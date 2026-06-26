@@ -67,7 +67,7 @@ function FarmerProfile() {
                 <Sprout className="h-4 w-4 text-primary" /> Crops
               </h3>
               <div className="mt-3 flex flex-wrap gap-2">
-                {farmer.crops.map((c) => (
+                {farmer.crops.map((c: string) => (
                   <span key={c} className="rounded-full border border-border px-3 py-1 text-xs text-foreground/80">
                     {c}
                   </span>
