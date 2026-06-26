@@ -9,38 +9,356 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as MarketRouteImport } from './routes/market'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as FarmersRouteImport } from './routes/farmers'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as FarmersSlugRouteImport } from './routes/farmers.$slug'
+import { Route as AppTransportRouteImport } from './routes/app.transport'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
+import { Route as AppFarmerRouteImport } from './routes/app.farmer'
+import { Route as AppBuyerRouteImport } from './routes/app.buyer'
+import { Route as AppTransportJobsRouteImport } from './routes/app.transport.jobs'
+import { Route as AppFarmerPayoutsRouteImport } from './routes/app.farmer.payouts'
+import { Route as AppFarmerOrdersRouteImport } from './routes/app.farmer.orders'
+import { Route as AppFarmerListingsRouteImport } from './routes/app.farmer.listings'
+import { Route as AppBuyerOrdersRouteImport } from './routes/app.buyer.orders'
+import { Route as AppBuyerFeedRouteImport } from './routes/app.buyer.feed'
+import { Route as AppBuyerCartRouteImport } from './routes/app.buyer.cart'
 
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketRoute = MarketRouteImport.update({
+  id: '/market',
+  path: '/market',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FarmersRoute = FarmersRouteImport.update({
+  id: '/farmers',
+  path: '/farmers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const FarmersSlugRoute = FarmersSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => FarmersRoute,
+} as any)
+const AppTransportRoute = AppTransportRouteImport.update({
+  id: '/transport',
+  path: '/transport',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFarmerRoute = AppFarmerRouteImport.update({
+  id: '/farmer',
+  path: '/farmer',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBuyerRoute = AppBuyerRouteImport.update({
+  id: '/buyer',
+  path: '/buyer',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTransportJobsRoute = AppTransportJobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => AppTransportRoute,
+} as any)
+const AppFarmerPayoutsRoute = AppFarmerPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => AppFarmerRoute,
+} as any)
+const AppFarmerOrdersRoute = AppFarmerOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AppFarmerRoute,
+} as any)
+const AppFarmerListingsRoute = AppFarmerListingsRouteImport.update({
+  id: '/listings',
+  path: '/listings',
+  getParentRoute: () => AppFarmerRoute,
+} as any)
+const AppBuyerOrdersRoute = AppBuyerOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AppBuyerRoute,
+} as any)
+const AppBuyerFeedRoute = AppBuyerFeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
+  getParentRoute: () => AppBuyerRoute,
+} as any)
+const AppBuyerCartRoute = AppBuyerCartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => AppBuyerRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/contact': typeof ContactRoute
+  '/farmers': typeof FarmersRouteWithChildren
+  '/how-it-works': typeof HowItWorksRoute
+  '/market': typeof MarketRoute
+  '/pricing': typeof PricingRoute
+  '/app/buyer': typeof AppBuyerRouteWithChildren
+  '/app/farmer': typeof AppFarmerRouteWithChildren
+  '/app/settings': typeof AppSettingsRoute
+  '/app/transport': typeof AppTransportRouteWithChildren
+  '/farmers/$slug': typeof FarmersSlugRoute
+  '/app/': typeof AppIndexRoute
+  '/app/buyer/cart': typeof AppBuyerCartRoute
+  '/app/buyer/feed': typeof AppBuyerFeedRoute
+  '/app/buyer/orders': typeof AppBuyerOrdersRoute
+  '/app/farmer/listings': typeof AppFarmerListingsRoute
+  '/app/farmer/orders': typeof AppFarmerOrdersRoute
+  '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/transport/jobs': typeof AppTransportJobsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/contact': typeof ContactRoute
+  '/farmers': typeof FarmersRouteWithChildren
+  '/how-it-works': typeof HowItWorksRoute
+  '/market': typeof MarketRoute
+  '/pricing': typeof PricingRoute
+  '/app/buyer': typeof AppBuyerRouteWithChildren
+  '/app/farmer': typeof AppFarmerRouteWithChildren
+  '/app/settings': typeof AppSettingsRoute
+  '/app/transport': typeof AppTransportRouteWithChildren
+  '/farmers/$slug': typeof FarmersSlugRoute
+  '/app': typeof AppIndexRoute
+  '/app/buyer/cart': typeof AppBuyerCartRoute
+  '/app/buyer/feed': typeof AppBuyerFeedRoute
+  '/app/buyer/orders': typeof AppBuyerOrdersRoute
+  '/app/farmer/listings': typeof AppFarmerListingsRoute
+  '/app/farmer/orders': typeof AppFarmerOrdersRoute
+  '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/transport/jobs': typeof AppTransportJobsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/contact': typeof ContactRoute
+  '/farmers': typeof FarmersRouteWithChildren
+  '/how-it-works': typeof HowItWorksRoute
+  '/market': typeof MarketRoute
+  '/pricing': typeof PricingRoute
+  '/app/buyer': typeof AppBuyerRouteWithChildren
+  '/app/farmer': typeof AppFarmerRouteWithChildren
+  '/app/settings': typeof AppSettingsRoute
+  '/app/transport': typeof AppTransportRouteWithChildren
+  '/farmers/$slug': typeof FarmersSlugRoute
+  '/app/': typeof AppIndexRoute
+  '/app/buyer/cart': typeof AppBuyerCartRoute
+  '/app/buyer/feed': typeof AppBuyerFeedRoute
+  '/app/buyer/orders': typeof AppBuyerOrdersRoute
+  '/app/farmer/listings': typeof AppFarmerListingsRoute
+  '/app/farmer/orders': typeof AppFarmerOrdersRoute
+  '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/transport/jobs': typeof AppTransportJobsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/app'
+    | '/auth'
+    | '/contact'
+    | '/farmers'
+    | '/how-it-works'
+    | '/market'
+    | '/pricing'
+    | '/app/buyer'
+    | '/app/farmer'
+    | '/app/settings'
+    | '/app/transport'
+    | '/farmers/$slug'
+    | '/app/'
+    | '/app/buyer/cart'
+    | '/app/buyer/feed'
+    | '/app/buyer/orders'
+    | '/app/farmer/listings'
+    | '/app/farmer/orders'
+    | '/app/farmer/payouts'
+    | '/app/transport/jobs'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/contact'
+    | '/farmers'
+    | '/how-it-works'
+    | '/market'
+    | '/pricing'
+    | '/app/buyer'
+    | '/app/farmer'
+    | '/app/settings'
+    | '/app/transport'
+    | '/farmers/$slug'
+    | '/app'
+    | '/app/buyer/cart'
+    | '/app/buyer/feed'
+    | '/app/buyer/orders'
+    | '/app/farmer/listings'
+    | '/app/farmer/orders'
+    | '/app/farmer/payouts'
+    | '/app/transport/jobs'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/app'
+    | '/auth'
+    | '/contact'
+    | '/farmers'
+    | '/how-it-works'
+    | '/market'
+    | '/pricing'
+    | '/app/buyer'
+    | '/app/farmer'
+    | '/app/settings'
+    | '/app/transport'
+    | '/farmers/$slug'
+    | '/app/'
+    | '/app/buyer/cart'
+    | '/app/buyer/feed'
+    | '/app/buyer/orders'
+    | '/app/farmer/listings'
+    | '/app/farmer/orders'
+    | '/app/farmer/payouts'
+    | '/app/transport/jobs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  AppRoute: typeof AppRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ContactRoute: typeof ContactRoute
+  FarmersRoute: typeof FarmersRouteWithChildren
+  HowItWorksRoute: typeof HowItWorksRoute
+  MarketRoute: typeof MarketRoute
+  PricingRoute: typeof PricingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/market': {
+      id: '/market'
+      path: '/market'
+      fullPath: '/market'
+      preLoaderRoute: typeof MarketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/farmers': {
+      id: '/farmers'
+      path: '/farmers'
+      fullPath: '/farmers'
+      preLoaderRoute: typeof FarmersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +366,184 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/farmers/$slug': {
+      id: '/farmers/$slug'
+      path: '/$slug'
+      fullPath: '/farmers/$slug'
+      preLoaderRoute: typeof FarmersSlugRouteImport
+      parentRoute: typeof FarmersRoute
+    }
+    '/app/transport': {
+      id: '/app/transport'
+      path: '/transport'
+      fullPath: '/app/transport'
+      preLoaderRoute: typeof AppTransportRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/farmer': {
+      id: '/app/farmer'
+      path: '/farmer'
+      fullPath: '/app/farmer'
+      preLoaderRoute: typeof AppFarmerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/buyer': {
+      id: '/app/buyer'
+      path: '/buyer'
+      fullPath: '/app/buyer'
+      preLoaderRoute: typeof AppBuyerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/transport/jobs': {
+      id: '/app/transport/jobs'
+      path: '/jobs'
+      fullPath: '/app/transport/jobs'
+      preLoaderRoute: typeof AppTransportJobsRouteImport
+      parentRoute: typeof AppTransportRoute
+    }
+    '/app/farmer/payouts': {
+      id: '/app/farmer/payouts'
+      path: '/payouts'
+      fullPath: '/app/farmer/payouts'
+      preLoaderRoute: typeof AppFarmerPayoutsRouteImport
+      parentRoute: typeof AppFarmerRoute
+    }
+    '/app/farmer/orders': {
+      id: '/app/farmer/orders'
+      path: '/orders'
+      fullPath: '/app/farmer/orders'
+      preLoaderRoute: typeof AppFarmerOrdersRouteImport
+      parentRoute: typeof AppFarmerRoute
+    }
+    '/app/farmer/listings': {
+      id: '/app/farmer/listings'
+      path: '/listings'
+      fullPath: '/app/farmer/listings'
+      preLoaderRoute: typeof AppFarmerListingsRouteImport
+      parentRoute: typeof AppFarmerRoute
+    }
+    '/app/buyer/orders': {
+      id: '/app/buyer/orders'
+      path: '/orders'
+      fullPath: '/app/buyer/orders'
+      preLoaderRoute: typeof AppBuyerOrdersRouteImport
+      parentRoute: typeof AppBuyerRoute
+    }
+    '/app/buyer/feed': {
+      id: '/app/buyer/feed'
+      path: '/feed'
+      fullPath: '/app/buyer/feed'
+      preLoaderRoute: typeof AppBuyerFeedRouteImport
+      parentRoute: typeof AppBuyerRoute
+    }
+    '/app/buyer/cart': {
+      id: '/app/buyer/cart'
+      path: '/cart'
+      fullPath: '/app/buyer/cart'
+      preLoaderRoute: typeof AppBuyerCartRouteImport
+      parentRoute: typeof AppBuyerRoute
+    }
   }
 }
 
+interface AppBuyerRouteChildren {
+  AppBuyerCartRoute: typeof AppBuyerCartRoute
+  AppBuyerFeedRoute: typeof AppBuyerFeedRoute
+  AppBuyerOrdersRoute: typeof AppBuyerOrdersRoute
+}
+
+const AppBuyerRouteChildren: AppBuyerRouteChildren = {
+  AppBuyerCartRoute: AppBuyerCartRoute,
+  AppBuyerFeedRoute: AppBuyerFeedRoute,
+  AppBuyerOrdersRoute: AppBuyerOrdersRoute,
+}
+
+const AppBuyerRouteWithChildren = AppBuyerRoute._addFileChildren(
+  AppBuyerRouteChildren,
+)
+
+interface AppFarmerRouteChildren {
+  AppFarmerListingsRoute: typeof AppFarmerListingsRoute
+  AppFarmerOrdersRoute: typeof AppFarmerOrdersRoute
+  AppFarmerPayoutsRoute: typeof AppFarmerPayoutsRoute
+}
+
+const AppFarmerRouteChildren: AppFarmerRouteChildren = {
+  AppFarmerListingsRoute: AppFarmerListingsRoute,
+  AppFarmerOrdersRoute: AppFarmerOrdersRoute,
+  AppFarmerPayoutsRoute: AppFarmerPayoutsRoute,
+}
+
+const AppFarmerRouteWithChildren = AppFarmerRoute._addFileChildren(
+  AppFarmerRouteChildren,
+)
+
+interface AppTransportRouteChildren {
+  AppTransportJobsRoute: typeof AppTransportJobsRoute
+}
+
+const AppTransportRouteChildren: AppTransportRouteChildren = {
+  AppTransportJobsRoute: AppTransportJobsRoute,
+}
+
+const AppTransportRouteWithChildren = AppTransportRoute._addFileChildren(
+  AppTransportRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppBuyerRoute: typeof AppBuyerRouteWithChildren
+  AppFarmerRoute: typeof AppFarmerRouteWithChildren
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppTransportRoute: typeof AppTransportRouteWithChildren
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppBuyerRoute: AppBuyerRouteWithChildren,
+  AppFarmerRoute: AppFarmerRouteWithChildren,
+  AppSettingsRoute: AppSettingsRoute,
+  AppTransportRoute: AppTransportRouteWithChildren,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+interface FarmersRouteChildren {
+  FarmersSlugRoute: typeof FarmersSlugRoute
+}
+
+const FarmersRouteChildren: FarmersRouteChildren = {
+  FarmersSlugRoute: FarmersSlugRoute,
+}
+
+const FarmersRouteWithChildren =
+  FarmersRoute._addFileChildren(FarmersRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  AppRoute: AppRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ContactRoute: ContactRoute,
+  FarmersRoute: FarmersRouteWithChildren,
+  HowItWorksRoute: HowItWorksRoute,
+  MarketRoute: MarketRoute,
+  PricingRoute: PricingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
