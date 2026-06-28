@@ -22,7 +22,10 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as FarmersSlugRouteImport } from './routes/farmers.$slug'
 import { Route as AppTransportRouteImport } from './routes/app.transport'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
+import { Route as AppProfileRouteImport } from './routes/app.profile'
+import { Route as AppInboxRouteImport } from './routes/app.inbox'
 import { Route as AppFarmerRouteImport } from './routes/app.farmer'
+import { Route as AppCreateRouteImport } from './routes/app.create'
 import { Route as AppBuyerRouteImport } from './routes/app.buyer'
 import { Route as AppTransportJobsRouteImport } from './routes/app.transport.jobs'
 import { Route as AppFarmerPayoutsRouteImport } from './routes/app.farmer.payouts'
@@ -97,9 +100,24 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFarmerRoute = AppFarmerRouteImport.update({
   id: '/farmer',
   path: '/farmer',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCreateRoute = AppCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBuyerRoute = AppBuyerRouteImport.update({
@@ -154,7 +172,10 @@ export interface FileRoutesByFullPath {
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
   '/app/buyer': typeof AppBuyerRouteWithChildren
+  '/app/create': typeof AppCreateRoute
   '/app/farmer': typeof AppFarmerRouteWithChildren
+  '/app/inbox': typeof AppInboxRoute
+  '/app/profile': typeof AppProfileRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
@@ -177,7 +198,10 @@ export interface FileRoutesByTo {
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
   '/app/buyer': typeof AppBuyerRouteWithChildren
+  '/app/create': typeof AppCreateRoute
   '/app/farmer': typeof AppFarmerRouteWithChildren
+  '/app/inbox': typeof AppInboxRoute
+  '/app/profile': typeof AppProfileRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
@@ -202,7 +226,10 @@ export interface FileRoutesById {
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
   '/app/buyer': typeof AppBuyerRouteWithChildren
+  '/app/create': typeof AppCreateRoute
   '/app/farmer': typeof AppFarmerRouteWithChildren
+  '/app/inbox': typeof AppInboxRoute
+  '/app/profile': typeof AppProfileRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
@@ -228,7 +255,10 @@ export interface FileRouteTypes {
     | '/market'
     | '/pricing'
     | '/app/buyer'
+    | '/app/create'
     | '/app/farmer'
+    | '/app/inbox'
+    | '/app/profile'
     | '/app/settings'
     | '/app/transport'
     | '/farmers/$slug'
@@ -251,7 +281,10 @@ export interface FileRouteTypes {
     | '/market'
     | '/pricing'
     | '/app/buyer'
+    | '/app/create'
     | '/app/farmer'
+    | '/app/inbox'
+    | '/app/profile'
     | '/app/settings'
     | '/app/transport'
     | '/farmers/$slug'
@@ -275,7 +308,10 @@ export interface FileRouteTypes {
     | '/market'
     | '/pricing'
     | '/app/buyer'
+    | '/app/create'
     | '/app/farmer'
+    | '/app/inbox'
+    | '/app/profile'
     | '/app/settings'
     | '/app/transport'
     | '/farmers/$slug'
@@ -394,11 +430,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/profile': {
+      id: '/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/inbox': {
+      id: '/app/inbox'
+      path: '/inbox'
+      fullPath: '/app/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/farmer': {
       id: '/app/farmer'
       path: '/farmer'
       fullPath: '/app/farmer'
       preLoaderRoute: typeof AppFarmerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/create': {
+      id: '/app/create'
+      path: '/create'
+      fullPath: '/app/create'
+      preLoaderRoute: typeof AppCreateRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/buyer': {
@@ -506,7 +563,10 @@ const AppTransportRouteWithChildren = AppTransportRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppBuyerRoute: typeof AppBuyerRouteWithChildren
+  AppCreateRoute: typeof AppCreateRoute
   AppFarmerRoute: typeof AppFarmerRouteWithChildren
+  AppInboxRoute: typeof AppInboxRoute
+  AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTransportRoute: typeof AppTransportRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
@@ -514,7 +574,10 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppBuyerRoute: AppBuyerRouteWithChildren,
+  AppCreateRoute: AppCreateRoute,
   AppFarmerRoute: AppFarmerRouteWithChildren,
+  AppInboxRoute: AppInboxRoute,
+  AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTransportRoute: AppTransportRouteWithChildren,
   AppIndexRoute: AppIndexRoute,

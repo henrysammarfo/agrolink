@@ -107,7 +107,7 @@ function FarmerProfile() {
         {/* bio */}
         <p className="mt-6 px-4 sm:px-8 text-center sm:text-left text-foreground/85 max-w-2xl">{farmer.bio}</p>
         <div className="mt-4 px-4 sm:px-8 flex flex-wrap justify-center sm:justify-start gap-2">
-          {farmer.crops.map((c) => (
+          {farmer.crops.map((c: string) => (
             <span key={c} className="rounded-full border border-border px-3 py-1 text-xs text-foreground/80">#{c.toLowerCase().replace(/\s+/g, "")}</span>
           ))}
         </div>
