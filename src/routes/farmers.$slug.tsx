@@ -1,5 +1,8 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, BadgeCheck, MapPin, Sprout, MessageCircle } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowLeft, BadgeCheck, MapPin, MessageCircle, Share2, UserPlus, UserCheck, Bookmark, Heart, Grid3x3, Play,
+} from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { farmers, listings } from "@/lib/mock-data";
 
@@ -28,97 +31,137 @@ export const Route = createFileRoute("/farmers/$slug")({
       </div>
     </SiteLayout>
   ),
+  errorComponent: ({ error }) => (
+    <SiteLayout>
+      <div className="mx-auto max-w-3xl px-6 py-32 text-center">
+        <h1 className="font-serif text-3xl text-foreground">Couldn't load this profile</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{error.message}</p>
+      </div>
+    </SiteLayout>
+  ),
   component: FarmerProfile,
 });
 
 function FarmerProfile() {
   const { farmer } = Route.useLoaderData();
   const theirListings = listings.filter((l) => l.farmerSlug === farmer.slug);
+  const [tab, setTab] = useState<"posts" | "liked" | "reposts">("posts");
+  const [following, setFollowing] = useState(false);
+  const handle = farmer.slug.replace(/-/g, "");
 
   return (
     <SiteLayout>
-      <div className="mx-auto max-w-7xl px-6 py-10 md:px-12">
+      <div className="mx-auto max-w-5xl px-4 pt-6 pb-20 md:px-6 md:pt-8">
         <Link to="/farmers" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> All farmers
         </Link>
 
-        <div className="mt-10 grid gap-12 lg:grid-cols-[1.1fr_1fr]">
-          <div className="overflow-hidden rounded-3xl border border-border">
-            <img src={farmer.image} alt={farmer.name} className="h-full w-full object-cover" />
+        {/* cover */}
+        <div className="relative mt-5 h-40 sm:h-56 overflow-hidden rounded-3xl bg-muted">
+          <img src={farmer.image} alt="" className="h-full w-full object-cover scale-110 blur-md opacity-70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/10 to-background" />
+        </div>
+
+        {/* avatar + actions */}
+        <div className="-mt-16 px-4 sm:px-8 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
+          <div className="relative">
+            <img src={farmer.image} alt={farmer.name} className="h-28 w-28 sm:h-32 sm:w-32 rounded-full object-cover ring-4 ring-background shadow-lg" />
+            <span className="absolute bottom-1 right-1 grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
+              <BadgeCheck className="h-4 w-4" />
+            </span>
           </div>
-
-          <div>
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">Profile</span>
-            <h1 className="mt-3 font-serif text-5xl md:text-7xl text-foreground">{farmer.name}</h1>
-            <p className="mt-3 inline-flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" /> {farmer.location} · {farmer.region}
+          <div className="mt-4 sm:mt-0 flex-1 text-center sm:text-left">
+            <h1 className="font-serif text-3xl sm:text-4xl text-foreground">{farmer.name}</h1>
+            <p className="text-sm text-muted-foreground">@{handle}</p>
+            <p className="mt-1 inline-flex items-center justify-center sm:justify-start gap-2 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" /> {farmer.location} · {farmer.region}
             </p>
-
-            <div className="mt-8 flex flex-wrap gap-6">
-              <Stat label="Rating" value={`${farmer.rating} ★`} sub={`${farmer.reviews} reviews`} />
-              <Stat label="Experience" value={`${farmer.yearsFarming} yrs`} sub="Farming" />
-              <Stat label="Active listings" value={`${theirListings.length}`} sub="This week" />
-            </div>
-
-            <p className="mt-10 text-base text-foreground/85 leading-relaxed">{farmer.bio}</p>
-
-            <div className="mt-8">
-              <h3 className="font-serif text-xl text-foreground inline-flex items-center gap-2">
-                <Sprout className="h-4 w-4 text-primary" /> Crops
-              </h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {farmer.crops.map((c: string) => (
-                  <span key={c} className="rounded-full border border-border px-3 py-1 text-xs text-foreground/80">
-                    {c}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-10 flex flex-wrap gap-3">
-              <Link to="/market" className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:bg-foreground/90">
-                See listings
-              </Link>
-              <button className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm text-foreground hover:border-primary/50">
-                <MessageCircle className="h-4 w-4" /> Message
-              </button>
-            </div>
+          </div>
+          <div className="mt-4 sm:mt-0 flex items-center gap-2">
+            <button
+              onClick={() => setFollowing((v) => !v)}
+              className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+                following ? "border border-border text-foreground hover:bg-secondary" : "bg-foreground text-background hover:bg-foreground/90"
+              }`}
+            >
+              {following ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+              {following ? "Following" : "Follow"}
+            </button>
+            <button className="grid h-10 w-10 place-items-center rounded-full border border-border text-foreground hover:bg-secondary" aria-label="Message">
+              <MessageCircle className="h-4 w-4" />
+            </button>
+            <button className="grid h-10 w-10 place-items-center rounded-full border border-border text-foreground hover:bg-secondary" aria-label="Share">
+              <Share2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
-        <section className="mt-24">
-          <h2 className="font-serif text-3xl md:text-4xl text-foreground">
-            <BadgeCheck className="inline h-6 w-6 text-primary mr-2" />
-            Active listings
-          </h2>
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {theirListings.map((l) => (
-              <Link key={l.id} to="/market" className="group overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/40 transition">
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img src={l.image} alt={l.produce} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                </div>
-                <div className="p-5">
-                  <h3 className="font-serif text-xl text-foreground">{l.produce}</h3>
-                  <div className="mt-2 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{l.quantityKg}kg available</span>
-                    <span className="text-primary">GHS {l.pricePerKg}/kg</span>
-                  </div>
-                </div>
-              </Link>
+        {/* stats */}
+        <div className="mt-8 px-4 sm:px-8 flex items-center justify-center sm:justify-start gap-10 text-center">
+          <Stat n={(farmer.reviews * 13).toLocaleString()} label="Followers" />
+          <Stat n={`${theirListings.length}`} label="Listings" />
+          <Stat n={`${(farmer.reviews * 47).toLocaleString()}`} label="Likes" />
+          <Stat n={`${farmer.rating}★`} label="Rating" />
+        </div>
+
+        {/* bio */}
+        <p className="mt-6 px-4 sm:px-8 text-center sm:text-left text-foreground/85 max-w-2xl">{farmer.bio}</p>
+        <div className="mt-4 px-4 sm:px-8 flex flex-wrap justify-center sm:justify-start gap-2">
+          {farmer.crops.map((c) => (
+            <span key={c} className="rounded-full border border-border px-3 py-1 text-xs text-foreground/80">#{c.toLowerCase().replace(/\s+/g, "")}</span>
+          ))}
+        </div>
+
+        {/* tabs */}
+        <div className="mt-10 border-b border-border">
+          <div className="flex items-center justify-center gap-8 text-sm">
+            {([
+              ["posts", Grid3x3, "Posts"],
+              ["liked", Heart, "Liked"],
+              ["reposts", Bookmark, "Saved"],
+            ] as const).map(([k, Icon, label]) => (
+              <button
+                key={k} onClick={() => setTab(k)}
+                className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${
+                  tab === k ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" /> {label}
+              </button>
             ))}
           </div>
-        </section>
+        </div>
+
+        {/* grid */}
+        <div className="mt-5 grid grid-cols-3 gap-1 sm:gap-2">
+          {(tab === "posts" ? theirListings : []).map((l) => (
+            <Link key={l.id} to="/market" className="group relative aspect-[9/16] overflow-hidden rounded-md bg-muted">
+              <img src={l.image} alt={l.produce} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                <div className="font-serif text-sm text-white">{l.produce}</div>
+                <div className="text-[10px] text-white/80">GHS {l.pricePerKg}/kg</div>
+              </div>
+              <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[10px] text-white">
+                <Play className="h-3 w-3 fill-current" /> {Math.floor(Math.random() * 8) + 2}.{Math.floor(Math.random() * 9)}k
+              </span>
+            </Link>
+          ))}
+          {tab !== "posts" && (
+            <div className="col-span-3 py-20 text-center text-sm text-muted-foreground">
+              {tab === "liked" ? "Liked posts are private to the farmer." : "No saved posts yet."}
+            </div>
+          )}
+        </div>
       </div>
     </SiteLayout>
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
+function Stat({ n, label }: { n: string; label: string }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className="mt-1 font-serif text-3xl text-foreground">{value}</div>
-      <div className="text-xs text-muted-foreground">{sub}</div>
+      <div className="font-serif text-xl text-foreground">{n}</div>
+      <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{label}</div>
     </div>
   );
 }

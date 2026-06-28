@@ -2,9 +2,10 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
-  ChevronLeft, Bell, Search, Plus, LogOut,
+  ChevronLeft, Bell, Search, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
+import { useAuth } from "@/lib/auth";
 
 export type AppRole = "buyer" | "farmer" | "transport";
 
@@ -14,30 +15,36 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
     { to: "/app/buyer/feed", label: "Feed", icon: Sprout },
     { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
     { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket },
+    { to: "/app/inbox", label: "Inbox", icon: Inbox },
   ],
   farmer: [
-    { to: "/app/farmer", label: "Overview", icon: Sprout },
-    { to: "/app/farmer/listings", label: "Listings", icon: ClipboardList },
+    { to: "/app/farmer", label: "Studio", icon: Sprout },
+    { to: "/app/farmer/listings", label: "Listings", icon: ImageIcon },
     { to: "/app/farmer/orders", label: "Orders", icon: Tractor },
     { to: "/app/farmer/payouts", label: "Payouts", icon: Wallet },
+    { to: "/app/inbox", label: "Inbox", icon: Inbox },
   ],
   transport: [
-    { to: "/app/transport", label: "Overview", icon: Truck },
-    { to: "/app/transport/jobs", label: "Job board", icon: MapPin },
+    { to: "/app/transport", label: "Map", icon: MapPin },
+    { to: "/app/transport/jobs", label: "Jobs", icon: Truck },
+    { to: "/app/inbox", label: "Inbox", icon: Inbox },
   ],
-};
-
-const ROLE_LABEL: Record<AppRole, string> = {
-  buyer: "Buyer",
-  farmer: "Farmer",
-  transport: "Transport partner",
 };
 
 export function AppShell({ role, children }: { role: AppRole; children?: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-
+  const { profile, roles, signOut } = useAuth();
   const nav = NAV[role];
+
+  // Mobile bottom nav: Home, Discover, Create (+), Inbox, Profile  — TikTok-style
+  const mobileTabs = [
+    { to: roleHome(role), icon: Home, label: "Home" },
+    { to: role === "transport" ? "/app/transport/jobs" : "/app/buyer/feed", icon: Sprout, label: "Discover" },
+    { to: "/app/create", icon: Plus, label: "", center: true },
+    { to: "/app/inbox", icon: Inbox, label: "Inbox" },
+    { to: "/app/profile", icon: User, label: "Me" },
+  ];
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -57,9 +64,28 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
           </button>
         </div>
 
-        <div className="px-3">
-          <RoleSwitcher role={role} collapsed={collapsed} />
-        </div>
+        {!collapsed && roles.length > 1 && (
+          <div className="px-3 pb-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Switch surface
+          </div>
+        )}
+        {roles.length > 1 && (
+          <div className="px-3">
+            <div className={`grid gap-1 ${collapsed ? "" : "grid-cols-2"}`}>
+              {roles.filter((r) => r !== "transport" || role === "transport").map((r) => (
+                <Link
+                  key={r}
+                  to={roleHome(r)}
+                  className={`rounded-lg px-2 py-1.5 text-center text-[11px] capitalize ${
+                    role === r ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:bg-sidebar-accent"
+                  }`}
+                >
+                  {collapsed ? r[0].toUpperCase() : r === "farmer" ? "Farmer Studio" : "Buyer"}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         <nav className="mt-4 flex-1 space-y-1 px-3">
           {nav.map((n) => {
@@ -69,9 +95,7 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
                 key={n.to}
                 to={n.to}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
-                  active
-                    ? "bg-primary/15 text-foreground"
-                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground"
+                  active ? "bg-primary/15 text-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground"
                 }`}
               >
                 <n.icon className={`h-4 w-4 shrink-0 ${active ? "text-primary" : ""}`} />
@@ -82,20 +106,18 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
         </nav>
 
         <div className="space-y-1 border-t border-sidebar-border p-3">
-          <Link
-            to="/app/settings"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground"
-          >
+          <Link to="/app/profile" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground">
+            <User className="h-4 w-4" />
+            {!collapsed && (profile?.display_name || "Profile")}
+          </Link>
+          <Link to="/app/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground">
             <Settings className="h-4 w-4" />
             {!collapsed && "Settings"}
           </Link>
-          <Link
-            to="/"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground"
-          >
+          <button onClick={() => signOut()} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground">
             <LogOut className="h-4 w-4" />
-            {!collapsed && "Exit dashboard"}
-          </Link>
+            {!collapsed && "Sign out"}
+          </button>
         </div>
       </aside>
 
@@ -116,35 +138,42 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground" aria-label="Notifications">
+            <Link to="/app/inbox" className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground">
               <Bell className="h-4 w-4" />
-            </button>
+            </Link>
             {role === "farmer" && (
-              <button className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              <Link to="/app/create" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
                 <Plus className="h-4 w-4" /> New listing
-              </button>
+              </Link>
             )}
-            <div className="hidden sm:flex items-center gap-3 rounded-full border border-border px-2 py-1.5">
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/20 font-serif text-sm text-primary">A</span>
-              <span className="pr-2 text-xs text-muted-foreground">{ROLE_LABEL[role]}</span>
-            </div>
+            <Link to="/app/profile" className="hidden sm:flex items-center gap-3 rounded-full border border-border px-2 py-1.5">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/20 font-serif text-sm text-primary">
+                {(profile?.display_name?.[0] ?? "A").toUpperCase()}
+              </span>
+              <span className="pr-2 text-xs text-muted-foreground capitalize">{role}</span>
+            </Link>
           </div>
         </header>
 
-        <main className="flex-1 p-6 md:p-10">{children ?? <Outlet />}</main>
+        <main className="flex-1 p-6 md:p-10 pb-24 md:pb-10">{children ?? <Outlet />}</main>
 
-        {/* Mobile bottom nav */}
-        <nav className="md:hidden sticky bottom-0 z-30 grid grid-cols-4 border-t border-border bg-background/95 backdrop-blur">
-          {nav.slice(0, 4).map((n) => {
-            const active = pathname === n.to;
+        {/* Mobile bottom nav — TikTok style with center Create */}
+        <nav className="md:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur pb-[max(env(safe-area-inset-bottom),0px)]">
+          {mobileTabs.map((t) => {
+            const active = pathname === t.to;
+            if (t.center) {
+              return (
+                <Link key="create" to={t.to} className="flex items-center justify-center -mt-3">
+                  <span className="grid h-12 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg">
+                    <Plus className="h-5 w-5" />
+                  </span>
+                </Link>
+              );
+            }
             return (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] ${active ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <n.icon className="h-4 w-4" />
-                {n.label}
+              <Link key={t.to} to={t.to} className={`flex flex-col items-center gap-1 py-2.5 text-[10px] ${active ? "text-primary" : "text-muted-foreground"}`}>
+                <t.icon className="h-5 w-5" />
+                {t.label}
               </Link>
             );
           })}
@@ -154,37 +183,12 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
   );
 }
 
-function RoleSwitcher({ role, collapsed }: { role: AppRole; collapsed: boolean }) {
-  if (collapsed) {
-    return (
-      <div className="grid place-items-center rounded-xl bg-sidebar-accent py-2 text-xs text-muted-foreground">
-        {role[0].toUpperCase()}
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-center gap-2 rounded-xl bg-sidebar-accent p-1">
-      {(["buyer", "farmer", "transport"] as AppRole[]).map((r) => (
-        <Link
-          key={r}
-          to={`/app/${r}` as "/app/buyer"}
-          className={`flex-1 rounded-lg px-2 py-1.5 text-center text-[11px] capitalize transition ${
-            role === r ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {r}
-        </Link>
-      ))}
-    </div>
-  );
+function roleHome(r: AppRole) {
+  return (r === "farmer" ? "/app/farmer" : r === "transport" ? "/app/transport" : "/app/buyer") as "/app/buyer";
 }
 
 export function PageHeader({ eyebrow, title, italic, sub, action }: {
-  eyebrow?: string;
-  title: string;
-  italic?: string;
-  sub?: string;
-  action?: ReactNode;
+  eyebrow?: string; title: string; italic?: string; sub?: string; action?: ReactNode;
 }) {
   return (
     <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
