@@ -54,10 +54,66 @@
   --color-soil: var(--soil);
 }
 
+/* LIGHT THEME (default) — warm paper, near-black text, harvest accents */
 :root {
   --radius: 0.875rem;
 
-  /* Cinematic agri palette — dark by default */
+  --background: oklch(0.985 0.005 90);
+  --foreground: oklch(0.18 0.012 145);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.012 145);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.012 145);
+
+  --primary: oklch(0.55 0.14 145);
+  --primary-foreground: oklch(0.98 0.012 90);
+
+  --secondary: oklch(0.95 0.012 90);
+  --secondary-foreground: oklch(0.2 0.012 145);
+
+  --muted: oklch(0.95 0.008 90);
+  --muted-foreground: oklch(0.45 0.014 145);
+
+  --accent: oklch(0.72 0.15 75);
+  --accent-foreground: oklch(0.18 0.02 75);
+
+  --destructive: oklch(0.6 0.22 22);
+  --destructive-foreground: oklch(0.98 0.01 90);
+
+  --border: oklch(0.18 0.012 145 / 10%);
+  --input: oklch(0.18 0.012 145 / 14%);
+  --ring: oklch(0.55 0.14 145 / 50%);
+
+  --harvest: oklch(0.55 0.14 145);
+  --amber-sun: oklch(0.72 0.15 75);
+  --soil: oklch(0.42 0.08 50);
+
+  --chart-1: oklch(0.55 0.14 145);
+  --chart-2: oklch(0.72 0.15 75);
+  --chart-3: oklch(0.6 0.18 25);
+  --chart-4: oklch(0.55 0.12 200);
+  --chart-5: oklch(0.7 0.1 110);
+
+  --sidebar: oklch(0.97 0.008 90);
+  --sidebar-foreground: oklch(0.2 0.012 145);
+  --sidebar-primary: oklch(0.55 0.14 145);
+  --sidebar-primary-foreground: oklch(0.98 0.012 90);
+  --sidebar-accent: oklch(0.93 0.008 90);
+  --sidebar-accent-foreground: oklch(0.2 0.012 145);
+  --sidebar-border: oklch(0.18 0.012 145 / 8%);
+  --sidebar-ring: oklch(0.55 0.14 145 / 50%);
+
+  --gradient-harvest: linear-gradient(135deg, var(--harvest), var(--amber-sun));
+  --gradient-cinema: linear-gradient(180deg, transparent 50%, oklch(0 0 0 / 0.45) 100%);
+  --shadow-cinema: 0 30px 80px -20px oklch(0.18 0.012 145 / 0.18);
+  --shadow-glow: 0 0 60px -10px oklch(0.55 0.14 145 / 0.3);
+
+  --ease-cinema: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* DARK THEME (opt-in via class on <html>) — original cinematic palette */
+.dark {
   --background: oklch(0.16 0.012 145);
   --foreground: oklch(0.97 0.012 90);
 
@@ -87,7 +143,6 @@
 
   --harvest: oklch(0.7 0.15 145);
   --amber-sun: oklch(0.82 0.16 75);
-  --soil: oklch(0.42 0.08 50);
 
   --chart-1: oklch(0.7 0.15 145);
   --chart-2: oklch(0.82 0.16 75);
@@ -104,16 +159,7 @@
   --sidebar-border: oklch(0.97 0.012 90 / 8%);
   --sidebar-ring: oklch(0.7 0.15 145 / 60%);
 
-  --gradient-harvest: linear-gradient(135deg, var(--harvest), var(--amber-sun));
-  --gradient-cinema: linear-gradient(180deg, transparent 30%, oklch(0.1 0.01 145 / 0.85) 100%);
   --shadow-cinema: 0 30px 80px -20px oklch(0 0 0 / 0.6);
-  --shadow-glow: 0 0 60px -10px oklch(0.7 0.15 145 / 0.45);
-
-  --ease-cinema: cubic-bezier(0.76, 0, 0.24, 1);
-}
-
-.dark {
-  /* dark is identical — site is dark by default */
 }
 
 @layer base {
@@ -144,6 +190,13 @@
 
 @utility cinema-fade {
   animation: cinema-fade-up 0.9s var(--ease-cinema) both;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes cinema-fade-up {
