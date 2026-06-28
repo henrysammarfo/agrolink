@@ -45,7 +45,9 @@ function Hero() {
       >
         <source src={HERO_VIDEO_URL} type="video/mp4" />
       </video>
-      <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/20 to-background" />
+      {/* Bright video: only a soft bottom fade for text legibility, no global dim */}
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/40 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-background/40 to-transparent" />
 
       <div className="relative z-10 flex h-full flex-col">
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
@@ -294,8 +296,8 @@ function ClosingCTA() {
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0">
-        <img src={produceHero} alt="" className="h-full w-full object-cover opacity-30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background" />
+        <img src={produceHero} alt="" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-background/20" />
       </div>
       <div className="relative mx-auto max-w-5xl px-6 py-32 md:py-40 text-center">
         <h2 className="font-serif text-5xl md:text-7xl text-foreground text-balance">

@@ -72,7 +72,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
         {listings.map((l, i) => (
           <div
             key={l.id}
-            ref={(el) => (itemRefs.current[i] = el)}
+            ref={(el) => { itemRefs.current[i] = el; }}
             data-idx={i}
             className="relative h-full w-full snap-start snap-always"
             style={{ minHeight: "100%" }}

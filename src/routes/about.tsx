@@ -28,8 +28,8 @@ function About() {
     <SiteLayout>
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0">
-          <img src={corridor} alt="Accra farmland corridor" className="h-full w-full object-cover opacity-40" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/60 to-background" />
+          <img src={corridor} alt="Accra farmland corridor" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/40 to-background" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 py-32 md:px-12 md:py-44">
           <span className="text-xs uppercase tracking-widest text-muted-foreground">About</span>
