@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({ meta: [{ title: "Settings · AgroLink" }] }),
@@ -11,6 +12,7 @@ function Settings() {
   const [whatsapp, setWhatsapp] = useState(true);
   const [push, setPush] = useState(true);
   const [marketing, setMarketing] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   return (
     <AppShell role="buyer">
@@ -22,6 +24,15 @@ function Settings() {
           <FieldRow label="Phone" defaultValue="+233 24 555 0123" />
           <FieldRow label="Email" defaultValue="ama@example.gh" />
           <FieldRow label="Location" defaultValue="East Legon, Accra" />
+        </Card>
+
+        <Card title="Appearance">
+          <Toggle
+            label="Dark mode"
+            desc="Light theme is the default. Switch to dark for low-light viewing."
+            value={theme === "dark"}
+            onChange={(v) => setTheme(v ? "dark" : "light")}
+          />
         </Card>
 
         <Card title="Notifications">
