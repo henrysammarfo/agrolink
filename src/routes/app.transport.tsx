@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { MapPin, Truck, Clock, ArrowRight } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { transportJobs } from "@/lib/mock-data";
+import { CorridorMap, CORRIDOR_PINS, CORRIDOR_ROUTE } from "@/components/map/CorridorMap";
 
 export const Route = createFileRoute("/app/transport")({
   head: () => ({ meta: [{ title: "Transport · AgroLink" }] }),
@@ -14,7 +15,7 @@ function TransportOverview() {
 
   return (
     <AppShell role="transport">
-      <PageHeader eyebrow="Overview" title="Drive," italic="deliver, earn." sub="Three jobs match your van today." />
+      <PageHeader eyebrow="Dispatch" title="Drive," italic="deliver, earn." sub="Three jobs match your van right now." />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Today's earnings" value="GHS 280" sub="2 completed" />
@@ -22,6 +23,22 @@ function TransportOverview() {
         <StatCard label="Available jobs" value={`${available.length}`} />
         <StatCard label="Rating" value="4.9 ★" sub="62 trips" />
       </div>
+
+      {/* Live map */}
+      <section className="mt-10 overflow-hidden rounded-3xl border border-border bg-card">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div>
+            <h2 className="font-serif text-2xl">Live corridor</h2>
+            <p className="text-xs text-muted-foreground">Real-time pickup and drop-off pins</p>
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" /> Live
+          </span>
+        </div>
+        <div className="h-[360px]">
+          <CorridorMap pins={CORRIDOR_PINS} route={CORRIDOR_ROUTE} />
+        </div>
+      </section>
 
       {active && (
         <section className="mt-10 rounded-3xl border border-primary/40 bg-primary/5 p-6">
@@ -40,7 +57,7 @@ function TransportOverview() {
                 <div className="text-xs uppercase tracking-widest text-muted-foreground">Payout</div>
                 <div className="font-serif text-2xl text-primary">GHS {active.payoutGhs}</div>
               </div>
-              <button className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">Open map</button>
+              <button className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">Open navigation</button>
             </div>
           </div>
         </section>

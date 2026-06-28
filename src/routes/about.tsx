@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, MapPin, Leaf, Users, Sparkles } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import corridor from "@/assets/transport-corridor.jpg";
+import { CorridorMap, CORRIDOR_PINS, CORRIDOR_ROUTE } from "@/components/map/CorridorMap";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -9,7 +10,7 @@ export const Route = createFileRoute("/about")({
       { title: "About · AgroLink" },
       { name: "description", content: "AgroLink is built in Accra to reroute Ghana's food supply chain." },
       { property: "og:title", content: "About · AgroLink" },
-      { property: "og:description", content: "Our mission, our team, and the Agbogbloshie → Tema corridor." },
+      { property: "og:description", content: "Our mission and the Greater Accra corridor." },
       { property: "og:image", content: corridor },
     ],
   }),
@@ -29,17 +30,17 @@ function About() {
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0">
           <img src={corridor} alt="Accra farmland corridor" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/40 to-background" />
+          {/* much lighter wash — keep the photo legible */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/15 to-background/85" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 py-32 md:px-12 md:py-44">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">About</span>
-          <h1 className="mt-3 max-w-4xl font-serif text-5xl md:text-7xl lg:text-8xl text-foreground text-balance">
-            Re-routing the Accra
-            <span className="italic"> food supply</span>, one harvest at a time.
+          <span className="text-xs uppercase tracking-widest text-foreground/80">About</span>
+          <h1 className="mt-3 max-w-4xl font-serif text-5xl md:text-7xl lg:text-8xl text-foreground text-balance drop-shadow-sm">
+            Re-routing the Accra <span className="italic">food supply</span>, one harvest at a time.
           </h1>
-          <p className="mt-8 max-w-xl text-base md:text-lg text-foreground/80">
-            AgroLink is built in Ghana for the Greater Accra corridor — from the farms of
-            Dodowa, Afienya and Ada Foah to the kitchens of East Legon, Osu and Tema.
+          <p className="mt-8 max-w-xl text-base md:text-lg text-foreground/90">
+            Built in Ghana for the Greater Accra corridor — from the farms of Dodowa, Afienya and Ada Foah
+            to the kitchens of East Legon, Osu and Tema.
           </p>
         </div>
       </section>
@@ -49,7 +50,7 @@ function About() {
           {[
             { icon: Leaf, t: "Less waste", d: "30% of Ghana's vegetable harvest never reaches a buyer. We connect them in hours, not days." },
             { icon: Users, t: "Better margins", d: "Cut three middlemen. Farmers earn more, buyers pay less, drivers get steady work." },
-            { icon: Sparkles, t: "AI-matched", d: "Claude-powered matching surfaces the right supply to the right kitchen at the right hour." },
+            { icon: Sparkles, t: "AI-matched", d: "Smart matching surfaces the right supply to the right kitchen at the right hour." },
           ].map((p) => (
             <div key={p.t}>
               <p.icon className="h-6 w-6 text-primary" />
@@ -62,53 +63,27 @@ function About() {
 
       <section className="border-y border-border bg-card/30">
         <div className="mx-auto max-w-7xl px-6 py-24 md:px-12">
-          <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-end">
+          <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr] lg:items-end">
             <div>
               <span className="text-xs uppercase tracking-widest text-muted-foreground">The corridor</span>
               <h2 className="mt-3 font-serif text-4xl md:text-6xl text-foreground">
                 Agbogbloshie <span className="italic">→</span> Tema.
               </h2>
               <p className="mt-5 text-muted-foreground">
-                Greater Accra moves more than 4,000 tons of vegetables per week through
-                a handful of wholesale hubs. AgroLink threads the smaller farms into that
-                flow — directly, transparently, with no broker rake.
+                Greater Accra moves more than 4,000 tons of vegetables a week through a handful of wholesale hubs.
+                AgroLink threads the smaller farms directly into that flow — no broker rake.
               </p>
+              <div className="mt-6 flex flex-wrap gap-4 text-xs">
+                <Legend color="#2f7d32" label="Farms" />
+                <Legend color="#0b3d2e" label="Hubs" />
+                <Legend color="#c46a1a" label="Buyer zones" />
+              </div>
             </div>
 
-            <div className="relative aspect-[16/10] overflow-hidden rounded-3xl border border-border bg-background">
-              {/* Simple corridor illustration */}
-              <svg viewBox="0 0 600 380" className="absolute inset-0 h-full w-full">
-                <defs>
-                  <linearGradient id="route" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="oklch(0.7 0.15 145)" />
-                    <stop offset="100%" stopColor="oklch(0.82 0.16 75)" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M 60 280 C 180 200, 280 320, 380 180 S 540 120, 560 100"
-                  stroke="url(#route)"
-                  strokeWidth="2.5"
-                  fill="none"
-                  strokeDasharray="6 6"
-                />
-                {[
-                  { x: 60, y: 280, label: "Ada Foah" },
-                  { x: 220, y: 230, label: "Dodowa" },
-                  { x: 360, y: 200, label: "Afienya" },
-                  { x: 460, y: 150, label: "Tema" },
-                  { x: 560, y: 100, label: "Agbogbloshie" },
-                ].map((p) => (
-                  <g key={p.label}>
-                    <circle cx={p.x} cy={p.y} r="6" fill="oklch(0.7 0.15 145)" />
-                    <circle cx={p.x} cy={p.y} r="14" fill="oklch(0.7 0.15 145 / 0.2)" />
-                    <text x={p.x + 14} y={p.y + 4} fill="oklch(0.97 0.012 90)" fontSize="12" fontFamily="Inter">
-                      {p.label}
-                    </text>
-                  </g>
-                ))}
-              </svg>
-              <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" /> Greater Accra · Ghana
+            <div className="relative overflow-hidden rounded-3xl border border-border bg-background" style={{ aspectRatio: "16/10" }}>
+              <CorridorMap pins={CORRIDOR_PINS} route={CORRIDOR_ROUTE} />
+              <div className="pointer-events-none absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
+                <MapPin className="h-3 w-3" /> Greater Accra · Ghana
               </div>
             </div>
           </div>
@@ -139,5 +114,13 @@ function About() {
         </div>
       </section>
     </SiteLayout>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-2 text-muted-foreground">
+      <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} /> {label}
+    </span>
   );
 }
