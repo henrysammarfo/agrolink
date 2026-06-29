@@ -222,3 +222,125 @@ export const testimonials = [
 
 export const HERO_VIDEO_URL =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260622_204103_f607742e-09da-4cf5-bb06-4e67b0a531de.mp4";
+
+// ------- Extended mock data (fulfillment, admin, tracker) -------
+
+export type FulfillmentStep = "placed" | "confirmed" | "packed" | "shipped" | "in_transit" | "delivered";
+
+export type OrderTimelineEvent = {
+  step: FulfillmentStep;
+  label: string;
+  at: string;
+  by?: string;
+  note?: string;
+};
+
+export type TrackedOrder = {
+  id: string;
+  items: string;
+  totalGhs: number;
+  farmer: string;
+  driver?: string;
+  receiptUrl: string;
+  currentStep: FulfillmentStep;
+  timeline: OrderTimelineEvent[];
+  eta?: string;
+};
+
+export const trackedOrders: TrackedOrder[] = [
+  {
+    id: "OR-8821",
+    items: "Tomatoes 20kg · Kontomire 5 bunches",
+    totalGhs: 320,
+    farmer: "Kwame Asare",
+    driver: "Yaw Ofori",
+    receiptUrl: "#receipt-8821",
+    currentStep: "in_transit",
+    eta: "11:40",
+    timeline: [
+      { step: "placed", label: "Order placed", at: "09:14", by: "You" },
+      { step: "confirmed", label: "Confirmed by farmer", at: "09:18", by: "Kwame Asare" },
+      { step: "packed", label: "Packed & ready", at: "09:46", by: "Kwame Asare" },
+      { step: "shipped", label: "Picked up", at: "10:05", by: "Yaw Ofori" },
+      { step: "in_transit", label: "On the way", at: "10:08", by: "Yaw Ofori", note: "ETA 11:40" },
+    ],
+  },
+  {
+    id: "OR-8822",
+    items: "Garden Eggs 8kg",
+    totalGhs: 96,
+    farmer: "Akosua Boateng",
+    receiptUrl: "#receipt-8822",
+    currentStep: "confirmed",
+    eta: "14:30",
+    timeline: [
+      { step: "placed", label: "Order placed", at: "10:02", by: "You" },
+      { step: "confirmed", label: "Confirmed by farmer", at: "10:09", by: "Akosua Boateng" },
+    ],
+  },
+];
+
+export const FULFILLMENT_FLOW: { step: FulfillmentStep; label: string }[] = [
+  { step: "placed", label: "Placed" },
+  { step: "confirmed", label: "Confirmed" },
+  { step: "packed", label: "Packed" },
+  { step: "shipped", label: "Picked up" },
+  { step: "in_transit", label: "In transit" },
+  { step: "delivered", label: "Delivered" },
+];
+
+// ------- Admin: payments, disputes, listing reports -------
+
+export type AdminPayment = {
+  id: string;
+  buyer: string;
+  farmer: string;
+  amountGhs: number;
+  channel: "MTN MoMo" | "Vodafone Cash" | "Card" | "AirtelTigo";
+  status: "captured" | "held" | "refunded" | "failed";
+  createdAt: string;
+  ref: string;
+};
+
+export const adminPayments: AdminPayment[] = [
+  { id: "PM-3301", buyer: "Skybar East Legon", farmer: "Kwame Asare", amountGhs: 240, channel: "MTN MoMo", status: "captured", createdAt: "Today 09:14", ref: "PS-9F2A1C" },
+  { id: "PM-3300", buyer: "Maquis Tante Marie", farmer: "Ama Mensah", amountGhs: 144, channel: "Card", status: "held", createdAt: "Today 08:02", ref: "PS-9F1991" },
+  { id: "PM-3299", buyer: "Tema Foods Ltd", farmer: "Kwame Asare", amountGhs: 960, channel: "MTN MoMo", status: "captured", createdAt: "Today 07:10", ref: "PS-9F1820" },
+  { id: "PM-3298", buyer: "Household · Cantonments", farmer: "Akosua Boateng", amountGhs: 80, channel: "Vodafone Cash", status: "refunded", createdAt: "Yesterday", ref: "PS-9F0744" },
+  { id: "PM-3297", buyer: "Buka Lounge", farmer: "Ama Mensah", amountGhs: 312, channel: "AirtelTigo", status: "failed", createdAt: "Yesterday", ref: "PS-9F0610" },
+];
+
+export type Dispute = {
+  id: string;
+  orderId: string;
+  raisedBy: "buyer" | "farmer" | "transport";
+  party: string;
+  reason: string;
+  status: "open" | "investigating" | "resolved" | "rejected";
+  openedAt: string;
+  amountGhs: number;
+};
+
+export const disputes: Dispute[] = [
+  { id: "DS-441", orderId: "OR-8804", raisedBy: "buyer", party: "Household · Cantonments", reason: "Garden eggs arrived bruised", status: "open", openedAt: "Today 11:02", amountGhs: 96 },
+  { id: "DS-440", orderId: "OR-8771", raisedBy: "buyer", party: "Skybar East Legon", reason: "Driver no-show, cancelled", status: "investigating", openedAt: "Yesterday", amountGhs: 84 },
+  { id: "DS-438", orderId: "OR-8702", raisedBy: "farmer", party: "Kwame Asare", reason: "Buyer underpaid by GHS 40", status: "resolved", openedAt: "Jun 24", amountGhs: 40 },
+  { id: "DS-435", orderId: "OR-8688", raisedBy: "transport", party: "Yaw Ofori", reason: "Wrong pickup address", status: "rejected", openedAt: "Jun 22", amountGhs: 0 },
+];
+
+export type ListingReport = {
+  id: string;
+  listingId: string;
+  produce: string;
+  farmer: string;
+  reason: string;
+  status: "pending" | "approved" | "removed";
+  reportedAt: string;
+};
+
+export const listingReports: ListingReport[] = [
+  { id: "RP-220", listingId: "L-1042", produce: "Vine-ripe Tomatoes", farmer: "Kwame Asare", reason: "Price flagged — possible typo (GHS 1.2/kg)", status: "pending", reportedAt: "Today 10:14" },
+  { id: "RP-219", listingId: "L-1040", produce: "Kpakpo Shito Peppers", farmer: "Akosua Boateng", reason: "Video quality unreadable", status: "pending", reportedAt: "Today 09:30" },
+  { id: "RP-218", listingId: "L-1037", produce: "Bell Peppers (Mixed)", farmer: "Akosua Boateng", reason: "Duplicate listing", status: "approved", reportedAt: "Yesterday" },
+  { id: "RP-217", listingId: "L-0998", produce: "Watermelon (large)", farmer: "Unknown", reason: "Suspected non-farmer reseller", status: "removed", reportedAt: "Jun 24" },
+];

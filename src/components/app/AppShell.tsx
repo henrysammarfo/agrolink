@@ -3,11 +3,12 @@ import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
   ChevronLeft, Bell, Search, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
+  ShieldCheck, AlertTriangle, CreditCard, ListChecks,
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
-import { useAuth } from "@/lib/auth";
+import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
 
-export type AppRole = "buyer" | "farmer" | "transport";
+export type AppRole = AuthRole;
 
 const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]> = {
   buyer: [
@@ -29,6 +30,12 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
     { to: "/app/transport/jobs", label: "Jobs", icon: Truck },
     { to: "/app/inbox", label: "Inbox", icon: Inbox },
   ],
+  admin: [
+    { to: "/app/admin", label: "Overview", icon: ShieldCheck },
+    { to: "/app/admin/payments", label: "Payments", icon: CreditCard },
+    { to: "/app/admin/disputes", label: "Disputes", icon: AlertTriangle },
+    { to: "/app/admin/listings", label: "Listings", icon: ListChecks },
+  ],
 };
 
 export function AppShell({ role, children }: { role: AppRole; children?: ReactNode }) {
@@ -37,10 +44,9 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
   const { profile, roles, signOut } = useAuth();
   const nav = NAV[role];
 
-  // Mobile bottom nav: Home, Discover, Create (+), Inbox, Profile  — TikTok-style
   const mobileTabs = [
     { to: roleHome(role), icon: Home, label: "Home" },
-    { to: role === "transport" ? "/app/transport/jobs" : "/app/buyer/feed", icon: Sprout, label: "Discover" },
+    { to: role === "transport" ? "/app/transport/jobs" : role === "admin" ? "/app/admin/disputes" : "/app/buyer/feed", icon: Sprout, label: "Discover" },
     { to: "/app/create", icon: Plus, label: "", center: true },
     { to: "/app/inbox", icon: Inbox, label: "Inbox" },
     { to: "/app/profile", icon: User, label: "Me" },
@@ -72,7 +78,7 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
         {roles.length > 1 && (
           <div className="px-3">
             <div className={`grid gap-1 ${collapsed ? "" : "grid-cols-2"}`}>
-              {roles.filter((r) => r !== "transport" || role === "transport").map((r) => (
+              {roles.map((r) => (
                 <Link
                   key={r}
                   to={roleHome(r)}
@@ -80,7 +86,7 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
                     role === r ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:bg-sidebar-accent"
                   }`}
                 >
-                  {collapsed ? r[0].toUpperCase() : r === "farmer" ? "Farmer Studio" : "Buyer"}
+                  {collapsed ? r[0].toUpperCase() : r === "farmer" ? "Farmer" : r === "admin" ? "Admin" : r}
                 </Link>
               ))}
             </div>
@@ -106,6 +112,12 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
         </nav>
 
         <div className="space-y-1 border-t border-sidebar-border p-3">
+          {roles.includes("admin") && role !== "admin" && (
+            <Link to="/app/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-amber-700 dark:text-amber-300 hover:bg-sidebar-accent">
+              <ShieldCheck className="h-4 w-4" />
+              {!collapsed && "Admin panel"}
+            </Link>
+          )}
           <Link to="/app/profile" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground">
             <User className="h-4 w-4" />
             {!collapsed && (profile?.display_name || "Profile")}
@@ -131,7 +143,7 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
           <div className="hidden md:flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground w-80 max-w-full">
             <Search className="h-4 w-4" />
             <input
-              placeholder={`Search ${role === "buyer" ? "produce, farmers" : role === "farmer" ? "orders, buyers" : "jobs"}`}
+              placeholder={`Search ${role === "buyer" ? "produce, farmers" : role === "farmer" ? "orders, buyers" : role === "admin" ? "users, payments, disputes" : "jobs"}`}
               className="w-full bg-transparent outline-none placeholder:text-muted-foreground/70 text-foreground"
             />
             <kbd className="rounded border border-border px-1.5 text-[10px]">⌘K</kbd>
@@ -157,7 +169,6 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
 
         <main className="flex-1 p-6 md:p-10 pb-24 md:pb-10">{children ?? <Outlet />}</main>
 
-        {/* Mobile bottom nav — TikTok style with center Create */}
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur pb-[max(env(safe-area-inset-bottom),0px)]">
           {mobileTabs.map((t) => {
             const active = pathname === t.to;
@@ -184,7 +195,7 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
 }
 
 function roleHome(r: AppRole) {
-  return (r === "farmer" ? "/app/farmer" : r === "transport" ? "/app/transport" : "/app/buyer") as "/app/buyer";
+  return (r === "farmer" ? "/app/farmer" : r === "transport" ? "/app/transport" : r === "admin" ? "/app/admin" : "/app/buyer") as "/app/buyer";
 }
 
 export function PageHeader({ eyebrow, title, italic, sub, action }: {
@@ -193,9 +204,9 @@ export function PageHeader({ eyebrow, title, italic, sub, action }: {
   return (
     <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
-        {eyebrow && <span className="text-xs uppercase tracking-widest text-muted-foreground">{eyebrow}</span>}
+        {eyebrow && <span className="text-xs uppercase tracking-widest text-primary/80">{eyebrow}</span>}
         <h1 className="mt-2 font-serif text-4xl md:text-5xl text-foreground">
-          {title} {italic && <span className="italic">{italic}</span>}
+          {title} {italic && <span className="italic text-accent">{italic}</span>}
         </h1>
         {sub && <p className="mt-2 text-sm text-muted-foreground">{sub}</p>}
       </div>
@@ -205,9 +216,15 @@ export function PageHeader({ eyebrow, title, italic, sub, action }: {
 }
 
 export function StatCard({ label, value, sub, tone = "primary" }: {
-  label: string; value: string; sub?: string; tone?: "primary" | "accent" | "muted";
+  label: string; value: string; sub?: string; tone?: "primary" | "accent" | "muted" | "amber" | "rose" | "emerald";
 }) {
-  const toneClass = tone === "primary" ? "text-primary" : tone === "accent" ? "text-accent" : "text-foreground";
+  const toneClass =
+    tone === "primary" ? "text-primary"
+    : tone === "accent" ? "text-accent"
+    : tone === "amber" ? "text-amber-600 dark:text-amber-400"
+    : tone === "rose" ? "text-rose-600 dark:text-rose-400"
+    : tone === "emerald" ? "text-emerald-600 dark:text-emerald-400"
+    : "text-foreground";
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="text-xs uppercase tracking-widest text-muted-foreground">{label}</div>

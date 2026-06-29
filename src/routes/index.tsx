@@ -149,7 +149,7 @@ function LiveFeedTeaser() {
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/10 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-foreground/70">
                 <MapPin className="h-3 w-3" />
@@ -297,25 +297,28 @@ function ClosingCTA() {
     <section className="relative overflow-hidden">
       <div className="absolute inset-0">
         <img src={produceHero} alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-background/20" />
+        {/* very light wash so the image stays bright + readable */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-background/10 to-background/10" />
       </div>
-      <div className="relative mx-auto max-w-5xl px-6 py-32 md:py-40 text-center">
-        <h2 className="font-serif text-5xl md:text-7xl text-foreground text-balance">
-          Ready to <span className="italic">re-route</span> the
-          <br /> Accra food supply?
-        </h2>
-        <p className="mx-auto mt-6 max-w-xl text-sm md:text-base text-muted-foreground">
-          Join AgroLink as a farmer, buyer, or transport partner.
-          Onboarding takes less than four minutes.
-        </p>
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link to="/auth" className="group inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-3 text-sm font-medium text-background hover:bg-foreground/90">
-            Get started
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-          <Link to="/contact" className="inline-flex items-center gap-2 rounded-full border border-foreground/30 px-7 py-3 text-sm font-medium text-foreground hover:bg-foreground/10">
-            Talk to the team
-          </Link>
+      <div className="relative mx-auto max-w-3xl px-6 py-32 md:py-40 text-center">
+        <div className="mx-auto inline-block rounded-3xl bg-background/70 px-8 py-10 backdrop-blur-md">
+          <h2 className="font-serif text-5xl md:text-7xl text-foreground text-balance">
+            Ready to <span className="italic text-primary">re-route</span> the
+            <br /> Accra food <span className="italic text-accent">supply?</span>
+          </h2>
+          <p className="mx-auto mt-6 max-w-xl text-sm md:text-base text-muted-foreground">
+            Join AgroLink as a farmer, buyer, or transport partner.
+            Onboarding takes less than four minutes.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/auth" className="group inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-3 text-sm font-medium text-background hover:bg-foreground/90">
+              Get started
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link to="/contact" className="inline-flex items-center gap-2 rounded-full border border-foreground/30 px-7 py-3 text-sm font-medium text-foreground hover:bg-foreground/10">
+              Talk to the team
+            </Link>
+          </div>
         </div>
       </div>
     </section>
