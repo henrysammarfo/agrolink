@@ -36,6 +36,7 @@ import { Route as AppBuyerOrdersRouteImport } from './routes/app.buyer.orders'
 import { Route as AppBuyerFeedRouteImport } from './routes/app.buyer.feed'
 import { Route as AppBuyerCartRouteImport } from './routes/app.buyer.cart'
 import { Route as AppAdminPaymentsRouteImport } from './routes/app.admin.payments'
+import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -172,6 +173,11 @@ const AppAdminPaymentsRoute = AppAdminPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminDisputesRoute = AppAdminDisputesRouteImport.update({
+  id: '/disputes',
+  path: '/disputes',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -193,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
@@ -221,6 +228,7 @@ export interface FileRoutesByTo {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app': typeof AppIndexRoute
+  '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
@@ -282,6 +291,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/app/admin/disputes'
     | '/app/admin/payments'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app'
+    | '/app/admin/disputes'
     | '/app/admin/payments'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
@@ -339,6 +350,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/app/admin/disputes'
     | '/app/admin/payments'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
@@ -552,14 +564,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminPaymentsRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/app/admin/disputes': {
+      id: '/app/admin/disputes'
+      path: '/disputes'
+      fullPath: '/app/admin/disputes'
+      preLoaderRoute: typeof AppAdminDisputesRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
   }
 }
 
 interface AppAdminRouteChildren {
+  AppAdminDisputesRoute: typeof AppAdminDisputesRoute
   AppAdminPaymentsRoute: typeof AppAdminPaymentsRoute
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminDisputesRoute: AppAdminDisputesRoute,
   AppAdminPaymentsRoute: AppAdminPaymentsRoute,
 }
 
