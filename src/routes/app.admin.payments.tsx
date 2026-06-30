@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Filter, Download } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { AdminGate } from "./app.admin";
-import { adminPayments, type AdminPayment } from "@/lib/mock-data";
+import { adminPayments as seed, type AdminPayment } from "@/lib/mock-data";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 export const Route = createFileRoute("/app/admin/payments")({
   head: () => ({ meta: [{ title: "Payments · Admin · AgroLink" }] }),
@@ -17,16 +19,47 @@ const TONE: Record<AdminPayment["status"], string> = {
   failed: "bg-rose-500/15 text-rose-600 dark:text-rose-300",
 };
 
+type Action = { kind: "release" | "refund" | "retry"; payment: AdminPayment } | null;
+
 function AdminPayments() {
+  const [items, setItems] = useState(seed);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | AdminPayment["status"]>("all");
+  const [action, setAction] = useState<Action>(null);
+  const [note, setNote] = useState("");
 
-  const filtered = useMemo(() => adminPayments.filter((p) => {
+  const filtered = useMemo(() => items.filter((p) => {
     if (status !== "all" && p.status !== status) return false;
     if (!q) return true;
-    const hay = `${p.id} ${p.buyer} ${p.farmer} ${p.ref}`.toLowerCase();
-    return hay.includes(q.toLowerCase());
-  }), [q, status]);
+    return `${p.id} ${p.buyer} ${p.farmer} ${p.ref}`.toLowerCase().includes(q.toLowerCase());
+  }), [items, q, status]);
+
+  const runAction = async () => {
+    if (!action) return;
+    await new Promise((r) => setTimeout(r, 600));
+    setItems((curr) => curr.map((p) => {
+      if (p.id !== action.payment.id) return p;
+      if (action.kind === "release") return { ...p, status: "captured" };
+      if (action.kind === "refund") return { ...p, status: "refunded" };
+      return { ...p, status: "captured" };
+    }));
+    const msg = action.kind === "release"
+      ? `Released GHS ${action.payment.amountGhs} to ${action.payment.farmer}`
+      : action.kind === "refund"
+      ? `Refunded GHS ${action.payment.amountGhs} to ${action.payment.buyer}`
+      : `Retried payment ${action.payment.ref}`;
+    toast.success(msg, { description: note || `Ref ${action.payment.ref}` });
+    setNote("");
+  };
+
+  const labels = {
+    release: { title: "Release funds to farmer?", confirm: "Release funds", tone: "success" as const,
+      desc: action && `Move GHS ${action.payment.amountGhs} from escrow to ${action.payment.farmer}'s wallet. This cannot be undone.` },
+    refund: { title: "Refund the buyer?", confirm: "Refund buyer", tone: "danger" as const,
+      desc: action && `Return GHS ${action.payment.amountGhs} to ${action.payment.buyer} via ${action.payment.channel}.` },
+    retry: { title: "Retry this payment?", confirm: "Retry charge", tone: "warning" as const,
+      desc: action && `Re-attempt capture for ${action.payment.ref}.` },
+  };
 
   return (
     <AdminGate>
@@ -35,9 +68,10 @@ function AdminPayments() {
           eyebrow="Finance"
           title="All"
           italic="payments"
-          sub="Search by reference, buyer, or farmer. Filter by status."
+          sub="Search by reference, buyer, or farmer. Every action is logged."
           action={
-            <button className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm hover:bg-card">
+            <button onClick={() => toast.message("Export queued", { description: "CSV will email shortly." })}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm hover:bg-card">
               <Download className="h-4 w-4" /> Export CSV
             </button>
           }
@@ -87,9 +121,9 @@ function AdminPayments() {
                     <span className={`rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-wider ${TONE[p.status]}`}>{p.status}</span>
                   </td>
                   <td className="px-5 py-4 text-right">
-                    {p.status === "held" && <button className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700">Release</button>}
-                    {p.status === "captured" && <button className="rounded-full border border-rose-300 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">Refund</button>}
-                    {p.status === "failed" && <button className="rounded-full border border-border px-3 py-1.5 text-xs">Retry</button>}
+                    {p.status === "held" && <button onClick={() => setAction({ kind: "release", payment: p })} className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700">Release</button>}
+                    {p.status === "captured" && <button onClick={() => setAction({ kind: "refund", payment: p })} className="rounded-full border border-rose-300 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">Refund</button>}
+                    {p.status === "failed" && <button onClick={() => setAction({ kind: "retry", payment: p })} className="rounded-full border border-border px-3 py-1.5 text-xs">Retry</button>}
                   </td>
                 </tr>
               ))}
@@ -99,6 +133,30 @@ function AdminPayments() {
             </tbody>
           </table>
         </div>
+
+        {action && (
+          <ConfirmDialog
+            open={!!action}
+            onOpenChange={(v) => { if (!v) { setAction(null); setNote(""); } }}
+            title={labels[action.kind].title}
+            description={labels[action.kind].desc}
+            confirmLabel={labels[action.kind].confirm}
+            tone={labels[action.kind].tone}
+            onConfirm={runAction}
+          >
+            <div className="mt-2 rounded-xl border border-border bg-background p-3 text-xs">
+              <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+                <div>Ref</div><div className="text-right font-mono text-foreground">{action.payment.ref}</div>
+                <div>Channel</div><div className="text-right text-foreground">{action.payment.channel}</div>
+                <div>Amount</div><div className="text-right font-serif text-base text-primary">GHS {action.payment.amountGhs}</div>
+              </div>
+            </div>
+            <label className="mt-3 block text-xs text-muted-foreground">Reason / note (optional)</label>
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+              placeholder="Add an internal note for the audit log…"
+              className="mt-1 w-full rounded-lg border border-border bg-background p-2 text-sm outline-none focus:border-primary" />
+          </ConfirmDialog>
+        )}
       </AppShell>
     </AdminGate>
   );

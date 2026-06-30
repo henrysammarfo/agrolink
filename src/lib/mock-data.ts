@@ -310,6 +310,14 @@ export const adminPayments: AdminPayment[] = [
   { id: "PM-3297", buyer: "Buka Lounge", farmer: "Ama Mensah", amountGhs: 312, channel: "AirtelTigo", status: "failed", createdAt: "Yesterday", ref: "PS-9F0610" },
 ];
 
+export type DisputeEvent = {
+  at: string;
+  actor: string;
+  kind: "opened" | "note" | "evidence" | "status" | "resolved" | "rejected";
+  text: string;
+  evidenceName?: string;
+};
+
 export type Dispute = {
   id: string;
   orderId: string;
@@ -319,14 +327,35 @@ export type Dispute = {
   status: "open" | "investigating" | "resolved" | "rejected";
   openedAt: string;
   amountGhs: number;
+  description?: string;
+  timeline: DisputeEvent[];
 };
 
 export const disputes: Dispute[] = [
-  { id: "DS-441", orderId: "OR-8804", raisedBy: "buyer", party: "Household · Cantonments", reason: "Garden eggs arrived bruised", status: "open", openedAt: "Today 11:02", amountGhs: 96 },
-  { id: "DS-440", orderId: "OR-8771", raisedBy: "buyer", party: "Skybar East Legon", reason: "Driver no-show, cancelled", status: "investigating", openedAt: "Yesterday", amountGhs: 84 },
-  { id: "DS-438", orderId: "OR-8702", raisedBy: "farmer", party: "Kwame Asare", reason: "Buyer underpaid by GHS 40", status: "resolved", openedAt: "Jun 24", amountGhs: 40 },
-  { id: "DS-435", orderId: "OR-8688", raisedBy: "transport", party: "Yaw Ofori", reason: "Wrong pickup address", status: "rejected", openedAt: "Jun 22", amountGhs: 0 },
+  { id: "DS-441", orderId: "OR-8804", raisedBy: "buyer", party: "Household · Cantonments", reason: "Garden eggs arrived bruised", status: "open", openedAt: "Today 11:02", amountGhs: 96,
+    description: "Half the basket was soft on arrival. Photos attached at intake.",
+    timeline: [
+      { at: "Today 11:02", actor: "Buyer", kind: "opened", text: "Raised dispute citing bruised produce." },
+      { at: "Today 11:05", actor: "Buyer", kind: "evidence", text: "Uploaded photo of basket on arrival", evidenceName: "basket-arrival.jpg" },
+    ] },
+  { id: "DS-440", orderId: "OR-8771", raisedBy: "buyer", party: "Skybar East Legon", reason: "Driver no-show, cancelled", status: "investigating", openedAt: "Yesterday", amountGhs: 84,
+    description: "Driver marked en-route but never arrived. Buyer cancelled at 19:40.",
+    timeline: [
+      { at: "Yesterday 18:20", actor: "Buyer", kind: "opened", text: "Driver hasn't arrived 40 mins past ETA." },
+      { at: "Yesterday 19:50", actor: "Admin · Nana", kind: "status", text: "Moved to investigating; pinged transport partner." },
+    ] },
+  { id: "DS-438", orderId: "OR-8702", raisedBy: "farmer", party: "Kwame Asare", reason: "Buyer underpaid by GHS 40", status: "resolved", openedAt: "Jun 24", amountGhs: 40,
+    timeline: [
+      { at: "Jun 24", actor: "Farmer", kind: "opened", text: "Short payment on MoMo settlement." },
+      { at: "Jun 25", actor: "Admin · Kojo", kind: "resolved", text: "Top-up of GHS 40 issued to farmer wallet." },
+    ] },
+  { id: "DS-435", orderId: "OR-8688", raisedBy: "transport", party: "Yaw Ofori", reason: "Wrong pickup address", status: "rejected", openedAt: "Jun 22", amountGhs: 0,
+    timeline: [
+      { at: "Jun 22", actor: "Driver", kind: "opened", text: "Pickup pin off by 1.2km." },
+      { at: "Jun 22", actor: "Admin · Nana", kind: "rejected", text: "Address matched buyer profile. No fault on buyer." },
+    ] },
 ];
+
 
 export type ListingReport = {
   id: string;
