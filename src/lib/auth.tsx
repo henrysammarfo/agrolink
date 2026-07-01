@@ -106,8 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export const useAuth = () => useContext(AuthCtx);
 
-function uniqueRoles(roles: AppRole[]) {
-  return Array.from(new Set(roles.length ? roles : ["buyer"]));
+function uniqueRoles(roles: AppRole[]): AppRole[] {
+  return Array.from(new Set<AppRole>(roles.length ? roles : ["buyer"]));
 }
 
 function loadLocalRoles(uid: string): AppRole[] {
