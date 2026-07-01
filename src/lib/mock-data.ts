@@ -192,7 +192,7 @@ export type Order = {
   buyer: string;
   items: string;
   totalGhs: number;
-  status: "pending" | "confirmed" | "in_transit" | "delivered" | "cancelled";
+  status: "pending" | "confirmed" | "packed" | "shipped" | "in_transit" | "delivered" | "cancelled";
   placedAt: string;
   eta?: string;
 };
@@ -218,14 +218,14 @@ export type TransportJob = {
   payload: string;
   distanceKm: number;
   payoutGhs: number;
-  status: "available" | "active" | "completed";
+  status: "available" | "accepted" | "picked_up" | "completed";
   windowLabel: string;
 };
 
 export const transportJobs: TransportJob[] = [
   { id: "TR-552", from: "Dodowa Co-op", to: "East Legon · Skybar", payload: "Tomatoes 80kg", distanceKm: 38, payoutGhs: 120, status: "available", windowLabel: "Today 10:00 – 12:00" },
   { id: "TR-551", from: "Ada Foah", to: "Osu · Bistro 22", payload: "Kontomire 18 bunches", distanceKm: 96, payoutGhs: 240, status: "available", windowLabel: "Today 11:00 – 14:00" },
-  { id: "TR-548", from: "Afienya", to: "Tema Foods Ltd", payload: "Mixed Peppers 60kg", distanceKm: 22, payoutGhs: 90, status: "active", windowLabel: "Now" },
+  { id: "TR-548", from: "Afienya", to: "Tema Foods Ltd", payload: "Mixed Peppers 60kg", distanceKm: 22, payoutGhs: 90, status: "picked_up", windowLabel: "Now" },
   { id: "TR-544", from: "Dodowa", to: "Madina Market", payload: "Garden Eggs 40kg", distanceKm: 30, payoutGhs: 80, status: "completed", windowLabel: "Yesterday" },
 ];
 
