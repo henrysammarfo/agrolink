@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Camera, Image as ImageIcon, Hash, MapPin, Tag, X, Sparkles, ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
 
@@ -10,7 +11,7 @@ export const Route = createFileRoute("/app/create")({
 });
 
 function Create() {
-  const { roles } = useAuth();
+  const { roles, addRole } = useAuth();
   const role = roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
   const isFarmer = roles.includes("farmer");
   const navigate = useNavigate();
@@ -22,6 +23,16 @@ function Create() {
   const [posted, setPosted] = useState(false);
 
   if (!isFarmer) {
+    const enableSeller = async () => {
+      try {
+        await addRole("farmer");
+        toast.success("Seller mode enabled", { description: "You can now post produce listings." });
+        navigate({ to: "/app/create" });
+      } catch (error) {
+        toast.error("Could not enable seller mode", { description: error instanceof Error ? error.message : "Please try again." });
+      }
+    };
+
     return (
       <AppShell role={role}>
         <PageHeader eyebrow="Create" title="Become a" italic="seller" />
@@ -31,8 +42,11 @@ function Create() {
           <p className="mt-3 mx-auto max-w-md text-sm text-muted-foreground">
             Buyers can also sell on AgroLink. Add a seller role to your account to post listings — same login, same profile.
           </p>
-          <button onClick={() => navigate({ to: "/app/settings" })} className="mt-6 inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm text-background hover:bg-foreground/90">
+          <button onClick={enableSeller} className="mt-6 inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm text-background hover:bg-foreground/90">
             Enable seller mode
+          </button>
+          <button onClick={() => navigate({ to: "/app/settings" })} className="ml-2 mt-6 inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm hover:bg-secondary">
+            Account settings
           </button>
         </div>
       </AppShell>

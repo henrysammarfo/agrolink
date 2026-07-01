@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, Edit3, Trash2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { FarmerGate } from "@/components/app/RoleGate";
 import { listings } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/app/farmer/listings")({
@@ -10,6 +11,7 @@ export const Route = createFileRoute("/app/farmer/listings")({
 
 function Listings() {
   return (
+    <FarmerGate>
     <AppShell role="farmer">
       <PageHeader
         eyebrow="Catalog"
@@ -17,9 +19,9 @@ function Listings() {
         italic="listings"
         sub="Edit prices, restock, or pull listings out of the feed."
         action={
-          <button className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          <Link to="/app/create" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
             <Plus className="h-4 w-4" /> New listing
-          </button>
+          </Link>
         }
       />
 
@@ -63,5 +65,6 @@ function Listings() {
         </table>
       </div>
     </AppShell>
+    </FarmerGate>
   );
 }

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Package, Truck, Check, Clock } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { FarmerGate } from "@/components/app/RoleGate";
 import { StatusBadge } from "./app.buyer";
 import { farmerOrders } from "@/lib/mock-data";
 
@@ -34,6 +35,7 @@ function FarmerOrders() {
   };
 
   return (
+    <FarmerGate>
     <AppShell role="farmer">
       <PageHeader eyebrow="Fulfillment" title="Incoming" italic="orders" sub="Accept, pack, and hand off to a driver." />
       <div className="space-y-3">
@@ -68,5 +70,6 @@ function FarmerOrders() {
         })}
       </div>
     </AppShell>
+    </FarmerGate>
   );
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Plus } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
+import { FarmerGate } from "@/components/app/RoleGate";
 import { farmerOrders, listings, revenueSeries } from "@/lib/mock-data";
 import { StatusBadge } from "./app.buyer";
 
@@ -14,6 +15,7 @@ function FarmerOverview() {
   const total = revenueSeries.reduce((s, r) => s + r.ghs, 0);
 
   return (
+    <FarmerGate>
     <AppShell role="farmer">
       <PageHeader
         eyebrow="Overview"
@@ -21,9 +23,9 @@ function FarmerOverview() {
         italic="Kwame."
         sub="Three new orders since you last checked."
         action={
-          <button className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          <Link to="/app/create" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
             <Plus className="h-4 w-4" /> New listing
-          </button>
+          </Link>
         }
       />
 
@@ -103,5 +105,6 @@ function FarmerOverview() {
         </div>
       </section>
     </AppShell>
+    </FarmerGate>
   );
 }

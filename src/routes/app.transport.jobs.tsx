@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { MapPin, Truck, Clock, Check, Package } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { TransportGate } from "@/components/app/RoleGate";
 import { transportJobs, type TransportJob } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/app/transport/jobs")({
@@ -25,6 +26,7 @@ function Jobs() {
   const visible = filter === "all" ? jobs : jobs.filter((j) => j.status === filter);
 
   return (
+    <TransportGate>
     <AppShell role="transport">
       <PageHeader
         eyebrow="Job board"
@@ -94,5 +96,6 @@ function Jobs() {
         )}
       </div>
     </AppShell>
+    </TransportGate>
   );
 }

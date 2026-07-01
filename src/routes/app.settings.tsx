@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { useAuth, type AppRole } from "@/lib/auth";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({ meta: [{ title: "Settings · AgroLink" }] }),
@@ -13,17 +15,46 @@ function Settings() {
   const [push, setPush] = useState(true);
   const [marketing, setMarketing] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { roles, addRole, profile, user } = useAuth();
+  const role = roles.includes("admin") ? "admin" : roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
+
+  const enableRole = async (next: Exclude<AppRole, "admin">) => {
+    try {
+      await addRole(next);
+      toast.success(`${next === "transport" ? "Driver" : next === "farmer" ? "Seller" : "Buyer"} access enabled`);
+    } catch (error) {
+      toast.error("Could not update role", { description: error instanceof Error ? error.message : "Please try again." });
+    }
+  };
 
   return (
-    <AppShell role="buyer">
+    <AppShell role={role}>
       <PageHeader eyebrow="Account" title="Your" italic="settings" />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Profile">
-          <FieldRow label="Full name" defaultValue="Ama Mensah" />
-          <FieldRow label="Phone" defaultValue="+233 24 555 0123" />
-          <FieldRow label="Email" defaultValue="ama@example.gh" />
-          <FieldRow label="Location" defaultValue="East Legon, Accra" />
+          <FieldRow label="Full name" defaultValue={profile?.display_name ?? "Your name"} />
+          <FieldRow label="Phone" defaultValue={profile?.phone ?? "+233"} />
+          <FieldRow label="Email" defaultValue={user?.email ?? "you@example.com"} />
+          <FieldRow label="Location" defaultValue={profile?.region ?? "Greater Accra"} />
+        </Card>
+
+        <Card title="Workspaces">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {([
+              ["buyer", "Buyer", "Shop and track orders"],
+              ["farmer", "Seller", "Post produce and fulfill orders"],
+              ["transport", "Driver", "Accept logistics jobs"],
+            ] as const).map(([key, label, desc]) => {
+              const active = roles.includes(key);
+              return (
+                <button key={key} type="button" onClick={() => !active && enableRole(key)} className={`rounded-2xl border p-4 text-left transition ${active ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
+                  <div className="text-sm font-medium">{label}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{active ? "Enabled" : desc}</div>
+                </button>
+              );
+            })}
+          </div>
         </Card>
 
         <Card title="Appearance">

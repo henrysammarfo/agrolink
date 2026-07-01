@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MapPin, Truck, Clock, ArrowRight } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
+import { TransportGate } from "@/components/app/RoleGate";
 import { transportJobs } from "@/lib/mock-data";
 import { CorridorMap, CORRIDOR_PINS, CORRIDOR_ROUTE } from "@/components/map/CorridorMap";
 
@@ -14,6 +15,7 @@ function TransportOverview() {
   const available = transportJobs.filter((j) => j.status === "available");
 
   return (
+    <TransportGate>
     <AppShell role="transport">
       <PageHeader eyebrow="Dispatch" title="Drive," italic="deliver, earn." sub="Three jobs match your van right now." />
 
@@ -90,5 +92,6 @@ function TransportOverview() {
         </div>
       </section>
     </AppShell>
+    </TransportGate>
   );
 }
