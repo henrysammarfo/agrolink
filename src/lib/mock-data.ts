@@ -66,8 +66,18 @@ export type Listing = {
   quantityKg: number;
   image: string;
   postedHoursAgo: number;
+  views?: number;
+  likes?: number;
+  comments?: FeedComment[];
   organic?: boolean;
   trending?: boolean;
+};
+
+export type FeedComment = {
+  id: string;
+  author: string;
+  text: string;
+  at: string;
 };
 
 export const listings: Listing[] = [
@@ -81,6 +91,13 @@ export const listings: Listing[] = [
     quantityKg: 240,
     image: produceCrates,
     postedHoursAgo: 2,
+    views: 18400,
+    likes: 1240,
+    comments: [
+      { id: "C-1", author: "Ama · Madina", text: "Can you deliver 20kg before 2pm?", at: "8m" },
+      { id: "C-2", author: "Chef Kojo", text: "These tomatoes held up well last order.", at: "22m" },
+      { id: "C-3", author: "AgroLink", text: "Cold-chain van available on this corridor.", at: "1h" },
+    ],
     trending: true,
   },
   {
@@ -93,6 +110,12 @@ export const listings: Listing[] = [
     quantityKg: 90,
     image: produceHero,
     postedHoursAgo: 5,
+    views: 9300,
+    likes: 680,
+    comments: [
+      { id: "C-4", author: "Esi Market", text: "Looks fresh. Any bundle price?", at: "16m" },
+      { id: "C-5", author: "Ama Mensah", text: "Yes, 12 bunches and above gets discount.", at: "12m" },
+    ],
     organic: true,
   },
   {
@@ -105,6 +128,12 @@ export const listings: Listing[] = [
     quantityKg: 45,
     image: produceCrates,
     postedHoursAgo: 7,
+    views: 12100,
+    likes: 920,
+    comments: [
+      { id: "C-6", author: "Tema Foods", text: "Need 30kg sorted by size.", at: "35m" },
+      { id: "C-7", author: "Akosua Boateng", text: "Available for Tema pickup today.", at: "31m" },
+    ],
     trending: true,
   },
   {
@@ -117,6 +146,11 @@ export const listings: Listing[] = [
     quantityKg: 130,
     image: produceHero,
     postedHoursAgo: 9,
+    views: 5400,
+    likes: 310,
+    comments: [
+      { id: "C-8", author: "Naa", text: "Please show inside of the basket too.", at: "1h" },
+    ],
   },
   {
     id: "L-1038",
@@ -128,6 +162,11 @@ export const listings: Listing[] = [
     quantityKg: 60,
     image: produceCrates,
     postedHoursAgo: 12,
+    views: 7600,
+    likes: 455,
+    comments: [
+      { id: "C-9", author: "Market Queen", text: "Good size for stew, saved.", at: "2h" },
+    ],
     organic: true,
   },
   {
@@ -140,6 +179,11 @@ export const listings: Listing[] = [
     quantityKg: 70,
     image: produceHero,
     postedHoursAgo: 16,
+    views: 4200,
+    likes: 260,
+    comments: [
+      { id: "C-10", author: "Buka Lounge", text: "Can we mix red and green only?", at: "3h" },
+    ],
   },
 ];
 
@@ -148,7 +192,7 @@ export type Order = {
   buyer: string;
   items: string;
   totalGhs: number;
-  status: "pending" | "confirmed" | "in_transit" | "delivered" | "cancelled";
+  status: "pending" | "confirmed" | "packed" | "shipped" | "in_transit" | "delivered" | "cancelled";
   placedAt: string;
   eta?: string;
 };
@@ -174,14 +218,14 @@ export type TransportJob = {
   payload: string;
   distanceKm: number;
   payoutGhs: number;
-  status: "available" | "active" | "completed";
+  status: "available" | "accepted" | "picked_up" | "completed";
   windowLabel: string;
 };
 
 export const transportJobs: TransportJob[] = [
   { id: "TR-552", from: "Dodowa Co-op", to: "East Legon · Skybar", payload: "Tomatoes 80kg", distanceKm: 38, payoutGhs: 120, status: "available", windowLabel: "Today 10:00 – 12:00" },
   { id: "TR-551", from: "Ada Foah", to: "Osu · Bistro 22", payload: "Kontomire 18 bunches", distanceKm: 96, payoutGhs: 240, status: "available", windowLabel: "Today 11:00 – 14:00" },
-  { id: "TR-548", from: "Afienya", to: "Tema Foods Ltd", payload: "Mixed Peppers 60kg", distanceKm: 22, payoutGhs: 90, status: "active", windowLabel: "Now" },
+  { id: "TR-548", from: "Afienya", to: "Tema Foods Ltd", payload: "Mixed Peppers 60kg", distanceKm: 22, payoutGhs: 90, status: "picked_up", windowLabel: "Now" },
   { id: "TR-544", from: "Dodowa", to: "Madina Market", payload: "Garden Eggs 40kg", distanceKm: 30, payoutGhs: 80, status: "completed", windowLabel: "Yesterday" },
 ];
 
@@ -316,6 +360,9 @@ export type DisputeEvent = {
   kind: "opened" | "note" | "evidence" | "status" | "resolved" | "rejected";
   text: string;
   evidenceName?: string;
+  evidenceUrl?: string;
+  evidenceType?: string;
+  evidenceSizeKb?: number;
 };
 
 export type Dispute = {

@@ -45,7 +45,14 @@ export function ConfirmDialog({
             className={toneClass}
             onClick={async () => {
               setBusy(true);
-              try { await onConfirm(); onOpenChange(false); } finally { setBusy(false); }
+              try {
+                await onConfirm();
+                onOpenChange(false);
+              } catch (error) {
+                console.error(error);
+              } finally {
+                setBusy(false);
+              }
             }}
           >
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} {confirmLabel}

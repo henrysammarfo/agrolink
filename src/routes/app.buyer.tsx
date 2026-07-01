@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { OrderTracker } from "@/components/order/OrderTracker";
@@ -10,6 +10,9 @@ export const Route = createFileRoute("/app/buyer")({
 });
 
 function BuyerOverview() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/app/buyer") return <Outlet />;
+
   return (
     <AppShell role="buyer">
       <PageHeader

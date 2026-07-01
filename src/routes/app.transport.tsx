@@ -1,6 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { MapPin, Truck, Clock, ArrowRight } from "lucide-react";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
+import { MapPin, Truck, Clock, ArrowRight, Package, Check } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
+import { TransportGate } from "@/components/app/RoleGate";
 import { transportJobs } from "@/lib/mock-data";
 import { CorridorMap, CORRIDOR_PINS, CORRIDOR_ROUTE } from "@/components/map/CorridorMap";
 
@@ -10,10 +13,29 @@ export const Route = createFileRoute("/app/transport")({
 });
 
 function TransportOverview() {
-  const active = transportJobs.find((j) => j.status === "active");
-  const available = transportJobs.filter((j) => j.status === "available");
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/app/transport") return <Outlet />;
+
+  const [jobs, setJobs] = useState(transportJobs);
+  const active = jobs.find((j) => j.status === "accepted" || j.status === "picked_up");
+  const available = jobs.filter((j) => j.status === "available");
+
+  const acceptJob = (id: string) => {
+    const job = jobs.find((j) => j.id === id);
+    setJobs((curr) => curr.map((j) => (j.id === id ? { ...j, status: "accepted" } : j)));
+    toast.success("Job accepted", { description: job ? `${job.from} → ${job.to}` : id });
+  };
+
+  const advanceJob = (id: string) => {
+    const job = jobs.find((j) => j.id === id);
+    const next = job?.status === "accepted" ? "picked_up" : job?.status === "picked_up" ? "completed" : job?.status;
+    if (!next) return;
+    setJobs((curr) => curr.map((j) => (j.id === id ? { ...j, status: next } : j)));
+    toast.success(next === "picked_up" ? "Pickup confirmed" : "Delivery completed", { description: job ? `${job.from} → ${job.to}` : id });
+  };
 
   return (
+    <TransportGate>
     <AppShell role="transport">
       <PageHeader eyebrow="Dispatch" title="Drive," italic="deliver, earn." sub="Three jobs match your van right now." />
 
@@ -57,7 +79,16 @@ function TransportOverview() {
                 <div className="text-xs uppercase tracking-widest text-muted-foreground">Payout</div>
                 <div className="font-serif text-2xl text-primary">GHS {active.payoutGhs}</div>
               </div>
-              <button className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">Open navigation</button>
+              {active.status === "accepted" && (
+                <button onClick={() => advanceJob(active.id)} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground">
+                  <Package className="h-4 w-4" /> Mark picked up
+                </button>
+              )}
+              {active.status === "picked_up" && (
+                <button onClick={() => advanceJob(active.id)} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white">
+                  <Check className="h-4 w-4" /> Mark delivered
+                </button>
+              )}
             </div>
           </div>
         </section>
@@ -84,11 +115,12 @@ function TransportOverview() {
                 <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> {j.distanceKm} km</span>
                 <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {j.windowLabel}</span>
               </div>
-              <button className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-2.5 text-sm font-medium text-background">Accept job</button>
+              <button onClick={() => acceptJob(j.id)} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-2.5 text-sm font-medium text-background">Accept job</button>
             </div>
           ))}
         </div>
       </section>
     </AppShell>
+    </TransportGate>
   );
 }

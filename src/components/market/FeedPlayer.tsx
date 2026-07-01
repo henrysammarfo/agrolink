@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Heart, MessageCircle, Share2, Bookmark, ShoppingBasket, MapPin, BadgeCheck,
-  Volume2, VolumeX, Music2, Grid2x2, X,
+  Volume2, VolumeX, Music2, Grid2x2, X, Send, Copy, MessageSquare,
 } from "lucide-react";
-import { listings, type Listing } from "@/lib/mock-data";
+import { toast } from "sonner";
+import { listings, type FeedComment, type Listing } from "@/lib/mock-data";
 
 type Props = {
   initialIndex?: number;
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
+  const rankedListings = useMemo(() => [...listings].sort((a, b) => feedScore(b) - feedScore(a)), []);
   const [active, setActive] = useState(initialIndex);
   const [muted, setMuted] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
@@ -47,12 +49,12 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   // Keyboard arrows
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown") scrollToIdx(Math.min(active + 1, listings.length - 1));
+      if (e.key === "ArrowDown") scrollToIdx(Math.min(active + 1, rankedListings.length - 1));
       else if (e.key === "ArrowUp") scrollToIdx(Math.max(active - 1, 0));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active]);
+  }, [active, rankedListings.length]);
 
   function scrollToIdx(i: number) {
     itemRefs.current[i]?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -69,7 +71,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
         className="no-scrollbar h-full w-full overflow-y-auto snap-y snap-mandatory"
         style={{ scrollSnapType: "y mandatory" }}
       >
-        {listings.map((l, i) => (
+        {rankedListings.map((l, i) => (
           <div
             key={l.id}
             ref={(el) => { itemRefs.current[i] = el; }}
@@ -83,7 +85,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
               muted={muted}
               onToggleMute={() => setMuted((m) => !m)}
               onOpenGrid={() => setShowGrid(true)}
-              progress={`${i + 1} / ${listings.length}`}
+              progress={`${i + 1} / ${rankedListings.length}`}
             />
           </div>
         ))}
@@ -91,7 +93,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
 
       {/* progress rail */}
       <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex">
-        {listings.map((_, i) => (
+        {rankedListings.map((_, i) => (
           <span
             key={i}
             className={`block h-6 w-1 rounded-full transition-all ${i === active ? "bg-white" : "bg-white/30"}`}
@@ -109,7 +111,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
             </button>
           </div>
           <div className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4" style={{ maxHeight: "calc(100% - 60px)" }}>
-            {listings.map((l, i) => (
+            {rankedListings.map((l, i) => (
               <button
                 key={l.id}
                 onClick={() => { setShowGrid(false); scrollToIdx(i); }}
@@ -139,9 +141,36 @@ function FeedCard({
   onOpenGrid: () => void;
   progress: string;
 }) {
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [likes, setLikes] = useState(120 + Math.floor(Math.random() * 800));
+  const [liked, setLiked] = useState(() => readBool(`agrolink:feed:${item.id}:liked`));
+  const [saved, setSaved] = useState(() => readBool(`agrolink:feed:${item.id}:saved`));
+  const [likes, setLikes] = useState(() => readNumber(`agrolink:feed:${item.id}:likes`, item.likes ?? 120));
+  const [comments, setComments] = useState<FeedComment[]>(() => readComments(item));
+  const [commentText, setCommentText] = useState("");
+  const [panel, setPanel] = useState<"comments" | "share" | null>(null);
+
+  const addComment = () => {
+    const text = commentText.trim();
+    if (!text) return;
+    setComments((curr) => [{ id: `local-${Date.now()}`, author: "You", text, at: "now" }, ...curr]);
+    setCommentText("");
+    toast.success("Comment posted", { description: item.produce });
+  };
+
+  useEffect(() => writeNumber(`agrolink:feed:${item.id}:likes`, likes), [item.id, likes]);
+  useEffect(() => writeBool(`agrolink:feed:${item.id}:liked`, liked), [item.id, liked]);
+  useEffect(() => writeBool(`agrolink:feed:${item.id}:saved`, saved), [item.id, saved]);
+  useEffect(() => writeComments(item.id, comments), [item.id, comments]);
+
+  const shareListing = async () => {
+    const url = `${location.origin}/market?listing=${item.id}`;
+    try {
+      if (navigator.share) await navigator.share({ title: `${item.produce} on AgroLink`, text: `${item.produce} from ${item.farmer}`, url });
+      else await navigator.clipboard.writeText(url);
+      toast.success("Share link ready", { description: item.produce });
+    } catch {
+      toast.error("Share failed", { description: "Try copying the link instead." });
+    }
+  };
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-black">
@@ -178,13 +207,11 @@ function FeedCard({
           label={formatCount(likes)}
           active={liked}
           activeClass="text-rose-500 fill-rose-500"
-          onClick={() => { setLiked((v) => !v); setLikes((n) => n + (liked ? -1 : 1)); }}
+          onClick={() => { const next = !liked; setLiked(next); setLikes((n) => Math.max(0, n + (next ? 1 : -1))); }}
         />
-        <Action icon={MessageCircle} label="42" onClick={() => {}} />
+        <Action icon={MessageCircle} label={formatCount(comments.length)} onClick={() => setPanel("comments")} />
         <Action icon={Bookmark} label="Save" active={saved} activeClass="text-amber-sun fill-amber-sun" onClick={() => setSaved((v) => !v)} />
-        <Action icon={Share2} label="Share" onClick={() => {
-          if (navigator.share) navigator.share({ title: item.produce, url: location.href }).catch(() => {});
-        }} />
+        <Action icon={Share2} label="Share" onClick={() => setPanel("share")} />
       </div>
 
       {/* bottom meta */}
@@ -216,6 +243,59 @@ function FeedCard({
           <MapPin className="h-3 w-3" /> {item.location}, Greater Accra
         </div>
       </div>
+
+      {panel && (
+        <div className="absolute inset-0 z-20 flex items-end bg-black/35" onClick={() => setPanel(null)}>
+          <div className="max-h-[72%] w-full rounded-t-3xl bg-background text-foreground shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div>
+                <h3 className="font-serif text-xl">{panel === "comments" ? "Comments" : "Share listing"}</h3>
+                <p className="text-xs text-muted-foreground">{item.produce} · {item.farmer}</p>
+              </div>
+              <button onClick={() => setPanel(null)} className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary" aria-label="Close panel">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {panel === "comments" ? (
+              <div className="flex max-h-[calc(72vh-72px)] flex-col">
+                <div className="no-scrollbar flex-1 space-y-4 overflow-y-auto px-4 py-4">
+                  {comments.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No comments yet. Ask the farmer a question.</div>
+                  )}
+                  {comments.map((c) => (
+                    <div key={c.id} className="flex gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-serif text-primary">{c.author[0]}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 text-xs"><span className="font-medium">{c.author}</span><span className="text-muted-foreground">{c.at}</span></div>
+                        <p className="mt-1 text-sm text-foreground/85">{c.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 border-t border-border p-3">
+                  <input value={commentText} onChange={(e) => setCommentText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment()} placeholder="Add a comment…" className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary" />
+                  <button onClick={addComment} disabled={!commentText.trim()} className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45" aria-label="Post comment">
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-3 p-4 sm:grid-cols-3">
+                <button onClick={shareListing} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40">
+                  <Share2 className="h-5 w-5 text-primary" /> <span className="text-sm font-medium">System share</span>
+                </button>
+                <button onClick={() => { navigator.clipboard?.writeText(`${location.origin}/market?listing=${item.id}`); toast.success("Link copied"); }} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40">
+                  <Copy className="h-5 w-5 text-accent" /> <span className="text-sm font-medium">Copy link</span>
+                </button>
+                <Link to="/app/inbox" className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40">
+                  <MessageSquare className="h-5 w-5 text-emerald-600" /> <span className="text-sm font-medium">Send in DM</span>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -242,4 +322,52 @@ function Action({
 function formatCount(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return String(n);
+}
+
+export function feedScore(item: Listing) {
+  const freshness = Math.max(0, 48 - item.postedHoursAgo) * 3;
+  const engagement = (item.likes ?? 0) * 0.7 + (item.comments?.length ?? 0) * 25 + (item.views ?? 0) * 0.02;
+  const trust = item.organic ? 35 : 0;
+  const trend = item.trending ? 90 : 0;
+  return freshness + engagement + trust + trend;
+}
+
+export const FEED_ALGORITHM_COPY = "Score = Freshness ((48 - hours old) × 3) + Engagement (likes × 0.7 + comments × 25 + views × 0.02) + Trust badges (+35 organic) + Trending boost (+90). The order is deterministic, not random.";
+
+function readBool(key: string) {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(key) === "1";
+}
+
+function writeBool(key: string, value: boolean) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, value ? "1" : "0");
+}
+
+function readNumber(key: string, fallback: number) {
+  if (typeof window === "undefined") return fallback;
+  const value = Number(localStorage.getItem(key));
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function writeNumber(key: string, value: number) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, String(value));
+}
+
+function readComments(item: Listing) {
+  if (typeof window === "undefined") return item.comments ?? [];
+  try {
+    const stored = localStorage.getItem(`agrolink:feed:${item.id}:comments`);
+    if (!stored) return item.comments ?? [];
+    const parsed = JSON.parse(stored) as FeedComment[];
+    return Array.isArray(parsed) ? parsed : item.comments ?? [];
+  } catch {
+    return item.comments ?? [];
+  }
+}
+
+function writeComments(id: string, comments: FeedComment[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(`agrolink:feed:${id}:comments`, JSON.stringify(comments));
 }

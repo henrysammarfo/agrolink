@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Check, Trash2, Eye } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { AdminGate } from "./app.admin";
+import { AdminGate } from "@/components/app/RoleGate";
 import { listingReports as seed, type ListingReport } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/app/admin/listings")({

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Wallet, Download } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
+import { FarmerGate } from "@/components/app/RoleGate";
 import { payouts } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/app/farmer/payouts")({
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/app/farmer/payouts")({
 function Payouts() {
   const total = payouts.reduce((s, p) => s + p.amountGhs, 0);
   return (
+    <FarmerGate>
     <AppShell role="farmer">
       <PageHeader
         eyebrow="Earnings"
@@ -55,5 +57,6 @@ function Payouts() {
         </table>
       </div>
     </AppShell>
+    </FarmerGate>
   );
 }
