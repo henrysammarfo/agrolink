@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search, AlertTriangle, Check, X, Eye, Paperclip, Upload, FileText, MessageSquare,
-  CircleDot, Shield, RefreshCw,
+  CircleDot, Shield, RefreshCw, ChevronLeft, ChevronRight, Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { AdminGate } from "./app.admin";
+import { AdminGate } from "@/components/app/RoleGate";
 import { disputes as seed, type Dispute, type DisputeEvent } from "@/lib/mock-data";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import {
@@ -43,19 +43,41 @@ const ICON_TONE: Record<DisputeEvent["kind"], string> = {
   rejected: "bg-muted text-muted-foreground",
 };
 
+const STORE_KEY = "agrolink:admin-disputes:v1";
+const PAGE_SIZE = 3;
+
+const KIND_LABEL: Record<DisputeEvent["kind"], string> = {
+  opened: "Case opened",
+  note: "Admin note",
+  evidence: "Evidence file",
+  status: "Status update",
+  resolved: "Resolved",
+  rejected: "Rejected",
+};
+
 function AdminDisputes() {
-  const [items, setItems] = useState(seed);
+  const [items, setItems] = useState<Dispute[]>(() => loadDisputes());
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | Dispute["status"]>("all");
+  const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const [pending, setPending] = useState<{ id: string; next: "investigating" | "resolved" | "rejected" } | null>(null);
   const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem(STORE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const filtered = useMemo(() => items.filter((d) => {
     if (status !== "all" && d.status !== status) return false;
     if (!q) return true;
     return `${d.id} ${d.orderId} ${d.party} ${d.reason}`.toLowerCase().includes(q.toLowerCase());
   }), [items, q, status]);
+
+  useEffect(() => setPage(1), [q, status]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const active = items.find((d) => d.id === openId) ?? null;
 
@@ -66,17 +88,29 @@ function AdminDisputes() {
 
   const confirmStatus = async () => {
     if (!pending) return;
-    await new Promise((r) => setTimeout(r, 500));
-    const labelMap = { investigating: "Marked as investigating", resolved: "Refund issued · buyer notified", rejected: "Dispute rejected" } as const;
-    const kindMap = { investigating: "status" as const, resolved: "resolved" as const, rejected: "rejected" as const };
-    appendEvent(pending.id, {
-      at: "Just now",
-      actor: "Admin · You",
-      kind: kindMap[pending.next],
-      text: reason || labelMap[pending.next],
-    }, pending.next);
-    toast.success(labelMap[pending.next], { description: reason || `Dispute ${pending.id} updated` });
-    setReason("");
+    if (pending.next === "resolved" && !reason.trim()) {
+      toast.error("Resolution note required", { description: "Add a short reason before refunding the buyer." });
+      throw new Error("Resolution note required");
+    }
+    try {
+      await simulateAdminAction(reason);
+      const labelMap = { investigating: "Marked as investigating", resolved: "Refund issued · buyer notified", rejected: "Dispute rejected" } as const;
+      const kindMap = { investigating: "status" as const, resolved: "resolved" as const, rejected: "rejected" as const };
+      appendEvent(pending.id, {
+        at: "Just now",
+        actor: "Admin · You",
+        kind: kindMap[pending.next],
+        text: reason || labelMap[pending.next],
+      }, pending.next);
+      toast.success(labelMap[pending.next], { description: reason || `Dispute ${pending.id} updated` });
+      setReason("");
+    } catch (error) {
+      toast.error("Dispute action failed", {
+        description: error instanceof Error ? error.message : "Please retry the action.",
+        action: { label: "Retry", onClick: () => void confirmStatus() },
+      });
+      throw error;
+    }
   };
 
   const pendingMeta = pending && {
@@ -114,7 +148,7 @@ function AdminDisputes() {
         </div>
 
         <div className="space-y-3">
-          {filtered.map((d) => (
+          {paged.map((d) => (
             <div key={d.id} className="rounded-2xl border border-border bg-card p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -149,6 +183,21 @@ function AdminDisputes() {
             <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">No disputes match.</div>
           )}
         </div>
+
+        {filtered.length > PAGE_SIZE && (
+          <div className="mt-5 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-xs text-muted-foreground">
+            <span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} disputes</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="grid h-8 w-8 place-items-center rounded-full border border-border disabled:opacity-40" aria-label="Previous page">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span>Page {page} / {totalPages}</span>
+              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="grid h-8 w-8 place-items-center rounded-full border border-border disabled:opacity-40" aria-label="Next page">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         <DisputeDetail
           dispute={active}
@@ -187,7 +236,24 @@ function DisputeDetail({
   onRequestStatus: (next: "investigating" | "resolved" | "rejected") => void;
 }) {
   const [note, setNote] = useState("");
+  const [timelineQ, setTimelineQ] = useState("");
+  const [timelineKind, setTimelineKind] = useState<"all" | DisputeEvent["kind"]>("all");
+  const [timelinePage, setTimelinePage] = useState(1);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const visibleEvents = useMemo(() => {
+    const events = dispute?.timeline ?? [];
+    return events.filter((ev) => {
+      if (timelineKind !== "all" && ev.kind !== timelineKind) return false;
+      if (!timelineQ) return true;
+      return `${ev.actor} ${ev.text} ${ev.evidenceName ?? ""} ${KIND_LABEL[ev.kind]}`.toLowerCase().includes(timelineQ.toLowerCase());
+    });
+  }, [dispute?.timeline, timelineKind, timelineQ]);
+
+  useEffect(() => setTimelinePage(1), [timelineQ, timelineKind, dispute?.id]);
+
+  const timelinePages = Math.max(1, Math.ceil(visibleEvents.length / PAGE_SIZE));
+  const pagedEvents = visibleEvents.slice((timelinePage - 1) * PAGE_SIZE, timelinePage * PAGE_SIZE);
 
   const addNote = () => {
     if (!dispute || !note.trim()) return;
@@ -196,12 +262,26 @@ function DisputeDetail({
     setNote("");
   };
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f || !dispute) return;
-    onAppend(dispute.id, { at: "Just now", actor: "Admin · You", kind: "evidence", text: `Uploaded evidence (${(f.size / 1024).toFixed(0)} KB)`, evidenceName: f.name });
-    toast.success("Evidence uploaded", { description: f.name });
-    e.target.value = "";
+    try {
+      const evidenceUrl = await fileToDataUrl(f);
+      onAppend(dispute.id, {
+        at: "Just now",
+        actor: "Admin · You",
+        kind: "evidence",
+        text: `Uploaded ${f.type || "case file"}`,
+        evidenceName: f.name,
+        evidenceUrl,
+        evidenceType: f.type || "file",
+        evidenceSizeKb: Math.max(1, Math.round(f.size / 1024)),
+      });
+      toast.success("Evidence attached", { description: `${f.name} will remain after refresh.` });
+      e.target.value = "";
+    } catch {
+      toast.error("Evidence upload failed", { description: "Use an image, PDF, or text file under about 2MB." });
+    }
   };
 
   return (
@@ -226,28 +306,56 @@ function DisputeDetail({
             )}
 
             <div className="rounded-2xl border border-border bg-card p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
-                <Shield className="h-3.5 w-3.5 text-primary" /> Timeline
+              <div className="mb-3 flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+                    <Shield className="h-3.5 w-3.5 text-primary" /> Timeline · {visibleEvents.length} events
+                  </div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Page {timelinePage}/{timelinePages}</div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="flex flex-1 items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-xs">
+                    <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                    <input value={timelineQ} onChange={(e) => setTimelineQ(e.target.value)} placeholder="Search notes, files, status…" className="w-full bg-transparent outline-none" />
+                  </div>
+                  <div className="flex gap-1 overflow-x-auto rounded-full border border-border bg-background p-1">
+                    {(["all", "opened", "evidence", "note", "status", "resolved", "rejected"] as const).map((k) => (
+                      <button key={k} onClick={() => setTimelineKind(k)} className={`rounded-full px-2.5 py-1 text-[10px] capitalize whitespace-nowrap ${timelineKind === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                        {k === "all" ? "All" : KIND_LABEL[k]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <ol className="relative space-y-4 border-l border-border pl-5">
-                {dispute.timeline.map((ev, i) => {
+                {pagedEvents.map((ev, i) => {
                   const Icon = ICON[ev.kind];
                   return (
-                    <li key={i} className="relative">
+                    <li key={`${ev.at}-${ev.text}-${i}`} className="relative">
                       <span className={`absolute -left-[27px] grid h-5 w-5 place-items-center rounded-full ${ICON_TONE[ev.kind]}`}>
                         <Icon className="h-3 w-3" />
                       </span>
                       <div className="text-xs text-muted-foreground">{ev.at} · <span className="text-foreground">{ev.actor}</span></div>
+                      <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${ICON_TONE[ev.kind]}`}>{KIND_LABEL[ev.kind]}</span>
                       <div className="mt-0.5 text-sm text-foreground">{ev.text}</div>
                       {ev.evidenceName && (
-                        <a href="#" onClick={(e) => e.preventDefault()} className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30">
+                        <a href={ev.evidenceUrl || "#"} download={ev.evidenceName} onClick={(e) => !ev.evidenceUrl && e.preventDefault()} className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30">
                           <FileText className="h-3 w-3" /> {ev.evidenceName}
+                          {ev.evidenceSizeKb && <span className="text-muted-foreground">· {ev.evidenceSizeKb}KB</span>}
+                          {ev.evidenceUrl && <Download className="h-3 w-3" />}
                         </a>
                       )}
                     </li>
                   );
                 })}
               </ol>
+              {visibleEvents.length === 0 && <div className="rounded-xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">No timeline events match.</div>}
+              {visibleEvents.length > PAGE_SIZE && (
+                <div className="mt-4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+                  <button onClick={() => setTimelinePage((p) => Math.max(1, p - 1))} disabled={timelinePage === 1} className="grid h-8 w-8 place-items-center rounded-full border border-border disabled:opacity-40" aria-label="Previous timeline page"><ChevronLeft className="h-4 w-4" /></button>
+                  <button onClick={() => setTimelinePage((p) => Math.min(timelinePages, p + 1))} disabled={timelinePage === timelinePages} className="grid h-8 w-8 place-items-center rounded-full border border-border disabled:opacity-40" aria-label="Next timeline page"><ChevronRight className="h-4 w-4" /></button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
@@ -280,4 +388,35 @@ function DisputeDetail({
       </DialogContent>
     </Dialog>
   );
+}
+
+function loadDisputes() {
+  try {
+    const stored = localStorage.getItem(STORE_KEY);
+    if (!stored) return seed;
+    const parsed = JSON.parse(stored) as Dispute[];
+    return Array.isArray(parsed) ? parsed : seed;
+  } catch {
+    return seed;
+  }
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    if (file.size > 2_000_000) {
+      reject(new Error("File too large"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function simulateAdminAction(note: string) {
+  await new Promise((r) => setTimeout(r, 500));
+  if (note.toLowerCase().includes("fail")) {
+    throw new Error("Case service did not confirm the update. Please retry.");
+  }
 }

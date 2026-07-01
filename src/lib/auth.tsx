@@ -21,12 +21,13 @@ type Ctx = {
   loading: boolean;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  addRole: (r: Exclude<AppRole, "admin">) => Promise<void>;
   hasRole: (r: AppRole) => boolean;
 };
 
 const AuthCtx = createContext<Ctx>({
   user: null, session: null, profile: null, roles: [], loading: true,
-  signOut: async () => {}, refresh: async () => {}, hasRole: () => false,
+  signOut: async () => {}, refresh: async () => {}, addRole: async () => {}, hasRole: () => false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -71,6 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       hasRole: (r) => roles.includes(r),
       refresh: async () => { if (session?.user) await loadUserData(session.user.id); },
+      addRole: async (r) => {
+        if (!session?.user) throw new Error("Sign in first");
+        const { error } = await supabase.from("user_roles").insert({ user_id: session.user.id, role: r });
+        if (error && !error.message.toLowerCase().includes("duplicate")) throw error;
+        await loadUserData(session.user.id);
+      },
       signOut: async () => { await supabase.auth.signOut(); },
     }}>
       {children}
