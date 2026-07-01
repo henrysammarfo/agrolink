@@ -31,7 +31,7 @@ function Auth() {
   // Redirect when signed in
   useEffect(() => {
     if (!user) return;
-    const dest = hasRole("transport") ? "/app/transport" : hasRole("farmer") ? "/app/farmer" : "/app/buyer";
+    const dest = hasRole("admin") ? "/app/admin" : hasRole("farmer") ? "/app/farmer" : hasRole("transport") ? "/app/transport" : "/app/buyer";
     navigate({ to: dest });
   }, [user, hasRole, navigate]);
 

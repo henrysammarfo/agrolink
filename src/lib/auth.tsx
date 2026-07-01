@@ -30,6 +30,8 @@ const AuthCtx = createContext<Ctx>({
   signOut: async () => {}, refresh: async () => {}, addRole: async () => {}, hasRole: () => false,
 });
 
+const LOCAL_ROLES_KEY = "agrolink:local-roles:v1";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -37,12 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function loadUserData(uid: string) {
-    const [p, r] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", uid),
-    ]);
-    setProfile((p.data as Profile | null) ?? null);
-    setRoles(((r.data ?? []) as { role: AppRole }[]).map((x) => x.role));
+    const localRoles = loadLocalRoles(uid);
+    try {
+      const [p, r] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", uid),
+      ]);
+      setProfile((p.data as Profile | null) ?? null);
+      const remoteRoles = ((r.data ?? []) as { role: AppRole }[]).map((x) => x.role);
+      setRoles(uniqueRoles([...remoteRoles, ...localRoles]));
+    } catch (error) {
+      console.warn("[Auth] Could not load remote profile; using local role cache.", error);
+      setRoles(uniqueRoles(localRoles.length ? localRoles : ["buyer"]));
+    }
   }
 
   useEffect(() => {
@@ -59,6 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       if (data.session?.user) loadUserData(data.session.user.id).finally(() => setLoading(false));
       else setLoading(false);
+    }).catch((error) => {
+      console.warn("[Auth] Session fetch failed.", error);
+      setSession(null);
+      setLoading(false);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -74,8 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh: async () => { if (session?.user) await loadUserData(session.user.id); },
       addRole: async (r) => {
         if (!session?.user) throw new Error("Sign in first");
-        const { error } = await supabase.from("user_roles").insert({ user_id: session.user.id, role: r });
-        if (error && !error.message.toLowerCase().includes("duplicate")) throw error;
+        saveLocalRole(session.user.id, r);
+        setRoles((curr) => uniqueRoles([...curr, r]));
+        try {
+          const { error } = await supabase.from("user_roles").insert({ user_id: session.user.id, role: r });
+          if (error && !error.message.toLowerCase().includes("duplicate")) throw error;
+        } catch (error) {
+          console.warn("[Auth] Remote role save failed; kept local role for this device.", error);
+        }
         await loadUserData(session.user.id);
       },
       signOut: async () => { await supabase.auth.signOut(); },
@@ -86,3 +105,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export const useAuth = () => useContext(AuthCtx);
+
+function uniqueRoles(roles: AppRole[]) {
+  return Array.from(new Set(roles.length ? roles : ["buyer"]));
+}
+
+function loadLocalRoles(uid: string): AppRole[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_ROLES_KEY);
+    const all = raw ? JSON.parse(raw) as Record<string, AppRole[]> : {};
+    return all[uid] ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalRole(uid: string, role: Exclude<AppRole, "admin">) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(LOCAL_ROLES_KEY);
+    const all = raw ? JSON.parse(raw) as Record<string, AppRole[]> : {};
+    all[uid] = uniqueRoles([...(all[uid] ?? []), role]);
+    localStorage.setItem(LOCAL_ROLES_KEY, JSON.stringify(all));
+  } catch {
+    // ignore local cache failures
+  }
+}
