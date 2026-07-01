@@ -31,12 +31,30 @@ const AuthCtx = createContext<Ctx>({
 });
 
 const LOCAL_ROLES_KEY = "agrolink:local-roles:v1";
+const DEMO_UID = "agrolink-demo-user";
+const DEMO_USER = {
+  id: DEMO_UID,
+  email: "demo@agrolink.app",
+  app_metadata: {},
+  user_metadata: { display_name: "AgroLink Demo" },
+  aud: "authenticated",
+  created_at: new Date(0).toISOString(),
+} as unknown as User;
+const DEMO_PROFILE: Profile = {
+  id: DEMO_UID,
+  display_name: "AgroLink Demo",
+  avatar_url: null,
+  bio: "Demo workspace for buyers, sellers, drivers, and admins.",
+  phone: "+233 24 000 0000",
+  region: "Greater Accra",
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [demoMode, setDemoMode] = useState(false);
 
   async function loadUserData(uid: string) {
     const localRoles = loadLocalRoles(uid);
@@ -54,50 +72,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function loadDemoData() {
+    setDemoMode(true);
+    setSession(null);
+    setProfile(DEMO_PROFILE);
+    setRoles(uniqueRoles([...routeDemoRoles(), ...loadLocalRoles(DEMO_UID)]));
+  }
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       if (s?.user) {
+        setDemoMode(false);
         setTimeout(() => loadUserData(s.user.id), 0);
+      } else if (shouldUseDemoAuth()) {
+        loadDemoData();
       } else {
+        setDemoMode(false);
         setProfile(null);
         setRoles([]);
       }
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-      if (data.session?.user) loadUserData(data.session.user.id).finally(() => setLoading(false));
-      else setLoading(false);
+      if (data.session?.user) {
+        setDemoMode(false);
+        loadUserData(data.session.user.id).finally(() => setLoading(false));
+      } else {
+        if (shouldUseDemoAuth()) loadDemoData();
+        setLoading(false);
+      }
     }).catch((error) => {
       console.warn("[Auth] Session fetch failed.", error);
-      setSession(null);
+      if (shouldUseDemoAuth()) loadDemoData();
+      else setSession(null);
       setLoading(false);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const currentUser = session?.user ?? (demoMode ? DEMO_USER : null);
+
   return (
     <AuthCtx.Provider value={{
-      user: session?.user ?? null,
+      user: currentUser,
       session,
       profile,
       roles,
       loading,
       hasRole: (r) => roles.includes(r),
-      refresh: async () => { if (session?.user) await loadUserData(session.user.id); },
+      refresh: async () => { if (session?.user) await loadUserData(session.user.id); else if (demoMode) loadDemoData(); },
       addRole: async (r) => {
-        if (!session?.user) throw new Error("Sign in first");
-        saveLocalRole(session.user.id, r);
+        const uid = session?.user?.id ?? (demoMode || shouldUseDemoAuth() ? DEMO_UID : null);
+        if (!uid) throw new Error("Sign in first");
+        saveLocalRole(uid, r);
         setRoles((curr) => uniqueRoles([...curr, r]));
-        try {
-          const { error } = await supabase.from("user_roles").insert({ user_id: session.user.id, role: r });
-          if (error && !error.message.toLowerCase().includes("duplicate")) throw error;
-        } catch (error) {
-          console.warn("[Auth] Remote role save failed; kept local role for this device.", error);
+        if (session?.user) {
+          try {
+            const { error } = await supabase.from("user_roles").insert({ user_id: session.user.id, role: r });
+            if (error && !error.message.toLowerCase().includes("duplicate")) throw error;
+          } catch (error) {
+            console.warn("[Auth] Remote role save failed; kept local role for this device.", error);
+          }
+          await loadUserData(session.user.id);
+        } else {
+          setDemoMode(true);
+          setProfile(DEMO_PROFILE);
         }
-        await loadUserData(session.user.id);
       },
-      signOut: async () => { await supabase.auth.signOut(); },
+      signOut: async () => { setDemoMode(false); setRoles([]); setProfile(null); await supabase.auth.signOut(); },
     }}>
       {children}
     </AuthCtx.Provider>
@@ -131,4 +174,17 @@ function saveLocalRole(uid: string, role: Exclude<AppRole, "admin">) {
   } catch {
     // ignore local cache failures
   }
+}
+
+function shouldUseDemoAuth() {
+  return typeof window !== "undefined" && window.location.pathname.startsWith("/app");
+}
+
+function routeDemoRoles(): AppRole[] {
+  if (typeof window === "undefined") return ["buyer"];
+  const path = window.location.pathname;
+  if (path.startsWith("/app/admin")) return ["buyer", "admin"];
+  if (path.startsWith("/app/farmer") || path.startsWith("/app/create")) return ["buyer", "farmer"];
+  if (path.startsWith("/app/transport")) return ["buyer", "transport"];
+  return ["buyer"];
 }
