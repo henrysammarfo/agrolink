@@ -391,6 +391,7 @@ function DisputeDetail({
 }
 
 function loadDisputes() {
+  if (typeof window === "undefined") return seed;
   try {
     const stored = localStorage.getItem(STORE_KEY);
     if (!stored) return seed;
