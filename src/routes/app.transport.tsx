@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { MapPin, Truck, Clock, ArrowRight } from "lucide-react";
+import { MapPin, Truck, Clock, ArrowRight, Package, Check } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { TransportGate } from "@/components/app/RoleGate";
@@ -24,6 +24,14 @@ function TransportOverview() {
     const job = jobs.find((j) => j.id === id);
     setJobs((curr) => curr.map((j) => (j.id === id ? { ...j, status: "accepted" } : j)));
     toast.success("Job accepted", { description: job ? `${job.from} → ${job.to}` : id });
+  };
+
+  const advanceJob = (id: string) => {
+    const job = jobs.find((j) => j.id === id);
+    const next = job?.status === "accepted" ? "picked_up" : job?.status === "picked_up" ? "completed" : job?.status;
+    if (!next) return;
+    setJobs((curr) => curr.map((j) => (j.id === id ? { ...j, status: next } : j)));
+    toast.success(next === "picked_up" ? "Pickup confirmed" : "Delivery completed", { description: job ? `${job.from} → ${job.to}` : id });
   };
 
   return (
@@ -71,7 +79,16 @@ function TransportOverview() {
                 <div className="text-xs uppercase tracking-widest text-muted-foreground">Payout</div>
                 <div className="font-serif text-2xl text-primary">GHS {active.payoutGhs}</div>
               </div>
-              <button className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">Open navigation</button>
+              {active.status === "accepted" && (
+                <button onClick={() => advanceJob(active.id)} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground">
+                  <Package className="h-4 w-4" /> Mark picked up
+                </button>
+              )}
+              {active.status === "picked_up" && (
+                <button onClick={() => advanceJob(active.id)} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white">
+                  <Check className="h-4 w-4" /> Mark delivered
+                </button>
+              )}
             </div>
           </div>
         </section>
