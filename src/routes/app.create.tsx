@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Camera, Image as ImageIcon, Hash, MapPin, Tag, X, Sparkles, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
+import produceHero from "@/assets/produce-hero.jpg";
 
 export const Route = createFileRoute("/app/create")({
   head: () => ({ meta: [{ title: "Create · AgroLink" }] }),
@@ -21,6 +22,9 @@ function Create() {
   const [caption, setCaption] = useState("");
   const [tags, setTags] = useState("organic tomato dodowa");
   const [posted, setPosted] = useState(false);
+  const [media, setMedia] = useState<string | null>(null);
+  const [mediaName, setMediaName] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   if (!isFarmer) {
     const enableSeller = async () => {
@@ -56,8 +60,41 @@ function Create() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setPosted(true);
-    setTimeout(() => navigate({ to: "/app/farmer/listings" }), 1100);
+    saveCreatedListing({
+      id: `L-${Date.now().toString().slice(-5)}`,
+      produce: title,
+      farmer: "AgroLink Demo",
+      farmerSlug: "kwame-asare",
+      location: "Dodowa",
+      pricePerKg: Number(price),
+      quantityKg: Number(qty),
+      image: media || produceHero,
+      postedHoursAgo: 0,
+      views: 0,
+      likes: 0,
+      comments: [],
+      organic: tags.toLowerCase().includes("organic"),
+      trending: false,
+    });
+    toast.success("Listing posted", { description: `${title} is now in your seller catalog.` });
+    setTimeout(() => navigate({ to: "/app/farmer/listings" }), 900);
   }
+
+  const onFile = (file?: File) => {
+    if (!file) return;
+    if (file.size > 3_000_000) {
+      toast.error("File too large", { description: "Use an image or short demo file under 3MB." });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setMedia(String(reader.result));
+      setMediaName(file.name);
+      toast.success("Media attached", { description: file.name });
+    };
+    reader.onerror = () => toast.error("Upload failed", { description: "Try a different image." });
+    reader.readAsDataURL(file);
+  };
 
   return (
     <AppShell role={role}>
@@ -71,20 +108,23 @@ function Create() {
       <form onSubmit={submit} className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
         {/* Uploader */}
         <div className="rounded-3xl border-2 border-dashed border-border bg-card aspect-[9/16] sm:aspect-video relative overflow-hidden grid place-items-center text-center p-8">
-          <div>
+          {media && <img src={media} alt="Upload preview" className="absolute inset-0 h-full w-full object-cover" />}
+          {media && <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/20" />}
+          <div className="relative z-10">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 text-primary">
               <Camera className="h-7 w-7" />
             </div>
-            <h3 className="mt-5 font-serif text-2xl">Drop a video or photo</h3>
-            <p className="mt-2 text-sm text-muted-foreground">9:16 vertical works best. Up to 60 seconds.</p>
+            <h3 className={`mt-5 font-serif text-2xl ${media ? "text-white" : ""}`}>{media ? "Media ready" : "Drop a video or photo"}</h3>
+            <p className={`mt-2 text-sm ${media ? "text-white/80" : "text-muted-foreground"}`}>{mediaName || "9:16 vertical works best. Up to 60 seconds."}</p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <button type="button" className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">
+              <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">
                 <ImageIcon className="h-4 w-4" /> Upload
               </button>
-              <button type="button" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm">
+              <button type="button" onClick={() => toast.message("Camera demo", { description: "Use Upload in this preview; device camera connects in production." })} className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-5 py-2.5 text-sm">
                 <Camera className="h-4 w-4" /> Record
               </button>
             </div>
+            <input ref={fileRef} type="file" hidden accept="image/*,video/*" onChange={(e) => onFile(e.target.files?.[0])} />
           </div>
         </div>
 
@@ -140,6 +180,34 @@ function Create() {
       </form>
     </AppShell>
   );
+}
+
+type CreatedListing = {
+  id: string;
+  produce: string;
+  farmer: string;
+  farmerSlug: string;
+  location: string;
+  pricePerKg: number;
+  quantityKg: number;
+  image: string;
+  postedHoursAgo: number;
+  views: number;
+  likes: number;
+  comments: [];
+  organic: boolean;
+  trending: boolean;
+};
+
+function saveCreatedListing(listing: CreatedListing) {
+  if (typeof window === "undefined") return;
+  const key = "agrolink:created-listings:v1";
+  try {
+    const current = JSON.parse(localStorage.getItem(key) || "[]") as CreatedListing[];
+    localStorage.setItem(key, JSON.stringify([listing, ...current]));
+  } catch {
+    localStorage.setItem(key, JSON.stringify([listing]));
+  }
 }
 
 const inp = "block w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary";
