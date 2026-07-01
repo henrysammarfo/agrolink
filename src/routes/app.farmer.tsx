@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, Plus } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { FarmerGate } from "@/components/app/RoleGate";
@@ -11,6 +11,9 @@ export const Route = createFileRoute("/app/farmer")({
 });
 
 function FarmerOverview() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/app/farmer") return <Outlet />;
+
   const max = Math.max(...revenueSeries.map((r) => r.ghs));
   const total = revenueSeries.reduce((s, r) => s + r.ghs, 0);
 

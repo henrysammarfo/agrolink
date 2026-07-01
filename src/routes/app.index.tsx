@@ -12,10 +12,12 @@ function AppHome() {
   const navigate = useNavigate();
   useEffect(() => {
     if (loading) return;
-    const dest = roles.includes("transport")
-      ? "/app/transport"
+    const dest = roles.includes("admin")
+      ? "/app/admin"
       : roles.includes("farmer")
       ? "/app/farmer"
+      : roles.includes("transport")
+      ? "/app/transport"
       : "/app/buyer";
     navigate({ to: dest, replace: true });
   }, [roles, loading, navigate]);

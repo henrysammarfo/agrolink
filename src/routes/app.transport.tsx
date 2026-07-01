@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { MapPin, Truck, Clock, ArrowRight } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { TransportGate } from "@/components/app/RoleGate";
@@ -11,6 +11,9 @@ export const Route = createFileRoute("/app/transport")({
 });
 
 function TransportOverview() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/app/transport") return <Outlet />;
+
   const active = transportJobs.find((j) => j.status === "active");
   const available = transportJobs.filter((j) => j.status === "available");
 

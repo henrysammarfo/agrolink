@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { ShieldCheck, AlertTriangle, CreditCard, ListChecks, ArrowRight } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { AdminGate } from "@/components/app/RoleGate";
@@ -10,6 +10,9 @@ export const Route = createFileRoute("/app/admin")({
 });
 
 function AdminOverview() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/app/admin") return <Outlet />;
+
   const openDisputes = disputes.filter((d) => d.status === "open" || d.status === "investigating").length;
   const heldPayments = adminPayments.filter((p) => p.status === "held").length;
   const pendingReports = listingReports.filter((r) => r.status === "pending").length;
