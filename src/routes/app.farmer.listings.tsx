@@ -24,6 +24,7 @@ function Listings() {
     setItems((curr) => {
       const next = curr.filter((l) => l.id !== id);
       saveSellerListings(next.filter((l) => !listings.some((seed) => seed.id === l.id)));
+      saveRemovedListing(id);
       return next;
     });
     toast.success("Listing removed from seller catalog");
@@ -107,7 +108,8 @@ function readSellerListings(): Listing[] {
   if (typeof window === "undefined") return listings;
   try {
     const local = JSON.parse(localStorage.getItem("agrolink:created-listings:v1") || "[]") as Listing[];
-    return [...local, ...listings];
+    const removed = JSON.parse(localStorage.getItem("agrolink:removed-listings:v1") || "[]") as string[];
+    return [...local, ...listings.filter((l) => !removed.includes(l.id))];
   } catch {
     return listings;
   }
@@ -116,4 +118,14 @@ function readSellerListings(): Listing[] {
 function saveSellerListings(items: Listing[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem("agrolink:created-listings:v1", JSON.stringify(items));
+}
+
+function saveRemovedListing(id: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const current = JSON.parse(localStorage.getItem("agrolink:removed-listings:v1") || "[]") as string[];
+    localStorage.setItem("agrolink:removed-listings:v1", JSON.stringify(Array.from(new Set([...current, id]))));
+  } catch {
+    localStorage.setItem("agrolink:removed-listings:v1", JSON.stringify([id]));
+  }
 }
