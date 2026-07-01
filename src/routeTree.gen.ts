@@ -13,6 +13,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MarketRouteImport } from './routes/market'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as FarmersRouteImport } from './routes/farmers'
+import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
@@ -57,6 +58,11 @@ const HowItWorksRoute = HowItWorksRouteImport.update({
 const FarmersRoute = FarmersRouteImport.update({
   id: '/farmers',
   path: '/farmers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/discover': typeof DiscoverRoute
   '/farmers': typeof FarmersRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
@@ -221,6 +228,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/discover': typeof DiscoverRoute
   '/farmers': typeof FarmersRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
@@ -253,6 +261,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/discover': typeof DiscoverRoute
   '/farmers': typeof FarmersRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/contact'
+    | '/discover'
     | '/farmers'
     | '/how-it-works'
     | '/market'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
+    | '/discover'
     | '/farmers'
     | '/how-it-works'
     | '/market'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/contact'
+    | '/discover'
     | '/farmers'
     | '/how-it-works'
     | '/market'
@@ -379,6 +391,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
+  DiscoverRoute: typeof DiscoverRoute
   FarmersRoute: typeof FarmersRouteWithChildren
   HowItWorksRoute: typeof HowItWorksRoute
   MarketRoute: typeof MarketRoute
@@ -413,6 +426,13 @@ declare module '@tanstack/react-router' {
       path: '/farmers'
       fullPath: '/farmers'
       preLoaderRoute: typeof FarmersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -696,6 +716,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
+  DiscoverRoute: DiscoverRoute,
   FarmersRoute: FarmersRouteWithChildren,
   HowItWorksRoute: HowItWorksRoute,
   MarketRoute: MarketRoute,
