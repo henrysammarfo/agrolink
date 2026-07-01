@@ -141,10 +141,10 @@ function FeedCard({
   onOpenGrid: () => void;
   progress: string;
 }) {
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [likes, setLikes] = useState(item.likes ?? 120);
-  const [comments, setComments] = useState<FeedComment[]>(item.comments ?? []);
+  const [liked, setLiked] = useState(() => readBool(`agrolink:feed:${item.id}:liked`));
+  const [saved, setSaved] = useState(() => readBool(`agrolink:feed:${item.id}:saved`));
+  const [likes, setLikes] = useState(() => readNumber(`agrolink:feed:${item.id}:likes`, item.likes ?? 120));
+  const [comments, setComments] = useState<FeedComment[]>(() => readComments(item));
   const [commentText, setCommentText] = useState("");
   const [panel, setPanel] = useState<"comments" | "share" | null>(null);
 
@@ -155,6 +155,11 @@ function FeedCard({
     setCommentText("");
     toast.success("Comment posted", { description: item.produce });
   };
+
+  useEffect(() => writeNumber(`agrolink:feed:${item.id}:likes`, likes), [item.id, likes]);
+  useEffect(() => writeBool(`agrolink:feed:${item.id}:liked`, liked), [item.id, liked]);
+  useEffect(() => writeBool(`agrolink:feed:${item.id}:saved`, saved), [item.id, saved]);
+  useEffect(() => writeComments(item.id, comments), [item.id, comments]);
 
   const shareListing = async () => {
     const url = `${location.origin}/market?listing=${item.id}`;
@@ -202,7 +207,7 @@ function FeedCard({
           label={formatCount(likes)}
           active={liked}
           activeClass="text-rose-500 fill-rose-500"
-          onClick={() => { setLiked((v) => !v); setLikes((n) => n + (liked ? -1 : 1)); }}
+          onClick={() => { const next = !liked; setLiked(next); setLikes((n) => Math.max(0, n + (next ? 1 : -1))); }}
         />
         <Action icon={MessageCircle} label={formatCount(comments.length)} onClick={() => setPanel("comments")} />
         <Action icon={Bookmark} label="Save" active={saved} activeClass="text-amber-sun fill-amber-sun" onClick={() => setSaved((v) => !v)} />
@@ -255,6 +260,9 @@ function FeedCard({
             {panel === "comments" ? (
               <div className="flex max-h-[calc(72vh-72px)] flex-col">
                 <div className="no-scrollbar flex-1 space-y-4 overflow-y-auto px-4 py-4">
+                  {comments.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No comments yet. Ask the farmer a question.</div>
+                  )}
                   {comments.map((c) => (
                     <div key={c.id} className="flex gap-3">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-serif text-primary">{c.author[0]}</span>
@@ -316,10 +324,50 @@ function formatCount(n: number) {
   return String(n);
 }
 
-function feedScore(item: Listing) {
+export function feedScore(item: Listing) {
   const freshness = Math.max(0, 48 - item.postedHoursAgo) * 3;
   const engagement = (item.likes ?? 0) * 0.7 + (item.comments?.length ?? 0) * 25 + (item.views ?? 0) * 0.02;
   const trust = item.organic ? 35 : 0;
   const trend = item.trending ? 90 : 0;
   return freshness + engagement + trust + trend;
+}
+
+export const FEED_ALGORITHM_COPY = "Score = Freshness ((48 - hours old) × 3) + Engagement (likes × 0.7 + comments × 25 + views × 0.02) + Trust badges (+35 organic) + Trending boost (+90). The order is deterministic, not random.";
+
+function readBool(key: string) {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(key) === "1";
+}
+
+function writeBool(key: string, value: boolean) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, value ? "1" : "0");
+}
+
+function readNumber(key: string, fallback: number) {
+  if (typeof window === "undefined") return fallback;
+  const value = Number(localStorage.getItem(key));
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function writeNumber(key: string, value: number) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, String(value));
+}
+
+function readComments(item: Listing) {
+  if (typeof window === "undefined") return item.comments ?? [];
+  try {
+    const stored = localStorage.getItem(`agrolink:feed:${item.id}:comments`);
+    if (!stored) return item.comments ?? [];
+    const parsed = JSON.parse(stored) as FeedComment[];
+    return Array.isArray(parsed) ? parsed : item.comments ?? [];
+  } catch {
+    return item.comments ?? [];
+  }
+}
+
+function writeComments(id: string, comments: FeedComment[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(`agrolink:feed:${id}:comments`, JSON.stringify(comments));
 }
