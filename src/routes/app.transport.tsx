@@ -17,12 +17,12 @@ function TransportOverview() {
   if (pathname !== "/app/transport") return <Outlet />;
 
   const [jobs, setJobs] = useState(transportJobs);
-  const active = jobs.find((j) => j.status === "active");
+  const active = jobs.find((j) => j.status === "accepted" || j.status === "picked_up");
   const available = jobs.filter((j) => j.status === "available");
 
   const acceptJob = (id: string) => {
     const job = jobs.find((j) => j.id === id);
-    setJobs((curr) => curr.map((j) => (j.id === id ? { ...j, status: "active" } : j)));
+    setJobs((curr) => curr.map((j) => (j.id === id ? { ...j, status: "accepted" } : j)));
     toast.success("Job accepted", { description: job ? `${job.from} → ${job.to}` : id });
   };
 
