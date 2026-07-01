@@ -12,8 +12,16 @@ export const Route = createFileRoute("/app/transport/jobs")({
 
 const STATUS_TONE: Record<TransportJob["status"], string> = {
   available: "text-emerald-600 dark:text-emerald-400",
-  active: "text-primary",
+  accepted: "text-primary",
+  picked_up: "text-blue-600 dark:text-blue-400",
   completed: "text-muted-foreground",
+};
+
+const STATUS_LABEL: Record<TransportJob["status"], string> = {
+  available: "Available",
+  accepted: "Accepted",
+  picked_up: "Picked up",
+  completed: "Delivered",
 };
 
 function Jobs() {
@@ -35,7 +43,7 @@ function Jobs() {
         sub="Accept, pick up, and earn same-day on MoMo."
         action={
           <div className="flex gap-2">
-            {(["all", "available", "active", "completed"] as const).map((f) => (
+            {(["all", "available", "accepted", "picked_up", "completed"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -43,7 +51,7 @@ function Jobs() {
                   filter === f ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {f}
+                  {f === "all" ? "All" : STATUS_LABEL[f]}
               </button>
             ))}
           </div>
@@ -55,7 +63,7 @@ function Jobs() {
             <div className="min-w-0">
               <div className="flex items-center gap-3 text-xs uppercase tracking-widest">
                 <span className="font-mono text-primary/80">{j.id}</span>
-                <span className={STATUS_TONE[j.status]}>{j.status}</span>
+                <span className={STATUS_TONE[j.status]}>{STATUS_LABEL[j.status]}</span>
               </div>
               <h3 className="mt-1 font-serif text-xl">{j.payload}</h3>
               <div className="mt-2 inline-flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -70,16 +78,21 @@ function Jobs() {
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Paid on MoMo</div>
               </div>
               {j.status === "available" && (
-                <button onClick={() => setStatus(j.id, "active")} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700">
+                <button onClick={() => setStatus(j.id, "accepted")} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700">
                   <Check className="h-4 w-4" /> Accept
                 </button>
               )}
-              {j.status === "active" && (
+              {j.status === "accepted" && (
                 <>
-                  <button onClick={() => setStatus(j.id, "completed")} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90">
-                    <Package className="h-4 w-4" /> Mark delivered
+                  <button onClick={() => setStatus(j.id, "picked_up")} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90">
+                    <Package className="h-4 w-4" /> Mark picked up
                   </button>
                 </>
+              )}
+              {j.status === "picked_up" && (
+                <button onClick={() => setStatus(j.id, "completed")} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
+                  <Truck className="h-4 w-4" /> Mark delivered
+                </button>
               )}
               {j.status === "completed" && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs text-emerald-700 dark:text-emerald-300">
