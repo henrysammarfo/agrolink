@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Package, Truck, Check, Clock } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { FarmerGate } from "@/components/app/RoleGate";
 import { StatusBadge } from "./app.buyer";
@@ -26,12 +27,14 @@ function FarmerOrders() {
     setOrders((curr) => curr.map((o) => {
       if (o.id !== id) return o;
       const n = NEXT[o.status];
+      if (n) toast.success(n.label, { description: `${o.id} · ${o.items}` });
       return n ? { ...o, status: n.next as typeof o.status } : o;
     }));
   };
 
   const decline = (id: string) => {
     setOrders((curr) => curr.map((o) => o.id === id ? { ...o, status: "cancelled" } : o));
+    toast.error("Order declined", { description: id });
   };
 
   return (
