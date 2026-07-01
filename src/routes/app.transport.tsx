@@ -1,5 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import { MapPin, Truck, Clock, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { TransportGate } from "@/components/app/RoleGate";
 import { transportJobs } from "@/lib/mock-data";
@@ -14,8 +16,15 @@ function TransportOverview() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   if (pathname !== "/app/transport") return <Outlet />;
 
-  const active = transportJobs.find((j) => j.status === "active");
-  const available = transportJobs.filter((j) => j.status === "available");
+  const [jobs, setJobs] = useState(transportJobs);
+  const active = jobs.find((j) => j.status === "active");
+  const available = jobs.filter((j) => j.status === "available");
+
+  const acceptJob = (id: string) => {
+    const job = jobs.find((j) => j.id === id);
+    setJobs((curr) => curr.map((j) => (j.id === id ? { ...j, status: "active" } : j)));
+    toast.success("Job accepted", { description: job ? `${job.from} → ${job.to}` : id });
+  };
 
   return (
     <TransportGate>
@@ -89,7 +98,7 @@ function TransportOverview() {
                 <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> {j.distanceKm} km</span>
                 <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {j.windowLabel}</span>
               </div>
-              <button className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-2.5 text-sm font-medium text-background">Accept job</button>
+              <button onClick={() => acceptJob(j.id)} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-2.5 text-sm font-medium text-background">Accept job</button>
             </div>
           ))}
         </div>
