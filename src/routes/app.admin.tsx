@@ -1,41 +1,13 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ShieldCheck, AlertTriangle, CreditCard, ListChecks, ArrowRight } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
-import { useAuth } from "@/lib/auth";
-import { Loader2 } from "lucide-react";
+import { AdminGate } from "@/components/app/RoleGate";
 import { adminPayments, disputes, listingReports } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin · AgroLink" }] }),
   component: AdminOverview,
 });
-
-export function AdminGate({ children }: { children: React.ReactNode }) {
-  const { roles, loading } = useAuth();
-  const navigate = useNavigate();
-  const isAdmin = roles.includes("admin");
-
-  useEffect(() => {
-    if (!loading && !isAdmin) navigate({ to: "/app/buyer" });
-  }, [loading, isAdmin, navigate]);
-
-  if (loading) {
-    return <div className="grid min-h-screen place-items-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
-  }
-  if (!isAdmin) {
-    return (
-      <AppShell role="buyer">
-        <div className="rounded-3xl border border-amber-300 bg-amber-50 p-8 text-center dark:bg-amber-950/30">
-          <ShieldCheck className="mx-auto h-10 w-10 text-amber-600" />
-          <h2 className="mt-3 font-serif text-2xl">Admin only</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Your account doesn't have admin access. Ask an existing admin to grant the role.</p>
-        </div>
-      </AppShell>
-    );
-  }
-  return <>{children}</>;
-}
 
 function AdminOverview() {
   const openDisputes = disputes.filter((d) => d.status === "open" || d.status === "investigating").length;
