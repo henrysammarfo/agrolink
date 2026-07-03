@@ -6,6 +6,7 @@ import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { AdminGate } from "@/components/app/RoleGate";
 import { adminPayments as seed, type AdminPayment } from "@/lib/mock-data";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { withAutoRetry } from "@/lib/with-retry";
 
 export const Route = createFileRoute("/app/admin/payments")({
   head: () => ({ meta: [{ title: "Payments · Admin · AgroLink" }] }),
@@ -36,28 +37,24 @@ function AdminPayments() {
 
   const runAction = async () => {
     if (!action) return;
-    try {
-      await simulateAdminAction(note);
-      setItems((curr) => curr.map((p) => {
-        if (p.id !== action.payment.id) return p;
-        if (action.kind === "release") return { ...p, status: "captured" };
-        if (action.kind === "refund") return { ...p, status: "refunded" };
-        return { ...p, status: "captured" };
-      }));
-      const msg = action.kind === "release"
-        ? `Released GHS ${action.payment.amountGhs} to ${action.payment.farmer}`
-        : action.kind === "refund"
-        ? `Refunded GHS ${action.payment.amountGhs} to ${action.payment.buyer}`
-        : `Retried payment ${action.payment.ref}`;
-      toast.success(msg, { description: note || `Ref ${action.payment.ref}` });
-      setNote("");
-    } catch (error) {
-      toast.error("Payment action failed", {
-        description: error instanceof Error ? error.message : "Please retry the action.",
-        action: { label: "Retry", onClick: () => void runAction() },
-      });
-      throw error;
-    }
+    const labelMap = { release: "Release funds", refund: "Refund buyer", retry: "Retry charge" } as const;
+    await withAutoRetry(() => simulateAdminAction(note), {
+      label: labelMap[action.kind],
+      onManualRetry: () => void runAction(),
+    });
+    setItems((curr) => curr.map((p) => {
+      if (p.id !== action.payment.id) return p;
+      if (action.kind === "release") return { ...p, status: "captured" };
+      if (action.kind === "refund") return { ...p, status: "refunded" };
+      return { ...p, status: "captured" };
+    }));
+    const msg = action.kind === "release"
+      ? `Released GHS ${action.payment.amountGhs} to ${action.payment.farmer}`
+      : action.kind === "refund"
+      ? `Refunded GHS ${action.payment.amountGhs} to ${action.payment.buyer}`
+      : `Retried payment ${action.payment.ref}`;
+    toast.success(msg, { description: note || `Ref ${action.payment.ref}` });
+    setNote("");
   };
 
   const labels = {

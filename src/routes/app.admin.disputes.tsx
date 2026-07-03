@@ -9,6 +9,7 @@ import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { AdminGate } from "@/components/app/RoleGate";
 import { disputes as seed, type Dispute, type DisputeEvent } from "@/lib/mock-data";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { withAutoRetry } from "@/lib/with-retry";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -92,25 +93,21 @@ function AdminDisputes() {
       toast.error("Resolution note required", { description: "Add a short reason before refunding the buyer." });
       throw new Error("Resolution note required");
     }
-    try {
-      await simulateAdminAction(reason);
-      const labelMap = { investigating: "Marked as investigating", resolved: "Refund issued · buyer notified", rejected: "Dispute rejected" } as const;
-      const kindMap = { investigating: "status" as const, resolved: "resolved" as const, rejected: "rejected" as const };
-      appendEvent(pending.id, {
-        at: "Just now",
-        actor: "Admin · You",
-        kind: kindMap[pending.next],
-        text: reason || labelMap[pending.next],
-      }, pending.next);
-      toast.success(labelMap[pending.next], { description: reason || `Dispute ${pending.id} updated` });
-      setReason("");
-    } catch (error) {
-      toast.error("Dispute action failed", {
-        description: error instanceof Error ? error.message : "Please retry the action.",
-        action: { label: "Retry", onClick: () => void confirmStatus() },
-      });
-      throw error;
-    }
+    const actionLabel = { investigating: "Investigate", resolved: "Refund buyer", rejected: "Reject dispute" }[pending.next];
+    await withAutoRetry(() => simulateAdminAction(reason), {
+      label: actionLabel,
+      onManualRetry: () => void confirmStatus(),
+    });
+    const labelMap = { investigating: "Marked as investigating", resolved: "Refund issued · buyer notified", rejected: "Dispute rejected" } as const;
+    const kindMap = { investigating: "status" as const, resolved: "resolved" as const, rejected: "rejected" as const };
+    appendEvent(pending.id, {
+      at: "Just now",
+      actor: "Admin · You",
+      kind: kindMap[pending.next],
+      text: reason || labelMap[pending.next],
+    }, pending.next);
+    toast.success(labelMap[pending.next], { description: reason || `Dispute ${pending.id} updated` });
+    setReason("");
   };
 
   const pendingMeta = pending && {
