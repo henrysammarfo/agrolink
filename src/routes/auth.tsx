@@ -103,6 +103,32 @@ function Auth() {
           </button>
 
           <div className="my-6 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+            <span className="h-px flex-1 bg-border" /> or explore the demo <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="mb-6 grid grid-cols-2 gap-2">
+            {([
+              { k: "buyer",     l: "Buyer",  to: "/app/buyer",     icon: ShoppingBasket, hint: "Browse & order" },
+              { k: "farmer",    l: "Farmer", to: "/app/farmer",    icon: Tractor,        hint: "Post & sell" },
+              { k: "transport", l: "Driver", to: "/app/transport", icon: Truck,          hint: "Accept jobs" },
+              { k: "admin",     l: "Admin",  to: "/app/admin",     icon: ArrowRight,     hint: "Moderate" },
+            ] as const).map((r) => (
+              <button
+                key={r.k}
+                type="button"
+                onClick={() => navigate({ to: r.to })}
+                className="group flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left text-sm hover:border-primary hover:bg-primary/5 transition"
+              >
+                <r.icon className="h-4 w-4 text-primary" />
+                <div className="min-w-0">
+                  <div className="font-medium text-foreground">Try as {r.l}</div>
+                  <div className="text-[11px] text-muted-foreground">{r.hint}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="my-6 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
             <span className="h-px flex-1 bg-border" /> or {mode === "signin" ? "sign in" : "sign up"} with email <span className="h-px flex-1 bg-border" />
           </div>
 

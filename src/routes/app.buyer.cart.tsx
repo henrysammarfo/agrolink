@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet } from "lucide-react";
 import { useState } from "react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/app/buyer/cart")({
 const DEMO_MODE = true;
 
 function Cart() {
+  const navigate = useNavigate();
   const [items, setItems] = useState(listings.slice(0, 3).map((l) => ({ ...l, qty: 5 })));
   const [channel, setChannel] = useState("MTN MoMo");
   const [paying, setPaying] = useState(false);
@@ -108,7 +109,13 @@ function Cart() {
             <div className="mt-8 rounded-2xl border border-primary/40 bg-primary/10 p-5 text-center">
               <ShieldCheck className="mx-auto h-6 w-6 text-primary" />
               <p className="mt-2 font-serif text-xl">Demo payment confirmed</p>
-              <p className="mt-1 text-xs text-muted-foreground">Your order is being prepared.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Paid GHS {total} via {channel}. Order is being prepared.</p>
+              <button
+                onClick={() => navigate({ to: "/app/buyer/orders" })}
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-xs font-medium text-background hover:bg-foreground/90"
+              >
+                Track order <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             </div>
           )}
           <p className="mt-4 inline-flex w-full items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
