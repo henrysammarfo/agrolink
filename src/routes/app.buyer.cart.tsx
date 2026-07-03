@@ -12,6 +12,7 @@ export const Route = createFileRoute("/app/buyer/cart")({
 const DEMO_MODE = true;
 
 function Cart() {
+  const navigate = useNavigate();
   const [items, setItems] = useState(listings.slice(0, 3).map((l) => ({ ...l, qty: 5 })));
   const [channel, setChannel] = useState("MTN MoMo");
   const [paying, setPaying] = useState(false);
