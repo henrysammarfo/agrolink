@@ -29,6 +29,8 @@ import { Route as AppFarmerRouteImport } from './routes/app.farmer'
 import { Route as AppCreateRouteImport } from './routes/app.create'
 import { Route as AppBuyerRouteImport } from './routes/app.buyer'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
+import { Route as ApiModerateRouteImport } from './routes/api/moderate'
+import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as AppTransportJobsRouteImport } from './routes/app.transport.jobs'
 import { Route as AppFarmerPayoutsRouteImport } from './routes/app.farmer.payouts'
 import { Route as AppFarmerOrdersRouteImport } from './routes/app.farmer.orders'
@@ -39,6 +41,7 @@ import { Route as AppBuyerCartRouteImport } from './routes/app.buyer.cart'
 import { Route as AppAdminPaymentsRouteImport } from './routes/app.admin.payments'
 import { Route as AppAdminListingsRouteImport } from './routes/app.admin.listings'
 import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
+import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks/paystack'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -140,6 +143,16 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiModerateRoute = ApiModerateRouteImport.update({
+  id: '/api/moderate',
+  path: '/api/moderate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
+  id: '/api/checkout',
+  path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppTransportJobsRoute = AppTransportJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -190,6 +203,11 @@ const AppAdminDisputesRoute = AppAdminDisputesRouteImport.update({
   path: '/disputes',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const ApiWebhooksPaystackRoute = ApiWebhooksPaystackRouteImport.update({
+  id: '/api/webhooks/paystack',
+  path: '/api/webhooks/paystack',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -202,6 +220,8 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/buyer': typeof AppBuyerRouteWithChildren
   '/app/create': typeof AppCreateRoute
@@ -212,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
@@ -233,6 +254,8 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/buyer': typeof AppBuyerRouteWithChildren
   '/app/create': typeof AppCreateRoute
@@ -243,6 +266,7 @@ export interface FileRoutesByTo {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app': typeof AppIndexRoute
+  '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
@@ -266,6 +290,8 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/buyer': typeof AppBuyerRouteWithChildren
   '/app/create': typeof AppCreateRoute
@@ -276,6 +302,7 @@ export interface FileRoutesById {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
@@ -300,6 +327,8 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/market'
     | '/pricing'
+    | '/api/checkout'
+    | '/api/moderate'
     | '/app/admin'
     | '/app/buyer'
     | '/app/create'
@@ -310,6 +339,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
     | '/app/admin/payments'
@@ -331,6 +361,8 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/market'
     | '/pricing'
+    | '/api/checkout'
+    | '/api/moderate'
     | '/app/admin'
     | '/app/buyer'
     | '/app/create'
@@ -341,6 +373,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app'
+    | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
     | '/app/admin/payments'
@@ -363,6 +396,8 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/market'
     | '/pricing'
+    | '/api/checkout'
+    | '/api/moderate'
     | '/app/admin'
     | '/app/buyer'
     | '/app/create'
@@ -373,6 +408,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
     | '/app/admin/payments'
@@ -396,6 +432,9 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   MarketRoute: typeof MarketRoute
   PricingRoute: typeof PricingRoute
+  ApiCheckoutRoute: typeof ApiCheckoutRoute
+  ApiModerateRoute: typeof ApiModerateRoute
+  ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -540,6 +579,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/moderate': {
+      id: '/api/moderate'
+      path: '/api/moderate'
+      fullPath: '/api/moderate'
+      preLoaderRoute: typeof ApiModerateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/checkout': {
+      id: '/api/checkout'
+      path: '/api/checkout'
+      fullPath: '/api/checkout'
+      preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/transport/jobs': {
       id: '/app/transport/jobs'
       path: '/jobs'
@@ -609,6 +662,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/admin/disputes'
       preLoaderRoute: typeof AppAdminDisputesRouteImport
       parentRoute: typeof AppAdminRoute
+    }
+    '/api/webhooks/paystack': {
+      id: '/api/webhooks/paystack'
+      path: '/api/webhooks/paystack'
+      fullPath: '/api/webhooks/paystack'
+      preLoaderRoute: typeof ApiWebhooksPaystackRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -721,7 +781,20 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   MarketRoute: MarketRoute,
   PricingRoute: PricingRoute,
+  ApiCheckoutRoute: ApiCheckoutRoute,
+  ApiModerateRoute: ApiModerateRoute,
+  ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

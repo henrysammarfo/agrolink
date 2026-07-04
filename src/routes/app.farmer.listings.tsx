@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Plus, Edit3, Trash2, Eye, Heart, MessageCircle } from "lucide-react";
+import { Plus, Trash2, Eye, Heart, MessageCircle, Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { FarmerGate } from "@/components/app/RoleGate";
-import { listings, type Listing } from "@/lib/mock-data";
+import { useAuth } from "@/lib/auth";
+import { useSellerListings } from "@/hooks/use-marketplace";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/farmer/listings")({
@@ -12,120 +13,120 @@ export const Route = createFileRoute("/app/farmer/listings")({
 });
 
 function Listings() {
-  const [items, setItems] = useState<Listing[]>(() => readSellerListings());
+  const { user } = useAuth();
+  const { data: items = [], isLoading, refetch } = useSellerListings(user?.id);
 
-  const totals = useMemo(() => ({
-    views: items.reduce((s, l) => s + (l.views ?? 0), 0),
-    likes: items.reduce((s, l) => s + (l.likes ?? 0), 0),
-    comments: items.reduce((s, l) => s + (l.comments?.length ?? 0), 0),
-  }), [items]);
+  const totals = {
+    views: items.reduce((s, l) => s + (l.view_count ?? 0), 0),
+    likes: items.reduce((s, l) => s + (l.like_count ?? 0), 0),
+    comments: items.reduce((s, l) => s + (l.comment_count ?? 0), 0),
+  };
 
-  const remove = (id: string) => {
-    setItems((curr) => {
-      const next = curr.filter((l) => l.id !== id);
-      saveSellerListings(next.filter((l) => !listings.some((seed) => seed.id === l.id)));
-      saveRemovedListing(id);
-      return next;
-    });
-    toast.success("Listing removed from seller catalog");
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("listings").update({ status: "inactive" }).eq("id", id);
+    if (error) {
+      toast.error("Could not remove listing");
+      return;
+    }
+    toast.success("Listing removed");
+    refetch();
   };
 
   return (
     <FarmerGate>
-    <AppShell role="farmer">
-      <PageHeader
-        eyebrow="Catalog"
-        title="Your"
-        italic="listings"
-        sub="Edit prices, restock, or pull listings out of the feed."
-        action={
-          <Link to="/app/create" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            <Plus className="h-4 w-4" /> New listing
-          </Link>
-        }
-      />
-
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <MiniStat icon={Eye} label="Views" value={totals.views.toLocaleString()} />
-        <MiniStat icon={Heart} label="Likes" value={totals.likes.toLocaleString()} />
-        <MiniStat icon={MessageCircle} label="Comments" value={totals.comments.toLocaleString()} />
-      </div>
-
-      <div className="overflow-hidden rounded-3xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-xs uppercase tracking-widest text-muted-foreground">
-            <tr>
-              <th className="px-5 py-4 text-left">Produce</th>
-              <th className="px-5 py-4 text-left">Available</th>
-              <th className="px-5 py-4 text-left">Price</th>
-              <th className="px-5 py-4 text-left">Posted</th>
-              <th className="px-5 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+      <AppShell role="farmer">
+        <PageHeader
+          eyebrow="Catalog"
+          title="Your"
+          italic="listings"
+          sub="Edit prices, restock, or pull listings out of the feed."
+          action={
+            <Link
+              to="/app/create"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+            >
+              <Plus className="h-4 w-4" /> New listing
+            </Link>
+          }
+        />
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          <MiniStat icon={Eye} label="Views" value={totals.views.toLocaleString()} />
+          <MiniStat icon={Heart} label="Likes" value={totals.likes.toLocaleString()} />
+          <MiniStat
+            icon={MessageCircle}
+            label="Comments"
+            value={totals.comments.toLocaleString()}
+          />
+        </div>
+        {isLoading ? (
+          <div className="grid place-items-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((l) => (
-              <tr key={l.id} className="hover:bg-background/40 transition">
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg">
-                      <img src={l.image} alt="" className="h-full w-full object-cover" loading="lazy" />
-                    </div>
-                    <div>
-                      <div className="font-medium">{l.produce}</div>
-                      <div className="text-xs text-muted-foreground">{l.id}</div>
-                    </div>
+              <article
+                key={l.id}
+                className="overflow-hidden rounded-3xl border border-border bg-card"
+              >
+                <div className="aspect-[4/5] relative bg-muted">
+                  {l.image_url && (
+                    <img
+                      src={l.image_url}
+                      alt={l.title}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  )}
+                  <span className="absolute left-3 top-3 rounded-full bg-background/90 px-2 py-0.5 text-[10px] uppercase tracking-widest">
+                    {l.status}
+                  </span>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-serif text-xl">{l.title}</h3>
+                  <p className="mt-1 text-sm text-primary">
+                    GHS {l.price_per_unit}/{l.unit} · {l.quantity}
+                    {l.unit}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{l.location_name}</p>
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      onClick={() => remove(l.id)}
+                      className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-destructive hover:bg-destructive/5"
+                    >
+                      <Trash2 className="h-3 w-3" /> Remove
+                    </button>
                   </div>
-                </td>
-                <td className="px-5 py-4">{l.quantityKg} kg</td>
-                <td className="px-5 py-4 text-primary">GHS {l.pricePerKg}/kg</td>
-                <td className="px-5 py-4 text-muted-foreground">{l.postedHoursAgo}h ago</td>
-                <td className="px-5 py-4 text-right">
-                  <div className="inline-flex gap-2">
-                    <button onClick={() => toast.message("Edit draft opened", { description: l.produce })} className="grid h-9 w-9 place-items-center rounded-full border border-border hover:border-primary/40"><Edit3 className="h-4 w-4" /></button>
-                    <button onClick={() => remove(l.id)} className="grid h-9 w-9 place-items-center rounded-full border border-border hover:border-destructive/60 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                </td>
-              </tr>
+                </div>
+              </article>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </AppShell>
+            {items.length === 0 && (
+              <div className="col-span-full rounded-3xl border border-dashed border-border p-12 text-center text-muted-foreground">
+                No listings yet. Tap + to post your first produce.
+              </div>
+            )}
+          </div>
+        )}
+      </AppShell>
     </FarmerGate>
   );
 }
 
-function MiniStat({ icon: Icon, label, value }: { icon: typeof Eye; label: string; value: string }) {
+function MiniStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Eye;
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground"><Icon className="h-3.5 w-3.5 text-primary" /> {label}</div>
-      <div className="mt-2 font-serif text-3xl text-foreground">{value}</div>
+    <div className="rounded-2xl border border-border bg-card p-4 flex items-center gap-3">
+      <Icon className="h-5 w-5 text-primary" />
+      <div>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+        <div className="font-serif text-2xl">{value}</div>
+      </div>
     </div>
   );
-}
-
-function readSellerListings(): Listing[] {
-  if (typeof window === "undefined") return listings;
-  try {
-    const local = JSON.parse(localStorage.getItem("agrolink:created-listings:v1") || "[]") as Listing[];
-    const removed = JSON.parse(localStorage.getItem("agrolink:removed-listings:v1") || "[]") as string[];
-    return [...local, ...listings.filter((l) => !removed.includes(l.id))];
-  } catch {
-    return listings;
-  }
-}
-
-function saveSellerListings(items: Listing[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("agrolink:created-listings:v1", JSON.stringify(items));
-}
-
-function saveRemovedListing(id: string) {
-  if (typeof window === "undefined") return;
-  try {
-    const current = JSON.parse(localStorage.getItem("agrolink:removed-listings:v1") || "[]") as string[];
-    localStorage.setItem("agrolink:removed-listings:v1", JSON.stringify(Array.from(new Set([...current, id]))));
-  } catch {
-    localStorage.setItem("agrolink:removed-listings:v1", JSON.stringify([id]));
-  }
 }

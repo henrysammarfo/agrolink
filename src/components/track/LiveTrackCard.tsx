@@ -1,62 +1,117 @@
 import { useEffect, useState } from "react";
-import { Phone, MessageCircle, Shield, Star, Navigation, Clock } from "lucide-react";
-import { CorridorMap, TRACK_PINS, TRACK_ROUTE } from "@/components/map/CorridorMap";
-import type { TrackedOrder } from "@/lib/mock-data";
-import { FULFILLMENT_FLOW } from "@/lib/mock-data";
+import { Phone, MessageCircle, Clock, Navigation, Loader2 } from "lucide-react";
+import { CorridorMap } from "@/components/map/CorridorMap";
+import { fetchOsrmRoute } from "@/lib/api/driver";
+import { subscribeToDelivery, subscribeToDriverLocation } from "@/lib/api/orders";
+import type { OrderRow } from "@/lib/types/marketplace";
 
-export function LiveTrackCard({ order }: { order: TrackedOrder }) {
-  const [progress, setProgress] = useState(0);
-  const currentIndex = FULFILLMENT_FLOW.findIndex((s) => s.step === order.currentStep);
+const STATUS_STEPS = ["confirmed", "processing", "dispatched", "delivered"] as const;
 
-  // fake ETA countdown that eases with progress
-  const [etaMin, setEtaMin] = useState(14);
+export function LiveTrackCard({ order }: { order: OrderRow }) {
+  const delivery = order.delivery;
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [etaMin, setEtaMin] = useState<number | null>(null);
+
   useEffect(() => {
-    setEtaMin(Math.max(1, Math.round(14 * (1 - progress))));
-  }, [progress]);
+    if (!delivery) return;
+    fetchOsrmRoute(
+      { lat: delivery.pickup_lat, lng: delivery.pickup_lng },
+      { lat: delivery.delivery_lat, lng: delivery.delivery_lng },
+    ).then((r) => {
+      if (r) {
+        setRouteCoords(r.coordinates);
+        setEtaMin(Math.round(r.duration_min));
+      }
+    });
+  }, [delivery?.id]);
+
+  useEffect(() => {
+    if (!delivery?.id) return;
+    return subscribeToDelivery(delivery.id, (updated) => {
+      if (updated.driver_id && delivery.driver?.current_lat) {
+        setDriverPos({ lat: delivery.driver.current_lat!, lng: delivery.driver.current_lng! });
+      }
+    });
+  }, [delivery?.id]);
+
+  useEffect(() => {
+    if (!delivery?.driver_id) return;
+    return subscribeToDriverLocation(delivery.driver_id, (pos) => setDriverPos(pos));
+  }, [delivery?.driver_id]);
+
+  if (!delivery) {
+    return (
+      <div className="rounded-3xl border border-border bg-card p-8 text-center text-muted-foreground">
+        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+        <p className="mt-3 text-sm">Preparing delivery…</p>
+      </div>
+    );
+  }
+
+  const pins = [
+    { lat: delivery.pickup_lat, lng: delivery.pickup_lng, label: "Farm", kind: "farm" as const },
+    {
+      lat: delivery.delivery_lat,
+      lng: delivery.delivery_lng,
+      label: "You",
+      kind: "buyer" as const,
+    },
+    ...(driverPos
+      ? [{ lat: driverPos.lat, lng: driverPos.lng, label: "Driver", kind: "driver" as const }]
+      : []),
+  ];
+
+  const currentIndex = STATUS_STEPS.indexOf(order.status as (typeof STATUS_STEPS)[number]);
+  const progress = currentIndex >= 0 ? (currentIndex + 1) / STATUS_STEPS.length : 0.25;
 
   return (
     <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
       <div className="relative h-[280px] md:h-[340px]">
-        <CorridorMap
-          pins={TRACK_PINS}
-          route={TRACK_ROUTE}
-          animateDriver={!!order.driver}
-          driverLabel={order.driver ?? "Driver"}
-          onProgress={setProgress}
-        />
-        {/* Top pill */}
+        <CorridorMap pins={pins} route={routeCoords} animateDriver={false} driverLabel="Driver" />
         <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-4">
           <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-background/95 px-4 py-2 text-xs shadow-lg backdrop-blur">
-            <span className="grid h-2 w-2 place-items-center rounded-full bg-emerald-500">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-            </span>
-            <span className="font-medium">{order.driver ? "Driver en route" : "Awaiting driver"}</span>
-            <span className="text-muted-foreground">·</span>
-            <span className="inline-flex items-center gap-1 text-muted-foreground"><Clock className="h-3 w-3" /> {etaMin} min</span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+            <span className="font-medium">{delivery.status.replace(/_/g, " ")}</span>
+            {etaMin != null && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <span className="inline-flex items-center gap-1 text-muted-foreground">
+                  <Clock className="h-3 w-3" /> ~{etaMin} min
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Bottom sheet, Uber/Bolt style */}
       <div className="p-5 md:p-6">
         <div className="flex items-center gap-4">
           <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary/15 font-serif text-xl text-primary">
-            {(order.driver ?? order.farmer)[0]}
+            {(delivery.driver?.profile?.display_name ?? "D")[0]}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase tracking-widest text-primary/80">{order.id}</div>
-            <div className="truncate font-serif text-xl">{order.driver ?? order.farmer}</div>
-            <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1 text-amber-500"><Star className="h-3 w-3 fill-current" /> 4.9</span>
-              <span>·</span>
-              <span>Toyota Hilux · GT-4821-22</span>
+            <div className="text-[10px] uppercase tracking-widest text-primary/80">
+              {order.id.slice(0, 8)}
+            </div>
+            <div className="truncate font-serif text-xl">
+              {delivery.driver?.profile?.display_name ?? "Finding driver…"}
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              {delivery.driver?.vehicle_type ?? "Vehicle"} · {delivery.driver?.plate_number ?? "—"}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white hover:bg-emerald-600" aria-label="Call">
+            <button
+              className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white"
+              aria-label="Call"
+            >
               <Phone className="h-4 w-4" />
             </button>
-            <button className="grid h-11 w-11 place-items-center rounded-full border border-border text-foreground hover:bg-background" aria-label="Message">
+            <button
+              className="grid h-11 w-11 place-items-center rounded-full border border-border"
+              aria-label="Message"
+            >
               <MessageCircle className="h-4 w-4" />
             </button>
           </div>
@@ -64,8 +119,11 @@ export function LiveTrackCard({ order }: { order: TrackedOrder }) {
 
         <div className="mt-5 rounded-2xl bg-background p-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><Navigation className="h-3 w-3 text-primary" /> Farm → your address</span>
-            <span>{Math.round(progress * 100)}% complete</span>
+            <span className="inline-flex items-center gap-1">
+              <Navigation className="h-3 w-3 text-primary" /> {delivery.pickup_address} →{" "}
+              {delivery.delivery_address}
+            </span>
+            <span>{Math.round(progress * 100)}%</span>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
             <div
@@ -73,30 +131,13 @@ export function LiveTrackCard({ order }: { order: TrackedOrder }) {
               style={{ width: `${Math.max(6, progress * 100)}%` }}
             />
           </div>
-          <div className="mt-4 grid grid-cols-6 gap-1">
-            {FULFILLMENT_FLOW.map((s, i) => {
-              const done = i <= currentIndex;
-              return (
-                <div key={s.step} className="flex flex-col items-center gap-1">
-                  <span className={`h-1.5 w-full rounded-full ${done ? "bg-primary" : "bg-border"}`} />
-                  <span className={`text-[9px] uppercase tracking-wider ${done ? "text-foreground" : "text-muted-foreground"}`}>{s.label}</span>
-                </div>
-              );
-            })}
-          </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-sm">
-            <div className="text-muted-foreground">{order.items}</div>
-            <div className="mt-0.5 font-serif text-2xl text-primary">GHS {order.totalGhs}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <a href={order.receiptUrl} className="rounded-full border border-border px-4 py-2 text-xs hover:bg-background">Receipt</a>
-            <button className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-4 py-2 text-xs text-rose-600 hover:bg-rose-500/20">
-              <Shield className="h-3 w-3" /> Safety
-            </button>
-          </div>
+        <div className="mt-5 flex items-center justify-between">
+          <div className="font-serif text-2xl text-primary">GHS {order.total_amount}</div>
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">
+            {order.payment_status}
+          </span>
         </div>
       </div>
     </div>

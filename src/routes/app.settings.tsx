@@ -21,9 +21,9 @@ function Settings() {
   const enableRole = async (next: Exclude<AppRole, "admin">) => {
     try {
       await addRole(next);
-      toast.success(`${next === "transport" ? "Driver" : next === "farmer" ? "Seller" : "Buyer"} access enabled`);
+      toast.success(`${next === "transport" ? "Drive" : next === "farmer" ? "Sell" : "Shop"} mode enabled`);
     } catch (error) {
-      toast.error("Could not update role", { description: error instanceof Error ? error.message : "Please try again." });
+      toast.error("Could not update mode", { description: error instanceof Error ? error.message : "Please try again." });
     }
   };
 
@@ -40,11 +40,12 @@ function Settings() {
         </Card>
 
         <Card title="Workspaces">
+          <p className="text-sm text-muted-foreground mb-4">Like TikTok — one account, switch modes anytime.</p>
           <div className="grid gap-3 sm:grid-cols-3">
             {([
-              ["buyer", "Buyer", "Shop and track orders"],
-              ["farmer", "Seller", "Post produce and fulfill orders"],
-              ["transport", "Driver", "Accept logistics jobs"],
+              ["buyer", "Shop", "Browse feed and buy produce"],
+              ["farmer", "Sell", "Post listings and fulfill orders"],
+              ["transport", "Drive", "Accept delivery jobs"],
             ] as const).map(([key, label, desc]) => {
               const active = roles.includes(key);
               return (
