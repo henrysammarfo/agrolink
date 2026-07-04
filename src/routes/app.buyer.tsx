@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
-import { OrderTracker } from "@/components/order/OrderTracker";
+import { LiveTrackCard } from "@/components/track/LiveTrackCard";
 import { buyerOrders, listings, trackedOrders } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/app/buyer")({
@@ -38,7 +38,7 @@ function BuyerOverview() {
           </Link>
         </div>
         <div className="space-y-5">
-          {trackedOrders.map((o) => <OrderTracker key={o.id} order={o} />)}
+          {trackedOrders.slice(0, 1).map((o) => <LiveTrackCard key={o.id} order={o} />)}
         </div>
       </section>
 
