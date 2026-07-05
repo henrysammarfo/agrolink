@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { useAuth, type AppRole } from "@/lib/auth";
+import { registerForPushNotifications } from "@/lib/push-client";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({ meta: [{ title: "Settings · AgroLink" }] }),
@@ -17,6 +18,15 @@ function Settings() {
   const { theme, setTheme } = useTheme();
   const { roles, addRole, profile, user } = useAuth();
   const role = roles.includes("admin") ? "admin" : roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
+
+  const onPushToggle = async (enabled: boolean) => {
+    setPush(enabled);
+    if (enabled && user?.id) {
+      const ok = await registerForPushNotifications(user.id);
+      if (ok) toast.success("Push enabled — you'll get Bolt-style job alerts");
+      else toast.error("Allow notifications in browser settings");
+    }
+  };
 
   const enableRole = async (next: Exclude<AppRole, "admin">) => {
     try {
@@ -69,7 +79,7 @@ function Settings() {
 
         <Card title="Notifications">
           <Toggle label="WhatsApp updates" desc="Order status, dispatch and payment alerts." value={whatsapp} onChange={setWhatsapp} />
-          <Toggle label="Push notifications" desc="Mobile app push." value={push} onChange={setPush} />
+          <Toggle label="Push notifications" desc="Driver job alerts (Bolt/Yango-style ping)." value={push} onChange={onPushToggle} />
           <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={setMarketing} />
         </Card>
 

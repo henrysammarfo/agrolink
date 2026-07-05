@@ -132,10 +132,10 @@ export function useFeedTeaser(limit = 6) {
   });
 }
 
-export function useProfileStats(userId?: string) {
+export function useProfileStats(userId?: string, slug?: string) {
   return useQuery({
-    queryKey: ["profile-stats", userId],
-    queryFn: () => fetchProfileStats(userId!),
+    queryKey: ["profile-stats", userId, slug],
+    queryFn: () => fetchProfileStats(userId!, slug),
     enabled: !!userId,
   });
 }

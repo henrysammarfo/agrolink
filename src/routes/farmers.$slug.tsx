@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft, BadgeCheck, MapPin, MessageCircle, Share2, UserPlus, Grid3x3, Play, Loader2,
+  ArrowLeft, BadgeCheck, MapPin, MessageCircle, Share2, UserPlus, UserCheck, Grid3x3, Play, Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { fetchListingsBySlug } from "@/lib/api/listings";
 import { fetchProfileStats } from "@/lib/api/profiles";
+import { toggleFollow, fetchIsFollowing } from "@/lib/api/engagement";
+import { useAuth } from "@/lib/auth";
 import { MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
 
 export const Route = createFileRoute("/farmers/$slug")({
@@ -18,7 +20,9 @@ export const Route = createFileRoute("/farmers/$slug")({
 
 function FarmerProfile() {
   const { slug } = Route.useParams();
-  const [tab, setTab] = useState<"posts">("posts");
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const farmerSlug = slug;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["farmer-profile", slug],
@@ -37,10 +41,31 @@ function FarmerProfile() {
   } | undefined;
 
   const { data: stats } = useQuery({
-    queryKey: ["farmer-stats", profile?.id],
-    queryFn: () => fetchProfileStats(profile!.id!),
+    queryKey: ["farmer-stats", profile?.id, farmerSlug],
+    queryFn: () => fetchProfileStats(profile!.id!, farmerSlug),
     enabled: !!profile?.id,
   });
+
+  const { data: isFollowing = false } = useQuery({
+    queryKey: ["following", user?.id, farmerSlug],
+    queryFn: () => fetchIsFollowing(user!.id, farmerSlug),
+    enabled: !!user?.id,
+  });
+
+  const onFollow = async () => {
+    if (!user?.id) {
+      toast.error("Sign in to follow");
+      return;
+    }
+    try {
+      await toggleFollow(user.id, farmerSlug, !isFollowing);
+      await qc.invalidateQueries({ queryKey: ["following", user.id, farmerSlug] });
+      await qc.invalidateQueries({ queryKey: ["farmer-stats", profile?.id, farmerSlug] });
+      toast.success(isFollowing ? "Unfollowed" : "Following");
+    } catch {
+      toast.error("Could not update follow");
+    }
+  };
 
   const listings = data?.listings ?? [];
   const handle = (profile?.slug ?? slug).replace(/-/g, "");
@@ -105,8 +130,14 @@ function FarmerProfile() {
             </p>
           </div>
           <div className="mt-4 sm:mt-0 flex items-center gap-2">
-            <button className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">
-              <UserPlus className="h-4 w-4" /> Follow
+            <button
+              onClick={onFollow}
+              className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+                isFollowing ? "border border-border text-foreground hover:bg-secondary" : "bg-foreground text-background hover:bg-foreground/90"
+              }`}
+            >
+              {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+              {isFollowing ? "Following" : "Follow"}
             </button>
             <button className="grid h-10 w-10 place-items-center rounded-full border border-border" aria-label="Message">
               <MessageCircle className="h-4 w-4" />

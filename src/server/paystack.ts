@@ -257,5 +257,20 @@ export async function handlePaystackWebhook(
     metadata: { reference, amount: event.data.amount },
   });
 
+  const { data: delivery } = await supabaseAdmin
+    .from("deliveries")
+    .select("id, pickup_address, delivery_fee")
+    .eq("order_id", payment.order_id)
+    .maybeSingle();
+
+  if (delivery) {
+    const { notifyDriversOfNewJob } = await import("@/server/push");
+    await notifyDriversOfNewJob(
+      delivery.id,
+      delivery.pickup_address,
+      Number(delivery.delivery_fee ?? 0),
+    );
+  }
+
   return { ok: true, message: "Payment processed" };
 }

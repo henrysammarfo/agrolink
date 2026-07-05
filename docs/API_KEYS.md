@@ -22,8 +22,9 @@
 
 | Variable | Feature | How to obtain |
 |----------|---------|---------------|
-| `HUBTEL_CLIENT_ID` | Ghana MoMo alternate + SMS | developers.hubtel.com |
+| `HUBTEL_CLIENT_ID` | Ghana Card verify + MoMo alternate | developers.hubtel.com |
 | `HUBTEL_CLIENT_SECRET` | Same | Same |
+| `FCM_SERVER_KEY` | Driver job push (Bolt-style) | Firebase Console → Project Settings → Cloud Messaging |
 | `TINYFISH_API_KEY` | Market price scraping | agent.tinyfish.ai/api-keys |
 
 ## P2 — Optional

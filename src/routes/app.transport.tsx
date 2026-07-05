@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useDriverProfile } from "@/hooks/use-marketplace";
 import {
   fetchAvailableDeliveries, fetchDriverDeliveries, acceptDelivery, advanceDeliveryStatus,
+  completeDeliveryViaApi,
 } from "@/lib/api/orders";
 import {
   updateDriverAvailability, startDriverLocationWatch, fetchOsrmRoute,
@@ -100,8 +101,13 @@ function TransportOverview() {
     const status = next[job.status];
     if (!status) return;
     try {
-      await advanceDeliveryStatus(job.id, status, status === "delivered" ? { actual_delivery: new Date().toISOString() } : {});
-      toast.success(status === "delivered" ? "Delivery completed!" : "Status updated");
+      if (status === "delivered" && user?.id) {
+        await completeDeliveryViaApi(job.id, user.id);
+        toast.success("Delivery completed — payouts sent!");
+      } else {
+        await advanceDeliveryStatus(job.id, status);
+        toast.success("Status updated");
+      }
       loadJobs();
     } catch { toast.error("Could not update status"); }
   };

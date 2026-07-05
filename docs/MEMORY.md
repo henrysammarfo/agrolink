@@ -23,7 +23,12 @@ Last updated: 2026-07-05
 | Live feed | Done | `feed_rank` + engagement tables |
 | Payments | Done | Paystack + dynamic delivery quote at checkout |
 | Delivery pricing | Done | Bolt/Uber-style: base, km, kg, vehicle, peak, min fare — `src/lib/delivery-pricing.ts` |
-| Driver onboarding | Done | `/app/transport/register` — 5 documents, verification gate |
+| Driver onboarding | Done | Register + Hubtel Ghana Card verify + doc upload |
+| Auto payouts | Done | Paystack Transfers on delivery complete |
+| Driver push | Done | FCM + in-app notify on new paid jobs |
+| Surge pricing | Done | `surge_multiplier` in pricing config |
+| Follow system | Done | Live toggle on farmer profiles |
+| OSS library | Done | `docs/OSS_REFERENCE.md` — TikTok, Bolt, Uber, Yango, DoorDash |
 | Logistics | Done | Realtime driver location + OSRM + verified driver gate |
 | Admin | Done | Live payments + disputes from Supabase |
 | Marketing pages | Done | Home, farmers directory — Supabase-backed, no mock-data.ts |
@@ -45,12 +50,11 @@ Last updated: 2026-07-05
 
 ## Known gaps
 
-- Native React Native app (PWA first)
+- Native React Native app (PWA first; see OSS_REFERENCE for RN clones to port)
 - Twi language toggle
 - Live streaming
-- Hubtel Ghana Card verify UI (needs Hubtel keys)
-- Paystack Transfers automation for farmer payouts (admin trigger for now)
-- Follow/unfollow writes (UI present, needs `follows` mutation)
+- Paystack Subaccounts escrow (recommended — see OSS_REFERENCE)
+- 30-second job accept countdown (Bolt pattern)
 
 ## Key decisions
 

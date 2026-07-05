@@ -43,7 +43,10 @@ import { Route as AppAdminPaymentsRouteImport } from './routes/app.admin.payment
 import { Route as AppAdminListingsRouteImport } from './routes/app.admin.listings'
 import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
 import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks/paystack'
+import { Route as ApiVerifyGhanaCardRouteImport } from './routes/api/verify/ghana-card'
+import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
+import { Route as ApiDeliveriesCompleteRouteImport } from './routes/api/deliveries/complete'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -215,9 +218,24 @@ const ApiWebhooksPaystackRoute = ApiWebhooksPaystackRouteImport.update({
   path: '/api/webhooks/paystack',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVerifyGhanaCardRoute = ApiVerifyGhanaCardRouteImport.update({
+  id: '/api/verify/ghana-card',
+  path: '/api/verify/ghana-card',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
+  id: '/api/push/register',
+  path: '/api/push/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDeliveryQuoteRoute = ApiDeliveryQuoteRouteImport.update({
   id: '/api/delivery/quote',
   path: '/api/delivery/quote',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeliveriesCompleteRoute = ApiDeliveriesCompleteRouteImport.update({
+  id: '/api/deliveries/complete',
+  path: '/api/deliveries/complete',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -244,7 +262,10 @@ export interface FileRoutesByFullPath {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
@@ -280,7 +301,10 @@ export interface FileRoutesByTo {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app': typeof AppIndexRoute
+  '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
@@ -318,7 +342,10 @@ export interface FileRoutesById {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
@@ -357,7 +384,10 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/deliveries/complete'
     | '/api/delivery/quote'
+    | '/api/push/register'
+    | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
@@ -393,7 +423,10 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app'
+    | '/api/deliveries/complete'
     | '/api/delivery/quote'
+    | '/api/push/register'
+    | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
@@ -430,7 +463,10 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/deliveries/complete'
     | '/api/delivery/quote'
+    | '/api/push/register'
+    | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
@@ -458,7 +494,10 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiModerateRoute: typeof ApiModerateRoute
+  ApiDeliveriesCompleteRoute: typeof ApiDeliveriesCompleteRoute
   ApiDeliveryQuoteRoute: typeof ApiDeliveryQuoteRoute
+  ApiPushRegisterRoute: typeof ApiPushRegisterRoute
+  ApiVerifyGhanaCardRoute: typeof ApiVerifyGhanaCardRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
 }
 
@@ -702,11 +741,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksPaystackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/verify/ghana-card': {
+      id: '/api/verify/ghana-card'
+      path: '/api/verify/ghana-card'
+      fullPath: '/api/verify/ghana-card'
+      preLoaderRoute: typeof ApiVerifyGhanaCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/register': {
+      id: '/api/push/register'
+      path: '/api/push/register'
+      fullPath: '/api/push/register'
+      preLoaderRoute: typeof ApiPushRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/delivery/quote': {
       id: '/api/delivery/quote'
       path: '/api/delivery/quote'
       fullPath: '/api/delivery/quote'
       preLoaderRoute: typeof ApiDeliveryQuoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/deliveries/complete': {
+      id: '/api/deliveries/complete'
+      path: '/api/deliveries/complete'
+      fullPath: '/api/deliveries/complete'
+      preLoaderRoute: typeof ApiDeliveriesCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -824,7 +884,10 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiModerateRoute: ApiModerateRoute,
+  ApiDeliveriesCompleteRoute: ApiDeliveriesCompleteRoute,
   ApiDeliveryQuoteRoute: ApiDeliveryQuoteRoute,
+  ApiPushRegisterRoute: ApiPushRegisterRoute,
+  ApiVerifyGhanaCardRoute: ApiVerifyGhanaCardRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,
 }
 export const routeTree = rootRouteImport

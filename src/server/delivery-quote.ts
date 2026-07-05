@@ -55,6 +55,7 @@ export async function getActivePricingConfig(): Promise<PricingConfig> {
       min_fare: Number(data.min_fare),
       platform_fee_pct: Number(data.platform_fee_pct),
       peak_multiplier: Number(data.peak_multiplier),
+      surge_multiplier: data.surge_active ? Number(data.surge_multiplier ?? 1) : 1,
       motorcycle_multiplier: Number(data.motorcycle_multiplier),
       pickup_multiplier: Number(data.pickup_multiplier),
       truck_multiplier: Number(data.truck_multiplier),
@@ -77,11 +78,13 @@ export async function computeDeliveryQuote(params: {
   const osrmKm = await fetchOsrmDistanceKm(from, to);
   const distanceKm = osrmKm ?? haversineKm(from, to);
   const cfg = await getActivePricingConfig();
+  const surgeMult = cfg.surge_multiplier > 1 ? cfg.surge_multiplier : undefined;
   const quote = calculateDeliveryQuote(
     {
       distanceKm,
       weightKg: params.weightKg,
       vehicleType: params.vehicleType ?? "motorcycle",
+      surgeMultiplier: surgeMult,
     },
     cfg,
   );

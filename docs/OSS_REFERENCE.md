@@ -1,0 +1,76 @@
+# Open-Source Reference Library — AgroLink
+
+Curated repos mapped to AgroLink features. Use for UX patterns, not copy-paste — we extend TanStack Start + Supabase.
+
+## TikTok / Reels (vertical feed, profiles, FYP)
+
+| Repo | Stars | Stack | Borrow for AgroLink |
+|------|-------|-------|---------------------|
+| [mrthinh307/toptop](https://github.com/mrthinh307/toptop) | — | React 19 + Supabase | Unified auth, follow, profile tabs, video feed |
+| [yns19971020-cyber/tiktok](https://github.com/yns19971020-cyber/tiktok) (TikVibe) | — | Next.js 16 + Prisma | FYP ranking formula, double-tap like, comment threads |
+| [reinaldosimoes/react-vertical-feed](https://www.npmjs.com/package/react-vertical-feed) | npm | React component | Intersection-observer autoplay for `FeedPlayer` |
+| [illegal-instruction-co/react-riyils](https://github.com/illegal-instruction-co/react-riyils) | — | React | Gesture physics, explore grid → farmer profile grid |
+| [neomavkda3/react-tiktok-style-video-scroller](https://github.com/neomavkda3/react-tiktok-style-video-scroller) | — | React + virtual scroll | Infinite feed pagination |
+
+**AgroLink already has:** `FeedPlayer.tsx`, `feed_rank` view, engagement tables, profile grid on `/farmers/$slug`.
+
+**Next borrow:** Install `react-vertical-feed` for smoother snap-scroll; TikVibe trending score for `ai_demand_score` weight tuning.
+
+---
+
+## Uber / Bolt / Yango (driver app)
+
+| Repo | Stack | Borrow for AgroLink |
+|------|-------|---------------------|
+| [chimzyfire-ship-it/DeliveryApp](https://github.com/chimzyfire-ship-it/DeliveryApp) | React Native | Driver doc upload flow, job accept sheet |
+| [fleetbase/navigator-app](https://github.com/fleetbase/navigator-app) | Ember + Fleetbase | Navigator UX, POD capture, route polyline |
+| [bolt-delivery/bolt-delivery-app](https://github.com/bolt-delivery/bolt-delivery-app) | Archived RN | Online toggle, earnings screen layout |
+| [UberGuiding/uber-app-clone](https://github.com/UberGuiding/uber-app-clone) | React Native + Firebase | Map + bottom sheet job card pattern |
+
+**AgroLink already has:** `/app/transport` map, `VerifiedTransportGate`, OSRM routes, job board, Paystack Transfers payout on complete.
+
+**Yango note:** Yango (formerly Yandex Go) uses same patterns as Bolt — go-online, document KYC, surge zones. Our `surge_multiplier` in `delivery_pricing_config` covers this.
+
+---
+
+## DoorDash / Deliveroo / Glovo (buyer + dispatch)
+
+| Repo | Stack | Borrow for AgroLink |
+|------|-------|---------------------|
+| [mykhayloyuminov/expo-delivery-app](https://github.com/mykhayloyuminov/expo-delivery-app) | Expo monorepo + NestJS + Socket.io | Real-time order lifecycle, push on new order |
+| [SashenJayathilaka/Deliveroo-Clone](https://github.com/SashenJayathilaka/Deliveroo-Clone) | RN + Sanity | Checkout summary, restaurant/listing cards |
+| [adrianhajdin/food_ordering](https://github.com/adrianhajdin/food_ordering) | RN + Appwrite | Cart → pay → track flow |
+| [chayan-1906/Foodies-React-Native](https://github.com/chayan-1906/Foodies-React-Native) | RN + Redux | Multicart, animated checkout |
+
+**AgroLink already has:** Cart with live delivery quote, `LiveTrackCard`, Paystack MoMo, driver broadcast on payment webhook.
+
+---
+
+## Maps & routing
+
+| Resource | Use |
+|----------|-----|
+| [OSRM](http://project-osrm.org/) | Free driving routes (already integrated) |
+| [Leaflet](https://leafletjs.com/) | Corridor map pins (already integrated) |
+| [fleetbase/fleetbase](https://github.com/fleetbase/fleetbase) | Open logistics OS — reference for multi-stop |
+
+---
+
+## Payments (Ghana)
+
+| Provider | Docs | AgroLink usage |
+|----------|------|----------------|
+| Paystack | [Transfers](https://paystack.com/docs/transfers/) | `paystack-transfers.ts` — farmer/driver auto-payout |
+| Hubtel | [Identity Verify](https://developers.hubtel.com/) | `hubtel.ts` — Ghana Card in driver onboarding |
+
+---
+
+## Additional recommendations
+
+1. **Socket.io or Supabase Realtime channels** — job offer with 30s accept timer (Bolt countdown)
+2. **react-vertical-feed** — replace custom scroll in FeedPlayer for TikTok snap feel
+3. **OR-Tools** — batch co-op pickups (multiple farms → one buyer)
+4. **Sentry + PostHog** — funnel: feed view → cart → pay → deliver
+5. **PWA + FCM** — native install prompt for drivers; `FCM_SERVER_KEY` in `.env`
+6. **Hubtel SMS** — OTP for high-value orders
+7. **Paystack Subaccounts** — escrow per order until delivered (DoorDash model)

@@ -6,7 +6,7 @@ import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { VerifiedTransportGate } from "@/components/app/RoleGate";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useTransportJobs } from "@/hooks/use-marketplace";
-import { acceptDelivery, advanceDeliveryStatus } from "@/lib/api/orders";
+import { acceptDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
 import type { DeliveryRow } from "@/lib/types/marketplace";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -61,8 +61,12 @@ function Jobs() {
     const status = next[job.status];
     if (!status) return;
     try {
-      await advanceDeliveryStatus(job.id, status, status === "delivered" ? { actual_delivery: new Date().toISOString() } : {});
-      toast.success(status === "delivered" ? "Completed!" : "Updated");
+      if (status === "delivered" && user?.id) {
+        await completeDeliveryViaApi(job.id, user.id);
+        toast.success("Completed — farmer & driver paid via Paystack Transfer");
+      } else {
+        await advanceDeliveryStatus(job.id, status);
+      }
       refresh();
     } catch {
       toast.error("Could not update");

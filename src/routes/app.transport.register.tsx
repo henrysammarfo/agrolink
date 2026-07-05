@@ -59,6 +59,24 @@ function DriverRegister() {
     if (!user?.id) return;
     setSubmitting(true);
     try {
+      if (form.ghana_card_id) {
+        const verifyRes = await fetch("/api/verify/ghana-card", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ghanaCardId: form.ghana_card_id,
+            fullName: user.email?.split("@")[0],
+            userId: user.id,
+          }),
+        });
+        const verify = (await verifyRes.json()) as { verified: boolean; message: string };
+        if (verify.verified) {
+          toast.success("Ghana Card verified via Hubtel");
+        } else {
+          toast.message("Ghana Card pending manual review", { description: verify.message });
+        }
+      }
+
       const profileId = await upsertDriverRegistration(user.id, form);
       for (const docType of REQUIRED_DRIVER_DOCS) {
         const file = docs[docType];

@@ -13,6 +13,7 @@ export type PricingConfig = {
   min_fare: number;
   platform_fee_pct: number;
   peak_multiplier: number;
+  surge_multiplier: number;
   motorcycle_multiplier: number;
   pickup_multiplier: number;
   truck_multiplier: number;
@@ -26,6 +27,7 @@ export const DEFAULT_PRICING: PricingConfig = {
   min_fare: 25,
   platform_fee_pct: 0.06,
   peak_multiplier: 1.2,
+  surge_multiplier: 1.0,
   motorcycle_multiplier: 1.0,
   pickup_multiplier: 1.4,
   truck_multiplier: 1.8,
@@ -36,6 +38,7 @@ export type DeliveryQuoteInput = {
   weightKg: number;
   vehicleType?: VehicleType;
   at?: Date;
+  surgeMultiplier?: number;
 };
 
 export type DeliveryQuote = {
@@ -44,6 +47,7 @@ export type DeliveryQuote = {
   weightCharge: number;
   vehicleMultiplier: number;
   peakMultiplier: number;
+  surgeMultiplier: number;
   subtotal: number;
   total: number;
   breakdown: string[];
@@ -76,6 +80,7 @@ export function calculateDeliveryQuote(
   const vehicle = input.vehicleType ?? "motorcycle";
   const vMult = vehicleMultiplier(vehicle, cfg);
   const peakMult = isPeakHour(input.at) ? cfg.peak_multiplier : 1;
+  const surgeMult = input.surgeMultiplier ?? cfg.surge_multiplier ?? 1;
 
   const baseFare = cfg.base_fare;
   const distanceCharge = Math.max(0, input.distanceKm) * cfg.per_km_rate;
@@ -84,6 +89,7 @@ export function calculateDeliveryQuote(
 
   let subtotal = (baseFare + distanceCharge + weightCharge) * vMult;
   subtotal *= peakMult;
+  subtotal *= surgeMult;
   const total = Math.max(cfg.min_fare, Math.round(subtotal * 100) / 100);
 
   const breakdown = [
@@ -94,6 +100,7 @@ export function calculateDeliveryQuote(
       : `Weight ${input.weightKg.toFixed(0)} kg included (first ${cfg.free_kg} kg free)`,
     vMult !== 1 ? `Vehicle (${vehicle}) ×${vMult}` : `Vehicle: ${vehicle}`,
     peakMult > 1 ? `Peak hour ×${peakMult}` : "Off-peak rate",
+    surgeMult > 1 ? `Surge demand ×${surgeMult}` : "",
     total === cfg.min_fare && subtotal < cfg.min_fare ? `Minimum fare GHS ${cfg.min_fare} applied` : "",
   ].filter(Boolean);
 
@@ -103,6 +110,7 @@ export function calculateDeliveryQuote(
     weightCharge,
     vehicleMultiplier: vMult,
     peakMultiplier: peakMult,
+    surgeMultiplier: surgeMult,
     subtotal,
     total,
     breakdown,

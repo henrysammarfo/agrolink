@@ -35,10 +35,11 @@ export async function fetchProfileBySlug(slug: string): Promise<PublicProfile | 
   return data as PublicProfile | null;
 }
 
-export async function fetchProfileStats(userId: string) {
+export async function fetchProfileStats(userId: string, slug?: string) {
+  const farmerKey = slug ?? userId;
   const [listings, followers, following] = await Promise.all([
     supabase.from("listings").select("id, like_count, view_count").eq("seller_id", userId).eq("status", "active"),
-    supabase.from("follows").select("id", { count: "exact", head: true }).eq("farmer_slug", userId),
+    supabase.from("follows").select("id", { count: "exact", head: true }).eq("farmer_slug", farmerKey),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
   ]);
 

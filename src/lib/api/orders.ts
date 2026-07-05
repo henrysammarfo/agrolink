@@ -128,6 +128,17 @@ export async function subscribeToDelivery(
   };
 }
 
+export async function completeDeliveryViaApi(deliveryId: string, userId: string) {
+  const res = await fetch("/api/deliveries/complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ deliveryId, userId }),
+  });
+  const data = (await res.json()) as { error?: string; message?: string };
+  if (!res.ok) throw new Error(data.error ?? "Complete failed");
+  return data;
+}
+
 export async function subscribeToDriverLocation(
   driverProfileId: string,
   callback: (payload: { current_lat: number; current_lng: number }) => void,
