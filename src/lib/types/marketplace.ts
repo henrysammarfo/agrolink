@@ -109,7 +109,10 @@ export type DeliveryRow = {
   delivery_lng: number;
   delivery_address: string;
   estimated_distance_km: number | null;
+  delivery_fee: number | null;
+  fee_breakdown: unknown;
   status: DeliveryStatus;
+  created_at: string;
   tracking_updates: unknown[];
   driver?: {
     user_id: string;

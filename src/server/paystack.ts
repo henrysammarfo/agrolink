@@ -98,9 +98,37 @@ export async function processCheckout(params: {
     const listing = it.listing as { price_per_unit: number };
     return s + Number(listing.price_per_unit) * Number(it.quantity);
   }, 0);
-  const deliveryFee = 70;
-  const platformFee = Math.round(subtotal * 0.06);
+
+  const firstListing = items[0].listing as {
+    lat: number;
+    lng: number;
+    location_name: string;
+    unit: string;
+  };
+  const weightKg = items.reduce((s, it) => s + Number(it.quantity), 0);
+  const deliveryLat = params.deliveryLat ?? firstListing.lat;
+  const deliveryLng = params.deliveryLng ?? firstListing.lng;
+
+  const { computeDeliveryQuote } = await import("@/server/delivery-quote");
+  const quote = await computeDeliveryQuote({
+    pickupLat: firstListing.lat,
+    pickupLng: firstListing.lng,
+    deliveryLat,
+    deliveryLng,
+    weightKg,
+    vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
+  });
+
+  const deliveryFee = quote.total;
+  const platformFee = Math.round(subtotal * quote.pricingConfig.platform_fee_pct * 100) / 100;
   const total = subtotal + deliveryFee + platformFee;
+  const feeBreakdown = {
+    distanceKm: quote.distanceKm,
+    breakdown: quote.breakdown,
+    baseFare: quote.baseFare,
+    peakMultiplier: quote.peakMultiplier,
+    vehicleMultiplier: quote.vehicleMultiplier,
+  };
   const idempotencyKey = `agrolink-${params.userId.slice(0, 8)}-${Date.now()}`;
 
   const { data: order, error: orderErr } = await supabaseAdmin
@@ -113,9 +141,10 @@ export async function processCheckout(params: {
       delivery_fee: deliveryFee,
       platform_fee: platformFee,
       total_amount: total,
+      delivery_fee_breakdown: feeBreakdown,
       delivery_address: params.deliveryAddress ?? null,
-      delivery_lat: params.deliveryLat ?? null,
-      delivery_lng: params.deliveryLng ?? null,
+      delivery_lat: deliveryLat,
+      delivery_lng: deliveryLng,
     })
     .select()
     .single();
@@ -134,15 +163,17 @@ export async function processCheckout(params: {
   });
   await supabaseAdmin.from("order_items").insert(orderItems);
 
-  const firstListing = items[0].listing as { lat: number; lng: number; location_name: string };
   await supabaseAdmin.from("deliveries").insert({
     order_id: order.id,
     pickup_lat: firstListing.lat,
     pickup_lng: firstListing.lng,
     pickup_address: firstListing.location_name,
-    delivery_lat: params.deliveryLat ?? firstListing.lat,
-    delivery_lng: params.deliveryLng ?? firstListing.lng,
+    delivery_lat: deliveryLat,
+    delivery_lng: deliveryLng,
     delivery_address: params.deliveryAddress ?? "Buyer address",
+    estimated_distance_km: quote.distanceKm,
+    delivery_fee: deliveryFee,
+    fee_breakdown: feeBreakdown,
     status: "requested",
   });
 

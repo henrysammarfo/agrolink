@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Info } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
@@ -25,13 +25,43 @@ function Cart() {
   const [done, setDone] = useState(false);
   const [displayText, setDisplayText] = useState<string | null>(null);
 
+  const [deliveryQuote, setDeliveryQuote] = useState<{ total: number; breakdown: string[]; distanceKm: number } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+
   const subtotal = items.reduce(
     (s, i) => s + Number(i.listing?.price_per_unit ?? 0) * Number(i.quantity),
     0,
   );
-  const delivery = 70;
-  const platformFee = Math.round(subtotal * 0.06);
+  const delivery = deliveryQuote?.total ?? 0;
+  const platformFee = Math.round(subtotal * 0.06 * 100) / 100;
   const total = subtotal + delivery + platformFee;
+
+  useEffect(() => {
+    if (!items.length) {
+      setDeliveryQuote(null);
+      return;
+    }
+    const first = items[0].listing;
+    if (!first?.lat || !first?.lng) return;
+    const weightKg = items.reduce((s, i) => s + Number(i.quantity), 0);
+    setQuoteLoading(true);
+    fetch("/api/delivery/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pickupLat: first.lat,
+        pickupLng: first.lng,
+        deliveryLat: first.lat + 0.05,
+        deliveryLng: first.lng + 0.05,
+        weightKg,
+        vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
+      }),
+    })
+      .then((r) => r.json())
+      .then((q) => setDeliveryQuote(q))
+      .catch(() => setDeliveryQuote(null))
+      .finally(() => setQuoteLoading(false));
+  }, [items]);
 
   async function pay() {
     if (!user?.id || !user.email) {
@@ -171,9 +201,20 @@ function Cart() {
               <dd>GHS {subtotal.toFixed(2)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">Delivery</dt>
-              <dd>GHS {delivery.toFixed(2)}</dd>
+              <dt className="text-muted-foreground inline-flex items-center gap-1">
+                Delivery {quoteLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+              </dt>
+              <dd>{deliveryQuote ? `GHS ${delivery.toFixed(2)}` : "—"}</dd>
             </div>
+            {deliveryQuote?.breakdown && (
+              <div className="rounded-xl border border-border bg-background p-3 text-[11px] text-muted-foreground space-y-1">
+                <div className="inline-flex items-center gap-1 font-medium text-foreground"><Info className="h-3 w-3" /> Pricing factors</div>
+                {deliveryQuote.breakdown.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
+                <div>{deliveryQuote.distanceKm.toFixed(1)} km via OSRM routing</div>
+              </div>
+            )}
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Platform fee (6%)</dt>
               <dd>GHS {platformFee.toFixed(2)}</dd>
@@ -201,7 +242,7 @@ function Cart() {
 
           <button
             onClick={pay}
-            disabled={paying || items.length === 0 || done}
+            disabled={paying || items.length === 0 || done || quoteLoading || !deliveryQuote}
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background hover:bg-foreground/90 disabled:opacity-50"
           >
             {paying ? (

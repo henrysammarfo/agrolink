@@ -1,5 +1,9 @@
 import { Check, Clock, Package, Truck, MapPin, FileText, User } from "lucide-react";
-import { FULFILLMENT_FLOW, type TrackedOrder, type FulfillmentStep } from "@/lib/mock-data";
+import {
+  FULFILLMENT_FLOW,
+  type TrackedOrder,
+  type FulfillmentStep,
+} from "@/lib/types/fulfillment";
 
 const STEP_ICONS: Record<FulfillmentStep, typeof Check> = {
   placed: Check,

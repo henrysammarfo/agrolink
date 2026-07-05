@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { MapPin, Truck, Clock, Package, Check, Navigation, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
-import { TransportGate } from "@/components/app/RoleGate";
+import { TransportGate, VerifiedTransportGate } from "@/components/app/RoleGate";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile } from "@/hooks/use-marketplace";
@@ -113,7 +113,7 @@ function TransportOverview() {
   ] : [];
 
   return (
-    <TransportGate>
+    <VerifiedTransportGate>
       <AppShell role="transport">
         <div className="relative -mx-6 -mt-6 md:-mx-10 md:-mt-10 h-[calc(100vh-140px)] min-h-[560px] overflow-hidden">
           <CorridorMap pins={mapPins} route={routeCoords} animateDriver={false} driverLabel="You" />
@@ -172,6 +172,6 @@ function TransportOverview() {
           </div>
         </div>
       </AppShell>
-    </TransportGate>
+    </VerifiedTransportGate>
   );
 }

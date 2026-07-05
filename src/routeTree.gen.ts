@@ -31,6 +31,7 @@ import { Route as AppBuyerRouteImport } from './routes/app.buyer'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as ApiModerateRouteImport } from './routes/api/moderate'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
+import { Route as AppTransportRegisterRouteImport } from './routes/app.transport.register'
 import { Route as AppTransportJobsRouteImport } from './routes/app.transport.jobs'
 import { Route as AppFarmerPayoutsRouteImport } from './routes/app.farmer.payouts'
 import { Route as AppFarmerOrdersRouteImport } from './routes/app.farmer.orders'
@@ -42,6 +43,7 @@ import { Route as AppAdminPaymentsRouteImport } from './routes/app.admin.payment
 import { Route as AppAdminListingsRouteImport } from './routes/app.admin.listings'
 import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
 import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks/paystack'
+import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -153,6 +155,11 @@ const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   path: '/api/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppTransportRegisterRoute = AppTransportRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AppTransportRoute,
+} as any)
 const AppTransportJobsRoute = AppTransportJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -208,6 +215,11 @@ const ApiWebhooksPaystackRoute = ApiWebhooksPaystackRouteImport.update({
   path: '/api/webhooks/paystack',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDeliveryQuoteRoute = ApiDeliveryQuoteRouteImport.update({
+  id: '/api/delivery/quote',
+  path: '/api/delivery/quote',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -232,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
@@ -243,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
+  '/app/transport/register': typeof AppTransportRegisterRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -266,6 +280,7 @@ export interface FileRoutesByTo {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app': typeof AppIndexRoute
+  '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
@@ -277,6 +292,7 @@ export interface FileRoutesByTo {
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
+  '/app/transport/register': typeof AppTransportRegisterRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -302,6 +318,7 @@ export interface FileRoutesById {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
@@ -313,6 +330,7 @@ export interface FileRoutesById {
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
+  '/app/transport/register': typeof AppTransportRegisterRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -339,6 +357,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/delivery/quote'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
@@ -350,6 +369,7 @@ export interface FileRouteTypes {
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
     | '/app/transport/jobs'
+    | '/app/transport/register'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -373,6 +393,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app'
+    | '/api/delivery/quote'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
@@ -384,6 +405,7 @@ export interface FileRouteTypes {
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
     | '/app/transport/jobs'
+    | '/app/transport/register'
   id:
     | '__root__'
     | '/'
@@ -408,6 +430,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/delivery/quote'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
@@ -419,6 +442,7 @@ export interface FileRouteTypes {
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
     | '/app/transport/jobs'
+    | '/app/transport/register'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -434,6 +458,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiModerateRoute: typeof ApiModerateRoute
+  ApiDeliveryQuoteRoute: typeof ApiDeliveryQuoteRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
 }
 
@@ -593,6 +618,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/transport/register': {
+      id: '/app/transport/register'
+      path: '/register'
+      fullPath: '/app/transport/register'
+      preLoaderRoute: typeof AppTransportRegisterRouteImport
+      parentRoute: typeof AppTransportRoute
+    }
     '/app/transport/jobs': {
       id: '/app/transport/jobs'
       path: '/jobs'
@@ -670,6 +702,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksPaystackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/delivery/quote': {
+      id: '/api/delivery/quote'
+      path: '/api/delivery/quote'
+      fullPath: '/api/delivery/quote'
+      preLoaderRoute: typeof ApiDeliveryQuoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -723,10 +762,12 @@ const AppFarmerRouteWithChildren = AppFarmerRoute._addFileChildren(
 
 interface AppTransportRouteChildren {
   AppTransportJobsRoute: typeof AppTransportJobsRoute
+  AppTransportRegisterRoute: typeof AppTransportRegisterRoute
 }
 
 const AppTransportRouteChildren: AppTransportRouteChildren = {
   AppTransportJobsRoute: AppTransportJobsRoute,
+  AppTransportRegisterRoute: AppTransportRegisterRoute,
 }
 
 const AppTransportRouteWithChildren = AppTransportRoute._addFileChildren(
@@ -783,6 +824,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiModerateRoute: ApiModerateRoute,
+  ApiDeliveryQuoteRoute: ApiDeliveryQuoteRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,
 }
 export const routeTree = rootRouteImport

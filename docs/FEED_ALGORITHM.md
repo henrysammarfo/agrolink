@@ -47,4 +47,4 @@ Trust = organic ? 35 : 0
 Trending = trending ? 90 : 0
 ```
 
-This was client-side only in `mock-data.ts` and is replaced by server-computed scores.
+Replaced client-side mock ranking with server `feed_rank` view + `src/lib/feed-algorithm.ts`.
