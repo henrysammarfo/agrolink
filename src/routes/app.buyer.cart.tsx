@@ -109,6 +109,7 @@ function Cart() {
         body: JSON.stringify({
           userId: user.id,
           phone: profile?.phone ?? "+233551234987",
+          email: user.email,
           orderTotalGhs: total,
         }),
       });
@@ -118,7 +119,7 @@ function Cart() {
       if (data.demoCode) setDemoOtpHint(data.demoCode);
       toast.success(data.message ?? "Code sent");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "SMS failed");
+      toast.error(e instanceof Error ? e.message : "Could not send code");
     } finally {
       setOtpLoading(false);
     }
@@ -328,7 +329,7 @@ function Cart() {
                 B2B verification (GHS {HIGH_VALUE_OTP_THRESHOLD_GHS}+)
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Hubtel SMS OTP required before checkout.
+                Free email OTP required before checkout (Resend — 3,000/month free).
               </p>
               {!otpVerified ? (
                 <div className="mt-4 space-y-3">

@@ -156,7 +156,7 @@ export async function processCheckout(params: {
     pickupStops: quote.orderedStops ?? pickupStops,
   };
 
-  const { requireOtpForCheckout } = await import("@/server/hubtel-sms");
+  const { requireOtpForCheckout } = await import("@/server/checkout-otp");
   if (await requireOtpForCheckout(params.userId, total)) {
     if (!params.otpVerified) {
       throw new Error("SMS verification required for orders over GHS 500");

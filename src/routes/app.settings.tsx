@@ -46,7 +46,7 @@ function Settings() {
   const onWhatsappToggle = async (enabled: boolean) => {
     setWhatsapp(enabled);
     await persistPref("whatsapp", enabled);
-    toast.success(enabled ? "WhatsApp order updates enabled" : "WhatsApp updates off");
+    toast.success(enabled ? "Order updates enabled (email + WhatsApp)" : "External order updates off");
   };
 
   const onPushToggle = async (enabled: boolean) => {
@@ -115,7 +115,7 @@ function Settings() {
 
         <Card title="Notifications">
           {!prefsLoaded && <p className="text-xs text-muted-foreground">Loading preferences…</p>}
-          <Toggle label="WhatsApp updates" desc="Order status via WATI (Hubtel SMS fallback)." value={whatsapp} onChange={onWhatsappToggle} />
+          <Toggle label="Order updates" desc="Email (Resend, free) + WhatsApp (Meta Cloud API, free tier) + push." value={whatsapp} onChange={onWhatsappToggle} />
           <Toggle label="Push notifications" desc="Driver job alerts (Bolt/Yango-style ping)." value={push} onChange={onPushToggle} />
           <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={onMarketingToggle} />
         </Card>

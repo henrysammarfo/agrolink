@@ -109,7 +109,7 @@ Last updated: 2026-07-05
 | Priority | Feature | Status | Implementation |
 |----------|---------|--------|----------------|
 | 1 | Listing media → Supabase Storage | Done | `scripts/upload-listing-media.mjs`, `seed-demo-listings.mjs` uploads to `listing-images/demo/*`; `demo-listings.ts` uses storage URLs when `VITE_SUPABASE_URL` set |
-| 2 | WhatsApp order updates (WATI + Hubtel SMS) | Done | `server/whatsapp.ts`, `comms.ts` respects `profiles.whatsapp_enabled`; settings toggle wired to `/api/settings/notifications` |
+| 2 | WhatsApp order updates (Meta Cloud API) + email (Resend) | Done | `server/whatsapp.ts`, `server/email-notify.ts`, `comms.ts`; no WATI/Hubtel |
 | 3 | Chat image attachments | Done | `messages.attachment_url`, `chat-attachments` bucket, `ChatThread.tsx` upload + display |
 | 4 | ⌘K global search | Done | `GlobalSearch.tsx`, `/api/search/global`, `AppShell` trigger (desktop + mobile) |
 | 5 | PostHog event wiring | Done | `feed_*`, `driver_*`, `checkout_initiated`, `search`, `chat_message_sent`, `admin_surge_updated` |

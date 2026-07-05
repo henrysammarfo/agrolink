@@ -2,91 +2,81 @@
 
 ## P0 — Required for live demo
 
-| Variable | Feature | How to obtain |
-|----------|---------|---------------|
-| `VITE_SUPABASE_URL` | All DB/auth | Supabase Dashboard → Settings → API |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Client auth | Same as above (anon/publishable key) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Webhooks, admin, server ops, media seed | Supabase Dashboard → Settings → API (server only) |
-| `OPENAI_API_KEY` | Content moderation, price advice | platform.openai.com → API keys |
-| `PAYSTACK_SECRET_KEY` | MoMo checkout server-side | paystack.com → Settings → API Keys (test first) |
-| `VITE_PAYSTACK_PUBLIC_KEY` | Paystack inline/popup | Same dashboard (test public key) |
-| `PAYSTACK_WEBHOOK_SECRET` | Verify charge.success | Paystack Dashboard → Webhooks |
+| Variable | Feature | How to obtain | Free? |
+|----------|---------|---------------|-------|
+| `VITE_SUPABASE_URL` | All DB/auth | Supabase Dashboard → Settings → API | Yes (free tier) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Client auth | Same | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Webhooks, admin, seed | Same (server only) | Yes |
+| `OPENAI_API_KEY` | Moderation + price advice | platform.openai.com | Paid (you have credits) |
+| `VITE_PAYSTACK_PUBLIC_KEY` | MoMo checkout | paystack.com → Test keys | Test free |
+| `PAYSTACK_SECRET_KEY` | Checkout server | Same | Test free |
+| `PAYSTACK_WEBHOOK_SECRET` | Order confirmation | Paystack Webhooks | Free |
 
-### Paystack test MoMo
+## P1 — Free comms stack (replaces WATI + Hubtel)
 
-- Phone: `0551234987`
-- Network: MTN
-- Docs: https://paystack.com/docs/payments/test-payments/
-
-## P1 — Recommended (comms + push + analytics)
-
-| Variable | Feature | How to obtain |
-|----------|---------|---------------|
-| `HUBTEL_CLIENT_ID` | Ghana Card verify + MoMo alternate + WhatsApp SMS fallback | developers.hubtel.com |
-| `HUBTEL_CLIENT_SECRET` | Same | Same |
-| `WATI_API_TOKEN` | WhatsApp order updates (primary) | wati.io → API |
-| `WATI_API_URL` | WATI server base (default `https://live-server.wati.io`) | wati.io dashboard |
-| `FCM_SERVER_KEY` | Driver job push (Bolt-style) | Firebase Console → Project Settings → Cloud Messaging |
-| `VITE_VAPID_PUBLIC_KEY` | Web push (PWA) public key | `npm run vapid:generate` |
-| `VAPID_PRIVATE_KEY` | Web push server signing | Same script (server only) |
-| `VAPID_SUBJECT` | Web push contact URI | `mailto:support@agrolink.app` |
-| `VITE_POSTHOG_KEY` | Product analytics (feed, checkout, driver) | posthog.com → Project → API key |
-| `VITE_POSTHOG_HOST` | PostHog ingest (default `https://app.posthog.com`) | posthog.com |
-| `TINYFISH_API_KEY` | Market price scraping | agent.tinyfish.ai/api-keys |
+| Variable | Feature | How to obtain | Free tier |
+|----------|---------|---------------|-----------|
+| `RESEND_API_KEY` | Order emails + checkout OTP | [resend.com](https://resend.com) → API Keys | **3,000 emails/month** |
+| `RESEND_FROM_EMAIL` | Sender address | Verify domain or use `onboarding@resend.dev` for testing | Free |
+| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp order updates | [developers.facebook.com](https://developers.facebook.com) → WhatsApp → API Setup | **1,000 conversations/month** |
+| `WHATSAPP_ACCESS_TOKEN` | Meta Cloud API token | Same dashboard (System User or temp token) | Free tier |
+| `WHATSAPP_API_VERSION` | Graph API version | Default `v21.0` | — |
+| `VITE_VAPID_PUBLIC_KEY` | Web push (PWA) | `npm run vapid:generate` | **Free** |
+| `VAPID_PRIVATE_KEY` | Web push signing | Same script | **Free** |
+| `VAPID_SUBJECT` | Web push contact | `mailto:support@agrolink.app` | Free |
+| `FCM_SERVER_KEY` | Native driver push | Firebase Console → Cloud Messaging | **Free** |
+| `VITE_POSTHOG_KEY` | Analytics | posthog.com | **1M events/month** |
+| `TINYFISH_API_KEY` | Market prices | agent.tinyfish.ai | You have access |
 
 ## P2 — Optional
 
-| Variable | Feature | How to obtain |
-|----------|---------|---------------|
-| `VITE_SENTRY_DSN` | Client error tracking | sentry.io → Project DSN |
-| `GOOGLE_MAPS_API_KEY` | Turn-by-turn nav | Google Cloud Console |
-| `AFRICASTALKING_API_KEY` | SMS OTP fallback | africastalking.com |
-| `VENICE_API_KEY` | Backup AI (NOT moderation) | venice.ai → API |
-| `AZURE_KEY_VAULT_URL` | Secret storage in prod | Azure Portal |
+| Variable | Feature | Free? |
+|----------|---------|-------|
+| `VITE_SENTRY_DSN` | Error tracking | Free tier |
+| `GOOGLE_MAPS_API_KEY` | Turn-by-turn nav | You have GCP credits |
+| `VENICE_API_KEY` | Backup AI | Paid |
 
-## Feature → key mapping
+## Removed (no longer needed)
 
-| Feature | Keys used |
-|---------|-----------|
-| Signup/login | Supabase only |
-| Listing upload + demo seed media | Supabase Storage + service role |
-| Feed ranking | Supabase (no external key) |
-| Checkout | Paystack (+ optional Hubtel) |
-| WhatsApp order updates | WATI (+ Hubtel SMS fallback) |
-| Push (web + native) | VAPID + FCM |
-| Driver tracking | Supabase Realtime |
-| Route ETA | OSRM (free, no key) |
-| Analytics | PostHog (`VITE_POSTHOG_KEY`) |
-| Admin surge pricing | Supabase service role + admin role |
+| Old key | Replaced by |
+|---------|-------------|
+| `WATI_API_TOKEN` | Meta WhatsApp Cloud API (direct, free) |
+| `WATI_API_URL` | Meta Graph API |
+| `HUBTEL_CLIENT_ID` (SMS) | Resend email (free) |
+| `HUBTEL_CLIENT_SECRET` (SMS) | Resend email (free) |
+| Hubtel Ghana Card API | Admin manual review (free, format check only) |
+
+## Notification priority (all free at MVP scale)
+
+1. **In-app** — always (Supabase)
+2. **Web push** — VAPID + FCM (free)
+3. **Email** — Resend (3k/month free)
+4. **WhatsApp** — Meta Cloud API (1k convos/month free)
+
+## Setup guides
+
+### Resend (5 min)
+1. Sign up at resend.com
+2. Create API key → `RESEND_API_KEY`
+3. For production: verify your domain → set `RESEND_FROM_EMAIL=AgroLink <orders@yourdomain.com>`
+4. For testing: use `onboarding@resend.dev` (sends to your Resend account email only)
+
+### Meta WhatsApp Cloud API (15 min)
+1. Create Meta Business account
+2. developers.facebook.com → Create App → Business → Add WhatsApp
+3. Copy **Phone number ID** → `WHATSAPP_PHONE_NUMBER_ID`
+4. Generate **Access token** → `WHATSAPP_ACCESS_TOKEN`
+5. Add test phone numbers in WhatsApp → API Setup for dev
+6. First 1,000 service conversations/month are free
 
 ## PostHog events (wired)
 
-| Event | Trigger |
-|-------|---------|
-| `feed_view` | Feed opens |
-| `feed_like` | Like toggle |
-| `feed_add_to_cart` | Add to cart from feed |
-| `feed_comment` | Comment posted |
-| `feed_save` | Bookmark toggle |
-| `feed_share` | Share listing |
-| `checkout_initiated` | Pay on cart |
-| `driver_online_toggle` | Go online/offline |
-| `driver_job_accept` | Accept delivery job |
-| `driver_status_advance` | Pickup/en-route step |
-| `driver_delivery_complete` | POD + complete |
-| `search` | ⌘K global search |
-| `chat_message_sent` | Chat send (incl. attachments) |
-| `admin_surge_updated` | Surge pricing save |
-| `notification_pref_updated` | Settings WhatsApp/push toggle |
+See previous list in repo — `feed_*`, `driver_*`, `checkout_initiated`, `search`, etc.
 
-## Environment files
-
-Copy `.env.example` to `.env` and fill values. Never commit secrets.
-
-## Demo scripts (need service role)
+## Demo scripts
 
 ```bash
-npm run upload:media   # upload /public/media/demo/* → listing-images/demo/
-npm run seed:demo      # upload media + seed farmers/listings
-npm run vapid:generate # generate web push keys
+npm run vapid:generate   # free web push keys
+npm run upload:media       # Supabase storage
+npm run seed:demo          # seed listings
 ```

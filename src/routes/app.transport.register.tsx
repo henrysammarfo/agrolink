@@ -71,9 +71,9 @@ function DriverRegister() {
         });
         const verify = (await verifyRes.json()) as { verified: boolean; message: string };
         if (verify.verified) {
-          toast.success("Ghana Card verified via Hubtel");
+          toast.success("Ghana Card format accepted — admin will verify");
         } else {
-          toast.message("Ghana Card pending manual review", { description: verify.message });
+          toast.message("Submitted for admin review", { description: verify.message });
         }
       }
 

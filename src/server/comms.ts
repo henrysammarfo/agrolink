@@ -1,6 +1,7 @@
-/** Central notifications + web push + WhatsApp delivery */
+/** Central notifications — in-app + web push + free email (Resend) + Meta WhatsApp */
 
 import webpush from "web-push";
+import { sendOrderEmail } from "@/server/email-notify";
 import { sendWhatsAppMessage, orderStatusWhatsAppBody } from "@/server/whatsapp";
 
 type NotifyPayload = {
@@ -24,6 +25,12 @@ function ensureVapid() {
   }
 }
 
+function absoluteLink(link?: string): string | undefined {
+  if (!link) return undefined;
+  const site = process.env.SITE_URL ?? process.env.VITE_SITE_URL ?? "https://agrolink.app";
+  return link.startsWith("http") ? link : `${site.replace(/\/$/, "")}${link}`;
+}
+
 export async function notifyUser(userId: string, payload: NotifyPayload) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -41,14 +48,34 @@ export async function notifyUser(userId: string, payload: NotifyPayload) {
     .eq("id", userId)
     .maybeSingle();
 
-  if (profile?.whatsapp_enabled !== false && profile?.phone) {
-    const waBody = orderStatusWhatsAppBody(payload.type, {
-      body: payload.body ?? payload.title,
-      link: payload.link ?? "",
-      preview: payload.body ?? payload.title,
-      ...payload.whatsappExtras,
-    });
-    await sendWhatsAppMessage(profile.phone, waBody);
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId).catch(() => ({
+    data: { user: null },
+  }));
+  const email = authUser?.user?.email;
+
+  const orderUpdatesEnabled = profile?.whatsapp_enabled !== false;
+  const fullLink = absoluteLink(payload.link);
+
+  if (orderUpdatesEnabled) {
+    if (email) {
+      await sendOrderEmail({
+        to: email,
+        subject: payload.title,
+        title: payload.title,
+        body: payload.body ?? payload.title,
+        link: fullLink,
+      });
+    }
+
+    if (profile?.phone) {
+      const waBody = orderStatusWhatsAppBody(payload.type, {
+        body: payload.body ?? payload.title,
+        link: payload.link ?? "",
+        preview: payload.body ?? payload.title,
+        ...payload.whatsappExtras,
+      });
+      await sendWhatsAppMessage(profile.phone, waBody);
+    }
   }
 
   if (profile?.push_enabled === false) return;

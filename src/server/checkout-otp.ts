@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 
 import { HIGH_VALUE_OTP_THRESHOLD_GHS } from "@/lib/delivery-constants";
+import { sendOtpEmail } from "@/server/email-notify";
 
 export { HIGH_VALUE_OTP_THRESHOLD_GHS };
 
@@ -17,6 +18,7 @@ function generateOtp(): string {
 export async function sendCheckoutOtp(params: {
   userId: string;
   phone: string;
+  email?: string;
   orderTotalGhs: number;
 }): Promise<{ ok: boolean; message: string; demoCode?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -27,26 +29,11 @@ export async function sendCheckoutOtp(params: {
 
   const code = generateOtp();
   const phone = params.phone.replace(/\D/g, "").replace(/^233/, "0");
-  const message = `AgroLink: Your verification code is ${code}. Valid for 10 minutes. Do not share.`;
 
-  const clientId = process.env.HUBTEL_CLIENT_ID;
-  const clientSecret = process.env.HUBTEL_CLIENT_SECRET;
-
-  let sent = false;
-  if (clientId && clientSecret) {
-    try {
-      const qs = new URLSearchParams({
-        ClientId: clientId,
-        ClientSecret: clientSecret,
-        From: "AgroLink",
-        To: phone.startsWith("0") ? `+233${phone.slice(1)}` : phone,
-        Content: message,
-      });
-      const res = await fetch(`https://smsc.hubtel.com/v1/messages/send?${qs.toString()}`);
-      sent = res.ok;
-    } catch (e) {
-      console.warn("[HubtelSMS]", e);
-    }
+  let email = params.email?.trim();
+  if (!email) {
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(params.userId);
+    email = authUser?.user?.email ?? undefined;
   }
 
   await supabaseAdmin.from("otp_sessions").insert({
@@ -58,17 +45,33 @@ export async function sendCheckoutOtp(params: {
     expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
   });
 
-  if (!clientId || !clientSecret) {
+  if (!email) {
     return {
       ok: true,
-      message: "Demo OTP sent (Hubtel keys not configured)",
+      message: "Demo OTP (add email to account for free email verification)",
       demoCode: code,
     };
   }
 
-  return sent
-    ? { ok: true, message: "Verification code sent via SMS" }
-    : { ok: false, message: "Could not send SMS — try again" };
+  const sent = await sendOtpEmail({
+    to: email,
+    code,
+    orderTotalGhs: params.orderTotalGhs,
+  });
+
+  if (sent.ok) {
+    return { ok: true, message: "Verification code sent to your email (free via Resend)" };
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return {
+      ok: true,
+      message: "Demo OTP (set RESEND_API_KEY for free email delivery)",
+      demoCode: code,
+    };
+  }
+
+  return { ok: false, message: "Could not send email — try again" };
 }
 
 export async function verifyCheckoutOtp(params: {
@@ -96,23 +99,17 @@ export async function verifyCheckoutOtp(params: {
     return { ok: false, message: "Invalid code" };
   }
 
-  await supabaseAdmin
-    .from("otp_sessions")
-    .update({ verified: true })
-    .eq("id", session.id);
+  await supabaseAdmin.from("otp_sessions").update({ verified: true }).eq("id", session.id);
 
   await supabaseAdmin
     .from("profiles")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", params.userId);
 
-  return { ok: true, message: "Phone verified" };
+  return { ok: true, message: "Email verified" };
 }
 
-export async function requireOtpForCheckout(
-  userId: string,
-  totalGhs: number,
-): Promise<boolean> {
+export async function requireOtpForCheckout(userId: string, totalGhs: number): Promise<boolean> {
   if (totalGhs < HIGH_VALUE_OTP_THRESHOLD_GHS) return false;
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

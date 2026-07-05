@@ -74,7 +74,7 @@ See `docs/OSS_REFERENCE.md` for full mapping.
 
 - Twi language UI
 - Capacitor APK launch (`docs/APK_BUILD.md`)
-- WhatsApp order updates (Settings toggle is UI-only until WATI/Hubtel wired)
+- Order updates: Resend email (free) + Meta WhatsApp Cloud API (free tier) + push
 - Chat image attachments
 - Typing indicators
 

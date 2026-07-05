@@ -33,7 +33,7 @@ Both must exit 0. **Last verified:** 2026-07-05 — build + stress:comms on `cur
 ## Production comms + media (2026-07-05)
 
 - [x] Demo listing media uploads to Supabase Storage (`npm run upload:media`, `npm run seed:demo`)
-- [x] WhatsApp toggle persists to DB + WATI/Hubtel SMS in `notifyUser`
+- [x] Order updates via free Resend email + Meta WhatsApp Cloud API (no WATI/Hubtel)
 - [x] Chat image attachments (upload + inline display)
 - [x] ⌘K global search (listings, farmers, orders)
 - [x] PostHog events: feed, checkout, driver, search, chat, admin surge

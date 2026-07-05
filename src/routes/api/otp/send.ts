@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { sendCheckoutOtp } from "@/server/hubtel-sms";
+import { sendCheckoutOtp } from "@/server/checkout-otp";
 
 export const Route = createFileRoute("/api/otp/send")({
   server: {
@@ -9,6 +9,7 @@ export const Route = createFileRoute("/api/otp/send")({
           const body = (await request.json()) as {
             userId: string;
             phone: string;
+            email?: string;
             orderTotalGhs: number;
           };
           if (!body.userId || !body.phone) {
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/api/otp/send")({
           const result = await sendCheckoutOtp({
             userId: body.userId,
             phone: body.phone,
+            email: body.email,
             orderTotalGhs: body.orderTotalGhs ?? 0,
           });
           return Response.json(result, { status: result.ok ? 200 : 502 });

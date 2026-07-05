@@ -1,56 +1,51 @@
-/** WhatsApp order updates — WATI primary, Hubtel SMS fallback when WhatsApp unavailable */
+/** WhatsApp order updates — Meta Cloud API direct (free tier, no WATI/Hubtel) */
 
-export type WhatsAppResult = { ok: boolean; channel: "wati" | "hubtel_sms" | "demo"; message?: string };
+export type WhatsAppResult = {
+  ok: boolean;
+  channel: "meta_whatsapp" | "demo";
+  message?: string;
+};
 
 export async function sendWhatsAppMessage(phone: string, body: string): Promise<WhatsAppResult> {
   const normalized = normalizeGhPhone(phone);
   if (!normalized) return { ok: false, channel: "demo", message: "Invalid phone" };
 
-  const watiToken = process.env.WATI_API_TOKEN;
-  const watiUrl = process.env.WATI_API_URL ?? "https://live-server.wati.io";
+  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const apiVersion = process.env.WHATSAPP_API_VERSION ?? "v21.0";
 
-  if (watiToken) {
+  if (token && phoneNumberId) {
     try {
-      const res = await fetch(`${watiUrl}/api/v1/sendSessionMessage/${normalized}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${watiToken}`,
-          "Content-Type": "application/json",
+      const res = await fetch(
+        `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to: normalized,
+            type: "text",
+            text: { body: body.slice(0, 4096) },
+          }),
         },
-        body: JSON.stringify({ messageText: body }),
-      });
-      if (res.ok) return { ok: true, channel: "wati" };
+      );
+      if (res.ok) return { ok: true, channel: "meta_whatsapp" };
       const err = await res.text();
-      console.warn("[WATI] send failed", err);
+      console.warn("[Meta WhatsApp] send failed", err);
     } catch (e) {
-      console.warn("[WATI] error", e);
+      console.warn("[Meta WhatsApp] error", e);
     }
   }
 
-  const hubtelId = process.env.HUBTEL_CLIENT_ID;
-  const hubtelSecret = process.env.HUBTEL_CLIENT_SECRET;
-  if (hubtelId && hubtelSecret) {
-    try {
-      const qs = new URLSearchParams({
-        clientid: hubtelId,
-        clientsecret: hubtelSecret,
-        from: "AgroLink",
-        to: normalized,
-        content: body,
-      });
-      const res = await fetch(`https://smsc.hubtel.com/v1/messages/send?${qs.toString()}`);
-      if (res.ok) return { ok: true, channel: "hubtel_sms" };
-    } catch (e) {
-      console.warn("[Hubtel SMS fallback] error", e);
-    }
-  }
-
-  if (process.env.VITE_DEMO_MODE === "true" || !watiToken) {
+  if (process.env.VITE_DEMO_MODE === "true" || !token) {
     console.info("[WhatsApp demo]", normalized, body.slice(0, 80));
     return { ok: true, channel: "demo", message: "Logged in demo mode" };
   }
 
-  return { ok: false, channel: "demo", message: "No WhatsApp provider configured" };
+  return { ok: false, channel: "demo", message: "Meta WhatsApp not configured" };
 }
 
 function normalizeGhPhone(phone: string): string | null {

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { verifyCheckoutOtp } from "@/server/hubtel-sms";
+import { verifyCheckoutOtp } from "@/server/checkout-otp";
 
 export const Route = createFileRoute("/api/otp/verify")({
   server: {
