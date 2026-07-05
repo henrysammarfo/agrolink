@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { VerifiedTransportGate } from "@/components/app/RoleGate";
 import { JobAcceptCountdown } from "@/components/transport/JobAcceptCountdown";
+import { PodCaptureSheet } from "@/components/transport/PodCaptureSheet";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useTransportJobs } from "@/hooks/use-marketplace";
 import { acceptDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
@@ -30,6 +31,7 @@ function Jobs() {
   const { data: driver } = useDriverProfile(user?.id);
   const { data: jobs = [], isLoading } = useTransportJobs(driver?.id);
   const [filter, setFilter] = useState<"all" | "requested" | "active" | "delivered">("all");
+  const [podJob, setPodJob] = useState<DeliveryRow | null>(null);
   const qc = useQueryClient();
 
   const refresh = useCallback(() => {
@@ -76,21 +78,34 @@ function Jobs() {
     };
     const status = next[job.status];
     if (!status) return;
+    if (status === "delivered") {
+      setPodJob(job);
+      return;
+    }
     try {
-      if (status === "delivered" && user?.id) {
-        await completeDeliveryViaApi(job.id, user.id);
-        toast.success("Completed — farmer & driver paid via Paystack Transfer");
-      } else {
-        await advanceDeliveryStatus(job.id, status);
-      }
+      await advanceDeliveryStatus(job.id, status);
       refresh();
     } catch {
       toast.error("Could not update");
     }
   };
 
+  const finishWithPod = async (podPhotoUrl: string) => {
+    if (!podJob || !user?.id) return;
+    try {
+      await completeDeliveryViaApi(podJob.id, user.id, podPhotoUrl);
+      toast.success("Completed — POD saved, payouts sent");
+      setPodJob(null);
+      refresh();
+    } catch {
+      toast.error("Could not complete delivery");
+      throw new Error("complete failed");
+    }
+  };
+
   return (
     <VerifiedTransportGate>
+    <>
     <AppShell role="transport">
       <PageHeader
         eyebrow="Job board"
@@ -164,7 +179,7 @@ function Jobs() {
               )}
               {(j.status === "picked_up" || j.status === "enroute_delivery") && j.status !== "delivered" && (
                 <button onClick={() => advance(j)} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm text-white">
-                  <Truck className="h-4 w-4" /> Deliver
+                  <Truck className="h-4 w-4" /> {j.status === "enroute_delivery" ? "Photo & complete" : "Deliver"}
                 </button>
               )}
               {j.status === "delivered" && (
@@ -183,6 +198,16 @@ function Jobs() {
       </div>
       )}
     </AppShell>
+    {user?.id && podJob && (
+      <PodCaptureSheet
+        open
+        deliveryId={podJob.id}
+        userId={user.id}
+        onClose={() => setPodJob(null)}
+        onComplete={finishWithPod}
+      />
+    )}
+    </>
     </VerifiedTransportGate>
   );
 }

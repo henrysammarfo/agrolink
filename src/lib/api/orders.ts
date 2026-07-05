@@ -128,11 +128,15 @@ export async function subscribeToDelivery(
   };
 }
 
-export async function completeDeliveryViaApi(deliveryId: string, userId: string) {
+export async function completeDeliveryViaApi(
+  deliveryId: string,
+  userId: string,
+  podPhotoUrl?: string,
+) {
   const res = await fetch("/api/deliveries/complete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ deliveryId, userId }),
+    body: JSON.stringify({ deliveryId, userId, podPhotoUrl }),
   });
   const data = (await res.json()) as { error?: string; message?: string };
   if (!res.ok) throw new Error(data.error ?? "Complete failed");

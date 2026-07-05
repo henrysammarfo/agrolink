@@ -46,7 +46,8 @@ npx cap add android   # only once, after first build
 
 ## Production checklist
 
-- [ ] Replace placeholder icons in `public/icons/`
+- [ ] Replace placeholder icons in `public/icons/` — run `npm run icons:generate`; PNGs ship from BrandMark gradient
+- [ ] Seed Supabase listings: `npm run seed:demo` (or use `VITE_DEMO_MODE=true` client fallback)
 - [ ] Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in build env
 - [ ] Set server secrets: Paystack, Hubtel, FCM, OpenAI
 - [ ] Apply Supabase migration `20260705030000_escrow_countdown_batch_otp.sql`

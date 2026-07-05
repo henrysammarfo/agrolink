@@ -60,13 +60,17 @@ Last updated: 2026-07-05
 | Hubtel SMS OTP (GHS 500+) | Done | `/api/otp/send`, `/api/otp/verify`, cart UI |
 | Premium app UX | Done | TikTok immersive feed nav, Bolt countdown sheets |
 | Capacitor / APK scaffold | Done | `capacitor.config.ts`, `manifest.webmanifest`, `docs/APK_BUILD.md` |
+| react-riyils gesture feed | Done | Swiper physics in fullscreen `FeedPlayer` |
+| POD photo on deliver | Done | `PodCaptureSheet`, `delivery-pod` bucket, `pod_photo_url` |
+| Capacitor geolocation | Done | `@capacitor/geolocation` + `native-geolocation.ts` |
+| Demo feed seed | Done | `demo-listings.ts` + `scripts/seed-demo-listings.mjs` |
+| Brand app icons | Done | `public/icons/` from BrandMark gradient |
 
 ## Known gaps
 
-- Native React Native app (Capacitor APK path documented; RN clones in OSS_REFERENCE for future port)
-- Twi language toggle
+- Native React Native app (Capacitor APK path documented)
+- **Twi language toggle** (deferred by product decision)
 - Live streaming
-- `@capacitor/geolocation` native plugin (browser geo works today)
 
 ## Key decisions
 

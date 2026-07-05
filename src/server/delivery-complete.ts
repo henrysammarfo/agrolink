@@ -1,6 +1,10 @@
 import { processOrderPayouts } from "@/server/payouts";
 
-export async function completeDelivery(deliveryId: string, driverUserId: string) {
+export async function completeDelivery(
+  deliveryId: string,
+  driverUserId: string,
+  podPhotoUrl?: string,
+) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   const { data: delivery } = await supabaseAdmin
@@ -26,6 +30,8 @@ export async function completeDelivery(deliveryId: string, driverUserId: string)
     .update({
       status: "delivered",
       actual_delivery: new Date().toISOString(),
+      pod_photo_url: podPhotoUrl ?? null,
+      pod_captured_at: podPhotoUrl ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", deliveryId);

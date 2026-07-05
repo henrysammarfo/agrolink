@@ -14,6 +14,9 @@
       "launchShowDuration": 2000,
       "backgroundColor": "#0f1a14",
       "showSpinner": false
+    },
+    "Geolocation": {
+      "permissions": ["location", "coarseLocation"]
     }
   }
 }

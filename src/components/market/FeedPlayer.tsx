@@ -1,6 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { VerticalFeed, type VerticalFeedRef, type VideoItem } from "react-vertical-feed";
+import {
+  PlaybackControllerProvider,
+  RiyilsObserverProvider,
+  RiyilsViewer,
+} from "react-riyils";
+import "react-riyils/dist/index.css";
+import "@/styles/riyils-overrides.css";
 import {
   Heart,
   MessageCircle,
@@ -31,6 +39,8 @@ import {
 } from "@/lib/api/engagement";
 import type { FeedListing } from "@/lib/types/marketplace";
 import type { FeedComment } from "@/lib/types/marketplace";
+import { FALLBACK_PRODUCE_VIDEO, isDemoMode } from "@/lib/demo-listings";
+import { getCurrentPosition } from "@/lib/native-geolocation";
 
 export { FEED_ALGORITHM_COPY };
 
@@ -49,12 +59,9 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   const feedRef = useRef<VerticalFeedRef>(null);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (p) => setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => {},
-      { timeout: 8000 },
-    );
+    void getCurrentPosition().then((p) => {
+      if (p) setCoords({ lat: p.lat, lng: p.lng });
+    });
   }, []);
 
   useEffect(() => {
@@ -87,7 +94,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
     );
   }
 
-  if (error || rankedListings.length === 0) {
+  if (error || (rankedListings.length === 0 && !isDemoMode())) {
     return (
       <div className={`${wrapperClass} grid place-items-center p-8 text-center`}>
         <p className="text-white font-serif text-2xl">No listings yet</p>
@@ -100,6 +107,91 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
         >
           Post a listing
         </Link>
+      </div>
+    );
+  }
+
+  if (fullscreen) {
+    const riyilsVideos = rankedListings.map((l) => ({
+      id: l.id,
+      videoUrl: l.video_url ?? FALLBACK_PRODUCE_VIDEO,
+      thumbnailUrl: l.image_url ?? undefined,
+    }));
+
+    return (
+      <div className={wrapperClass}>
+        <PlaybackControllerProvider>
+          <RiyilsObserverProvider logLevel="warn">
+            <RiyilsViewer
+              videos={riyilsVideos}
+              initialIndex={initialIndex}
+              onClose={() => {}}
+              onVideoChange={setActive}
+              progressBarColor="transparent"
+              controls={[]}
+            />
+          </RiyilsObserverProvider>
+        </PlaybackControllerProvider>
+
+        {typeof document !== "undefined" &&
+          rankedListings[active] &&
+          createPortal(
+            <div className="agrolink-feed-overlay fixed inset-0">
+              <FeedCardOverlay
+                item={rankedListings[active]}
+                isActive
+                muted={muted}
+                onToggleMute={() => setMuted((m) => !m)}
+                onOpenGrid={() => setShowGrid(true)}
+                progress={`${active + 1} / ${rankedListings.length}`}
+                showImageOnly={!rankedListings[active].video_url}
+              />
+            </div>,
+            document.body,
+          )}
+
+        {showGrid && (
+          <div className="fixed inset-0 z-[10060] bg-background/95 backdrop-blur-xl">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h3 className="font-serif text-2xl">Browse all</h3>
+              <button
+                onClick={() => setShowGrid(false)}
+                className="grid h-10 w-10 place-items-center rounded-full hover:bg-secondary"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div
+              className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4"
+              style={{ maxHeight: "calc(100% - 60px)" }}
+            >
+              {rankedListings.map((l, i) => (
+                <button
+                  key={l.id}
+                  onClick={() => {
+                    setShowGrid(false);
+                    setActive(i);
+                  }}
+                  className="relative aspect-[9/16] overflow-hidden rounded-2xl"
+                >
+                  <img
+                    src={l.image_url ?? "/placeholder-produce.jpg"}
+                    alt={l.title}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-left">
+                    <div className="font-serif text-sm text-white">{l.title}</div>
+                    <div className="text-[10px] text-white/70">
+                      GHS {l.price_per_unit}/{l.unit}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

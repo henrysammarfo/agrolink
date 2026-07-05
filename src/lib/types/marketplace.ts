@@ -119,6 +119,8 @@ export type DeliveryRow = {
   accept_deadline?: string | null;
   offer_round?: number;
   pickup_stops?: PickupStop[];
+  pod_photo_url?: string | null;
+  pod_captured_at?: string | null;
   created_at: string;
   tracking_updates: unknown[];
   driver?: {

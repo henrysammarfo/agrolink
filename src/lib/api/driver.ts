@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { watchDriverPosition } from "@/lib/native-geolocation";
 import type { DriverProfile } from "@/lib/types/marketplace";
 
 export async function getOrCreateDriverProfile(userId: string): Promise<DriverProfile> {
@@ -78,17 +79,11 @@ export function startDriverLocationWatch(
   userId: string,
   onUpdate: (lat: number, lng: number) => void,
 ) {
-  if (!navigator.geolocation) return () => {};
-
-  const watchId = navigator.geolocation.watchPosition(
-    (pos) => {
-      const { latitude, longitude } = pos.coords;
-      onUpdate(latitude, longitude);
-      updateDriverLocation(userId, latitude, longitude).catch(console.error);
+  return watchDriverPosition(
+    ({ lat, lng }) => {
+      onUpdate(lat, lng);
+      updateDriverLocation(userId, lat, lng).catch(console.error);
     },
-    (err) => console.warn("[Driver] Geolocation error:", err),
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+    (msg) => console.warn("[Driver] Geolocation error:", msg),
   );
-
-  return () => navigator.geolocation.clearWatch(watchId);
 }

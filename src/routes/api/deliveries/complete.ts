@@ -6,11 +6,15 @@ export const Route = createFileRoute("/api/deliveries/complete")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const body = (await request.json()) as { deliveryId: string; userId: string };
+          const body = (await request.json()) as {
+            deliveryId: string;
+            userId: string;
+            podPhotoUrl?: string;
+          };
           if (!body.deliveryId || !body.userId) {
             return Response.json({ error: "Missing fields" }, { status: 400 });
           }
-          const result = await completeDelivery(body.deliveryId, body.userId);
+          const result = await completeDelivery(body.deliveryId, body.userId, body.podPhotoUrl);
           return Response.json(result);
         } catch (error) {
           return Response.json(

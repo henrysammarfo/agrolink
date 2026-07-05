@@ -12,7 +12,7 @@ Curated repos mapped to AgroLink features. Use for UX patterns, not copy-paste �
 | [illegal-instruction-co/react-riyils](https://github.com/illegal-instruction-co/react-riyils) | — | React | Gesture physics, explore grid → farmer profile grid |
 | [neomavkda3/react-tiktok-style-video-scroller](https://github.com/neomavkda3/react-tiktok-style-video-scroller) | — | React + virtual scroll | Infinite feed pagination |
 
-**AgroLink now has:** `react-vertical-feed` in FeedPlayer, 30s Bolt accept countdown, Paystack subaccount escrow, OSRM multi-farm batch routing, Hubtel SMS OTP for B2B orders, Capacitor APK scaffold.
+**AgroLink now has:** `react-riyils` Swiper gestures + `react-vertical-feed` embed mode, POD capture, Capacitor geolocation, demo feed seed.
 
 **Next borrow:** TikVibe trending score tuning; react-riyils gesture physics for feed; fleetbase POD photo on deliver.
 

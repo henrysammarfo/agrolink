@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { TransportGate, VerifiedTransportGate } from "@/components/app/RoleGate";
 import { JobAcceptCountdown } from "@/components/transport/JobAcceptCountdown";
+import { PodCaptureSheet } from "@/components/transport/PodCaptureSheet";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile } from "@/hooks/use-marketplace";
@@ -31,6 +32,7 @@ function TransportOverview() {
   const [jobs, setJobs] = useState<DeliveryRow[]>([]);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [loading, setLoading] = useState(true);
+  const [podJob, setPodJob] = useState<DeliveryRow | null>(null);
 
   const online = driverProfile?.available ?? false;
   const active = jobs.find((j) => ["driver_assigned", "driver_enroute_pickup", "picked_up", "enroute_delivery"].includes(j.status));
@@ -105,16 +107,28 @@ function TransportOverview() {
     };
     const status = next[job.status];
     if (!status) return;
+    if (status === "delivered") {
+      setPodJob(job);
+      return;
+    }
     try {
-      if (status === "delivered" && user?.id) {
-        await completeDeliveryViaApi(job.id, user.id);
-        toast.success("Delivery completed — payouts sent!");
-      } else {
-        await advanceDeliveryStatus(job.id, status);
-        toast.success("Status updated");
-      }
+      await advanceDeliveryStatus(job.id, status);
+      toast.success("Status updated");
       loadJobs();
     } catch { toast.error("Could not update status"); }
+  };
+
+  const finishWithPod = async (podPhotoUrl: string) => {
+    if (!podJob || !user?.id) return;
+    try {
+      await completeDeliveryViaApi(podJob.id, user.id, podPhotoUrl);
+      toast.success("Delivery completed — POD saved, payouts sent!");
+      setPodJob(null);
+      loadJobs();
+    } catch {
+      toast.error("Could not complete delivery");
+      throw new Error("complete failed");
+    }
   };
 
   const mapPins = featured ? [
@@ -176,7 +190,7 @@ function TransportOverview() {
                       <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-semibold text-white"><Truck className="h-4 w-4" /> En route to buyer</button>
                     )}
                     {featured.status === "enroute_delivery" && (
-                      <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Mark delivered</button>
+                      <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Photo & complete</button>
                     )}
                     <Link to="/app/transport/jobs" className="rounded-full border border-border px-4 py-3 text-sm text-muted-foreground">All jobs</Link>
                     </div>
@@ -191,6 +205,15 @@ function TransportOverview() {
           </div>
         </div>
       </AppShell>
+      {user?.id && podJob && (
+        <PodCaptureSheet
+          open
+          deliveryId={podJob.id}
+          userId={user.id}
+          onClose={() => setPodJob(null)}
+          onComplete={finishWithPod}
+        />
+      )}
     </VerifiedTransportGate>
   );
 }
