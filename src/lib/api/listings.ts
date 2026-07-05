@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedListing, ListingStatus, CropType } from "@/lib/types/marketplace";
 import { rankListings } from "@/lib/feed-algorithm";
-import { mergeDemoFeedIfEmpty } from "@/lib/demo-listings";
+import { mergeDemoFeedIfEmpty, isDemoMode, DEMO_FEED_LISTINGS } from "@/lib/demo-listings";
 
 export async function fetchFeedListings(opts?: {
   lat?: number;
@@ -21,14 +21,22 @@ export async function fetchFeedListings(opts?: {
     query = query.gt("id", opts.cursor);
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
+  try {
+    const { data, error } = await query;
+    if (error) throw error;
 
-  const ranked = rankListings((data ?? []) as FeedListing[], opts?.lat, opts?.lng);
-  const withDemo = mergeDemoFeedIfEmpty(ranked);
-  const nextCursor =
-    withDemo.length === limit ? (withDemo[withDemo.length - 1]?.id ?? null) : null;
-  return { listings: withDemo, nextCursor };
+    const ranked = rankListings((data ?? []) as FeedListing[], opts?.lat, opts?.lng);
+    const withDemo = mergeDemoFeedIfEmpty(ranked);
+    const nextCursor =
+      withDemo.length === limit ? (withDemo[withDemo.length - 1]?.id ?? null) : null;
+    return { listings: withDemo, nextCursor };
+  } catch (err) {
+    if (isDemoMode()) {
+      const ranked = rankListings(DEMO_FEED_LISTINGS, opts?.lat, opts?.lng);
+      return { listings: ranked, nextCursor: null };
+    }
+    throw err;
+  }
 }
 
 export async function fetchListingById(id: string): Promise<FeedListing | null> {

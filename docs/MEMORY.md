@@ -66,11 +66,11 @@ Last updated: 2026-07-05
 | Demo feed seed | Done | `demo-listings.ts` + `scripts/seed-demo-listings.mjs` |
 | Brand app icons | Done | `public/icons/` from BrandMark gradient |
 
-## Known gaps
+## Launch path: PWA (not APK)
 
-- Native React Native app (Capacitor APK path documented)
-- **Twi language toggle** (deferred by product decision)
-- Live streaming
+Production mobile = **installable PWA** over HTTPS. See `docs/PWA.md`.
+
+Capacitor/APK is **deferred** — config kept for a later phase only.
 
 ## Key decisions
 

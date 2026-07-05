@@ -1,6 +1,8 @@
-# APK / Android Build — AgroLink
+# APK / Android Build — **DEFERRED**
 
-AgroLink ships as a **PWA-first** TanStack Start web app wrapped with **Capacitor** for native Android APK distribution. Marketing pages stay on the web; the `/app/*` surfaces are optimized for full-screen mobile (TikTok feed, Bolt driver map, DoorDash checkout).
+> **Current launch path is PWA only.** See `docs/PWA.md` for production install.
+
+AgroLink ships as a **PWA-first** TanStack Start web app. Native APK via Capacitor is a future phase, not required for go-live.
 
 ## Prerequisites
 

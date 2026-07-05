@@ -1,24 +1,53 @@
 {
+  "id": "/",
   "name": "AgroLink",
   "short_name": "AgroLink",
-  "description": "Fresh produce marketplace — TikTok-style feed, MoMo checkout, Bolt-style delivery",
+  "description": "Fresh produce marketplace — TikTok-style feed, MoMo checkout, Bolt-style delivery across Greater Accra",
   "start_url": "/app/buyer/feed",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0f1a14",
   "theme_color": "#0f1a14",
   "orientation": "portrait-primary",
+  "categories": ["food", "shopping", "business"],
+  "lang": "en-GH",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "url": "/app/buyer/feed",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cart",
+      "url": "/app/buyer/cart",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Drive",
+      "url": "/app/transport",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
