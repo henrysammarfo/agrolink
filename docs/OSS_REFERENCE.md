@@ -12,9 +12,9 @@ Curated repos mapped to AgroLink features. Use for UX patterns, not copy-paste �
 | [illegal-instruction-co/react-riyils](https://github.com/illegal-instruction-co/react-riyils) | — | React | Gesture physics, explore grid → farmer profile grid |
 | [neomavkda3/react-tiktok-style-video-scroller](https://github.com/neomavkda3/react-tiktok-style-video-scroller) | — | React + virtual scroll | Infinite feed pagination |
 
-**AgroLink already has:** `FeedPlayer.tsx`, `feed_rank` view, engagement tables, profile grid on `/farmers/$slug`.
+**AgroLink now has:** `react-vertical-feed` in FeedPlayer, 30s Bolt accept countdown, Paystack subaccount escrow, OSRM multi-farm batch routing, Hubtel SMS OTP for B2B orders, Capacitor APK scaffold.
 
-**Next borrow:** Install `react-vertical-feed` for smoother snap-scroll; TikVibe trending score for `ai_demand_score` weight tuning.
+**Next borrow:** TikVibe trending score tuning; react-riyils gesture physics for feed; fleetbase POD photo on deliver.
 
 ---
 
@@ -27,9 +27,9 @@ Curated repos mapped to AgroLink features. Use for UX patterns, not copy-paste �
 | [bolt-delivery/bolt-delivery-app](https://github.com/bolt-delivery/bolt-delivery-app) | Archived RN | Online toggle, earnings screen layout |
 | [UberGuiding/uber-app-clone](https://github.com/UberGuiding/uber-app-clone) | React Native + Firebase | Map + bottom sheet job card pattern |
 
-**AgroLink already has:** `/app/transport` map, `VerifiedTransportGate`, OSRM routes, job board, Paystack Transfers payout on complete.
+**AgroLink now has:** `/app/transport` map with 30s accept countdown, job reassign API, co-op multi-stop pickups, Paystack escrow + release on complete.
 
-**Yango note:** Yango (formerly Yandex Go) uses same patterns as Bolt — go-online, document KYC, surge zones. Our `surge_multiplier` in `delivery_pricing_config` covers this.
+**Next borrow:** fleetbase POD photo capture; Yango-style surge heatmap UI.
 
 ---
 
@@ -42,7 +42,9 @@ Curated repos mapped to AgroLink features. Use for UX patterns, not copy-paste �
 | [adrianhajdin/food_ordering](https://github.com/adrianhajdin/food_ordering) | RN + Appwrite | Cart → pay → track flow |
 | [chayan-1906/Foodies-React-Native](https://github.com/chayan-1906/Foodies-React-Native) | RN + Redux | Multicart, animated checkout |
 
-**AgroLink already has:** Cart with live delivery quote, `LiveTrackCard`, Paystack MoMo, driver broadcast on payment webhook.
+**AgroLink now has:** Cart OTP for GHS 500+, Paystack split/escrow, batch farm routing in delivery quote.
+
+**Next borrow:** expo-delivery-app Socket.io for sub-second order updates (Supabase Realtime covers most cases today).
 
 ---
 

@@ -18,6 +18,8 @@ export async function initiatePaystackMoMoCharge(params: {
   phone: string;
   provider: "mtn" | "vod" | "atl";
   idempotencyKey: string;
+  subaccount?: string;
+  transactionChargeGhs?: number;
 }): Promise<PaystackChargeResult> {
   const secret = process.env.PAYSTACK_SECRET_KEY;
   if (!secret) {
@@ -43,6 +45,13 @@ export async function initiatePaystackMoMoCharge(params: {
       email: params.email,
       currency: "GHS",
       reference: params.idempotencyKey,
+      ...(params.subaccount
+        ? {
+            subaccount: params.subaccount,
+            transaction_charge: Math.round((params.transactionChargeGhs ?? 0) * 100),
+            bearer: "account",
+          }
+        : {}),
       mobile_money: {
         phone: params.phone.replace(/\D/g, "").replace(/^233/, "0"),
         provider: params.provider,
@@ -78,6 +87,7 @@ export async function processCheckout(params: {
   deliveryAddress?: string;
   deliveryLat?: number;
   deliveryLng?: number;
+  otpVerified?: boolean;
 }): Promise<{ orderId: string; paymentReference: string; displayText?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -99,15 +109,29 @@ export async function processCheckout(params: {
     return s + Number(listing.price_per_unit) * Number(it.quantity);
   }, 0);
 
-  const firstListing = items[0].listing as {
-    lat: number;
-    lng: number;
-    location_name: string;
-    unit: string;
-  };
+  const listings = items.map((it) => {
+    const l = it.listing as {
+      lat: number;
+      lng: number;
+      location_name: string;
+      unit: string;
+      seller_id: string;
+    };
+    return l;
+  });
+  const firstListing = listings[0];
   const weightKg = items.reduce((s, it) => s + Number(it.quantity), 0);
-  const deliveryLat = params.deliveryLat ?? firstListing.lat;
-  const deliveryLng = params.deliveryLng ?? firstListing.lng;
+  const deliveryLat = params.deliveryLat ?? firstListing.lat + 0.05;
+  const deliveryLng = params.deliveryLng ?? firstListing.lng + 0.05;
+
+  const pickupStops = [
+    ...new Map(
+      listings.map((l) => [
+        `${l.lat},${l.lng}`,
+        { lat: l.lat, lng: l.lng, label: l.location_name },
+      ]),
+    ).values(),
+  ];
 
   const { computeDeliveryQuote } = await import("@/server/delivery-quote");
   const quote = await computeDeliveryQuote({
@@ -117,6 +141,7 @@ export async function processCheckout(params: {
     deliveryLng,
     weightKg,
     vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
+    pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
   });
 
   const deliveryFee = quote.total;
@@ -128,7 +153,24 @@ export async function processCheckout(params: {
     baseFare: quote.baseFare,
     peakMultiplier: quote.peakMultiplier,
     vehicleMultiplier: quote.vehicleMultiplier,
+    pickupStops: quote.orderedStops ?? pickupStops,
   };
+
+  const { requireOtpForCheckout } = await import("@/server/hubtel-sms");
+  if (await requireOtpForCheckout(params.userId, total)) {
+    if (!params.otpVerified) {
+      throw new Error("SMS verification required for orders over GHS 500");
+    }
+  }
+
+  const primarySellerId = (items[0].listing as { seller_id: string }).seller_id;
+  const { buildEscrowSplit } = await import("@/server/paystack-subaccounts");
+  const escrowSplit = await buildEscrowSplit({
+    sellerId: primarySellerId,
+    subtotalGhs: subtotal,
+    platformFeePct: quote.pricingConfig.platform_fee_pct,
+  });
+
   const idempotencyKey = `agrolink-${params.userId.slice(0, 8)}-${Date.now()}`;
 
   const { data: order, error: orderErr } = await supabaseAdmin
@@ -145,6 +187,9 @@ export async function processCheckout(params: {
       delivery_address: params.deliveryAddress ?? null,
       delivery_lat: deliveryLat,
       delivery_lng: deliveryLng,
+      escrow_status: escrowSplit ? "held" : "pending",
+      escrow_amount: escrowSplit?.farmerShareGhs ?? null,
+      otp_verified_at: params.otpVerified ? new Date().toISOString() : null,
     })
     .select()
     .single();
@@ -163,17 +208,23 @@ export async function processCheckout(params: {
   });
   await supabaseAdmin.from("order_items").insert(orderItems);
 
+  const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
   await supabaseAdmin.from("deliveries").insert({
     order_id: order.id,
     pickup_lat: firstListing.lat,
     pickup_lng: firstListing.lng,
-    pickup_address: firstListing.location_name,
+    pickup_address:
+      pickupStops.length > 1
+        ? `${pickupStops.length} farms · ${firstListing.location_name}`
+        : firstListing.location_name,
     delivery_lat: deliveryLat,
     delivery_lng: deliveryLng,
     delivery_address: params.deliveryAddress ?? "Buyer address",
     estimated_distance_km: quote.distanceKm,
     delivery_fee: deliveryFee,
     fee_breakdown: feeBreakdown,
+    pickup_stops: quote.orderedStops ?? pickupStops,
+    accept_deadline: acceptDeadlineFromNow(),
     status: "requested",
   });
 
@@ -184,6 +235,14 @@ export async function processCheckout(params: {
     status: "pending",
     idempotency_key: idempotencyKey,
     provider_reference: idempotencyKey,
+    escrow_status: escrowSplit ? "held" : null,
+    paystack_split: escrowSplit
+      ? {
+          subaccount: escrowSplit.subaccountCode,
+          farmer_share: escrowSplit.farmerShareGhs,
+          platform_share: escrowSplit.platformShareGhs,
+        }
+      : null,
   });
 
   const charge = await initiatePaystackMoMoCharge({
@@ -192,6 +251,10 @@ export async function processCheckout(params: {
     phone: params.phone,
     provider: params.momoProvider,
     idempotencyKey,
+    subaccount: escrowSplit?.subaccountCode,
+    transactionChargeGhs: escrowSplit
+      ? escrowSplit.platformShareGhs + deliveryFee + platformFee
+      : undefined,
   });
 
   await supabaseAdmin.from("cart_items").delete().eq("cart_id", cart.id);
@@ -265,6 +328,8 @@ export async function handlePaystackWebhook(
 
   if (delivery) {
     const { notifyDriversOfNewJob } = await import("@/server/push");
+    const { setDeliveryAcceptDeadline } = await import("@/server/delivery-reassign");
+    await setDeliveryAcceptDeadline(delivery.id);
     await notifyDriversOfNewJob(
       delivery.id,
       delivery.pickup_address,

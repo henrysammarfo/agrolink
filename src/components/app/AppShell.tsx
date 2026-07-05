@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
   ChevronLeft, Bell, Search, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
-  ShieldCheck, AlertTriangle, CreditCard, ListChecks,
+  ShieldCheck, AlertTriangle, CreditCard, ListChecks, ArrowLeft,
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
@@ -38,11 +38,14 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
   ],
 };
 
+const IMMERSIVE_PATHS = ["/app/buyer/feed"];
+
 export function AppShell({ role, children }: { role: AppRole; children?: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { profile, roles, signOut } = useAuth();
   const nav = NAV[role];
+  const immersive = IMMERSIVE_PATHS.some((p) => pathname === p);
 
   const mobileTabs = [
     { to: roleHome(role), icon: Home, label: "Home" },
@@ -51,6 +54,45 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
     { to: "/app/inbox", icon: Inbox, label: "Inbox" },
     { to: "/app/profile", icon: User, label: "Me" },
   ];
+
+  if (immersive) {
+    return (
+      <div className="relative h-[100dvh] w-full overflow-hidden bg-black">
+        {children ?? <Outlet />}
+        <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-white/10 bg-black/80 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0px)]">
+          {mobileTabs.map((t) => {
+            const active = pathname === t.to;
+            if (t.center) {
+              return (
+                <Link key="create" to={t.to} className="flex items-center justify-center -mt-3">
+                  <span className="grid h-12 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/30">
+                    <Plus className="h-5 w-5" />
+                  </span>
+                </Link>
+              );
+            }
+            return (
+              <Link
+                key={t.to}
+                to={t.to}
+                className={`flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${active ? "text-white" : "text-white/45"}`}
+              >
+                <t.icon className={`h-5 w-5 ${active ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}`} />
+                {t.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <Link
+          to={roleHome(role)}
+          className="fixed left-3 top-[max(env(safe-area-inset-top),12px)] z-50 grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/10"
+          aria-label="Back to home"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -134,7 +176,7 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border bg-background/85 px-5 py-3.5 backdrop-blur">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border bg-background/85 px-5 py-3.5 backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <div className="flex items-center gap-3 md:hidden">
             <BrandMark className="h-7 w-7" />
             <span className="font-serif text-lg">AgroLink</span>

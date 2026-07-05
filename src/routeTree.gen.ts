@@ -45,7 +45,10 @@ import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.dispute
 import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks/paystack'
 import { Route as ApiVerifyGhanaCardRouteImport } from './routes/api/verify/ghana-card'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
+import { Route as ApiOtpVerifyRouteImport } from './routes/api/otp/verify'
+import { Route as ApiOtpSendRouteImport } from './routes/api/otp/send'
 import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
+import { Route as ApiDeliveriesReassignExpiredRouteImport } from './routes/api/deliveries/reassign-expired'
 import { Route as ApiDeliveriesCompleteRouteImport } from './routes/api/deliveries/complete'
 
 const PricingRoute = PricingRouteImport.update({
@@ -228,11 +231,27 @@ const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
   path: '/api/push/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOtpVerifyRoute = ApiOtpVerifyRouteImport.update({
+  id: '/api/otp/verify',
+  path: '/api/otp/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOtpSendRoute = ApiOtpSendRouteImport.update({
+  id: '/api/otp/send',
+  path: '/api/otp/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDeliveryQuoteRoute = ApiDeliveryQuoteRouteImport.update({
   id: '/api/delivery/quote',
   path: '/api/delivery/quote',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDeliveriesReassignExpiredRoute =
+  ApiDeliveriesReassignExpiredRouteImport.update({
+    id: '/api/deliveries/reassign-expired',
+    path: '/api/deliveries/reassign-expired',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDeliveriesCompleteRoute = ApiDeliveriesCompleteRouteImport.update({
   id: '/api/deliveries/complete',
   path: '/api/deliveries/complete',
@@ -263,7 +282,10 @@ export interface FileRoutesByFullPath {
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
+  '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/otp/send': typeof ApiOtpSendRoute
+  '/api/otp/verify': typeof ApiOtpVerifyRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
@@ -302,7 +324,10 @@ export interface FileRoutesByTo {
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app': typeof AppIndexRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
+  '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/otp/send': typeof ApiOtpSendRoute
+  '/api/otp/verify': typeof ApiOtpVerifyRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
@@ -343,7 +368,10 @@ export interface FileRoutesById {
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
+  '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/otp/send': typeof ApiOtpSendRoute
+  '/api/otp/verify': typeof ApiOtpVerifyRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
@@ -385,7 +413,10 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/deliveries/complete'
+    | '/api/deliveries/reassign-expired'
     | '/api/delivery/quote'
+    | '/api/otp/send'
+    | '/api/otp/verify'
     | '/api/push/register'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
@@ -424,7 +455,10 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app'
     | '/api/deliveries/complete'
+    | '/api/deliveries/reassign-expired'
     | '/api/delivery/quote'
+    | '/api/otp/send'
+    | '/api/otp/verify'
     | '/api/push/register'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
@@ -464,7 +498,10 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/deliveries/complete'
+    | '/api/deliveries/reassign-expired'
     | '/api/delivery/quote'
+    | '/api/otp/send'
+    | '/api/otp/verify'
     | '/api/push/register'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
@@ -495,7 +532,10 @@ export interface RootRouteChildren {
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiModerateRoute: typeof ApiModerateRoute
   ApiDeliveriesCompleteRoute: typeof ApiDeliveriesCompleteRoute
+  ApiDeliveriesReassignExpiredRoute: typeof ApiDeliveriesReassignExpiredRoute
   ApiDeliveryQuoteRoute: typeof ApiDeliveryQuoteRoute
+  ApiOtpSendRoute: typeof ApiOtpSendRoute
+  ApiOtpVerifyRoute: typeof ApiOtpVerifyRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiVerifyGhanaCardRoute: typeof ApiVerifyGhanaCardRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
@@ -755,11 +795,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPushRegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/otp/verify': {
+      id: '/api/otp/verify'
+      path: '/api/otp/verify'
+      fullPath: '/api/otp/verify'
+      preLoaderRoute: typeof ApiOtpVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/otp/send': {
+      id: '/api/otp/send'
+      path: '/api/otp/send'
+      fullPath: '/api/otp/send'
+      preLoaderRoute: typeof ApiOtpSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/delivery/quote': {
       id: '/api/delivery/quote'
       path: '/api/delivery/quote'
       fullPath: '/api/delivery/quote'
       preLoaderRoute: typeof ApiDeliveryQuoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/deliveries/reassign-expired': {
+      id: '/api/deliveries/reassign-expired'
+      path: '/api/deliveries/reassign-expired'
+      fullPath: '/api/deliveries/reassign-expired'
+      preLoaderRoute: typeof ApiDeliveriesReassignExpiredRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/deliveries/complete': {
@@ -885,7 +946,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiModerateRoute: ApiModerateRoute,
   ApiDeliveriesCompleteRoute: ApiDeliveriesCompleteRoute,
+  ApiDeliveriesReassignExpiredRoute: ApiDeliveriesReassignExpiredRoute,
   ApiDeliveryQuoteRoute: ApiDeliveryQuoteRoute,
+  ApiOtpSendRoute: ApiOtpSendRoute,
+  ApiOtpVerifyRoute: ApiOtpVerifyRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiVerifyGhanaCardRoute: ApiVerifyGhanaCardRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,

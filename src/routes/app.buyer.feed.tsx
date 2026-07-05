@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AppShell } from "@/components/app/AppShell";
 import { FeedPlayer } from "@/components/market/FeedPlayer";
 
 export const Route = createFileRoute("/app/buyer/feed")({
@@ -8,8 +9,8 @@ export const Route = createFileRoute("/app/buyer/feed")({
 
 function Feed() {
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-black">
+    <AppShell role="buyer">
       <FeedPlayer fullscreen />
-    </div>
+    </AppShell>
   );
 }

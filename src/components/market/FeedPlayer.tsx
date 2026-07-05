@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { VerticalFeed, type VerticalFeedRef, type VideoItem } from "react-vertical-feed";
 import {
   Heart,
   MessageCircle,
@@ -10,12 +11,10 @@ import {
   BadgeCheck,
   Volume2,
   VolumeX,
-  Music2,
   Grid2x2,
   X,
   Send,
   Copy,
-  MessageSquare,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,8 +46,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   const [active, setActive] = useState(initialIndex);
   const [muted, setMuted] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const feedRef = useRef<VerticalFeedRef>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -60,43 +58,24 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   }, []);
 
   useEffect(() => {
-    const root = containerRef.current;
-    if (!root) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting && e.intersectionRatio > 0.6) {
-            const idx = Number((e.target as HTMLElement).dataset.idx);
-            if (!Number.isNaN(idx)) setActive(idx);
-          }
-        });
-      },
-      { root, threshold: [0.6, 0.9] },
-    );
-    itemRefs.current.forEach((el) => el && obs.observe(el));
-    return () => obs.disconnect();
-  }, [rankedListings.length]);
-
-  useEffect(() => {
-    const el = itemRefs.current[initialIndex];
-    el?.scrollIntoView({ behavior: "auto", block: "start" });
+    if (rankedListings.length && feedRef.current) {
+      feedRef.current.scrollToItem(initialIndex, "auto");
+    }
   }, [initialIndex, rankedListings.length]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown") scrollToIdx(Math.min(active + 1, rankedListings.length - 1));
-      else if (e.key === "ArrowUp") scrollToIdx(Math.max(active - 1, 0));
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [active, rankedListings.length]);
-
-  function scrollToIdx(i: number) {
-    itemRefs.current[i]?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  const feedItems: VideoItem[] = rankedListings.map((l) => ({
+    id: l.id,
+    src: l.video_url ?? l.image_url ?? "",
+    poster: l.image_url ?? undefined,
+    muted,
+    autoPlay: true,
+    loop: true,
+    playsInline: true,
+    metadata: { listing: l },
+  }));
 
   const wrapperClass = fullscreen
-    ? "fixed inset-0 z-0 bg-black"
+    ? "h-full w-full bg-black"
     : "relative mx-auto aspect-[9/16] w-full max-w-[420px] overflow-hidden rounded-[2rem] border border-border bg-black shadow-[var(--shadow-cinema)]";
 
   if (isLoading) {
@@ -127,34 +106,31 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
 
   return (
     <div className={wrapperClass}>
-      <div
-        ref={containerRef}
-        className="no-scrollbar h-full w-full overflow-y-auto snap-y snap-mandatory"
-        style={{ scrollSnapType: "y mandatory" }}
-      >
-        {rankedListings.map((l, i) => (
-          <div
-            key={l.id}
-            ref={(el) => {
-              itemRefs.current[i] = el;
-            }}
-            data-idx={i}
-            className="relative h-full w-full snap-start snap-always"
-            style={{ minHeight: "100%" }}
-          >
-            <FeedCard
-              item={l}
+      <VerticalFeed
+        ref={feedRef}
+        items={feedItems}
+        className="h-full w-full"
+        style={{ height: "100%", scrollSnapType: "y mandatory" }}
+        threshold={0.75}
+        onCurrentItemChange={setActive}
+        onVideoError={() => {}}
+        renderItemOverlay={(item, i) => {
+          const listing = (item.metadata as { listing: FeedListing }).listing;
+          return (
+            <FeedCardOverlay
+              item={listing}
               isActive={i === active}
               muted={muted}
               onToggleMute={() => setMuted((m) => !m)}
               onOpenGrid={() => setShowGrid(true)}
               progress={`${i + 1} / ${rankedListings.length}`}
+              showImageOnly={!listing.video_url}
             />
-          </div>
-        ))}
-      </div>
+          );
+        }}
+      />
 
-      <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex">
+      <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex z-20">
         {rankedListings.map((_, i) => (
           <span
             key={i}
@@ -184,7 +160,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
                 key={l.id}
                 onClick={() => {
                   setShowGrid(false);
-                  scrollToIdx(i);
+                  feedRef.current?.scrollToItem(i, "smooth");
                 }}
                 className="relative aspect-[9/16] overflow-hidden rounded-2xl"
               >
@@ -209,13 +185,14 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   );
 }
 
-function FeedCard({
+function FeedCardOverlay({
   item,
   isActive,
   muted,
   onToggleMute,
   onOpenGrid,
   progress,
+  showImageOnly,
 }: {
   item: FeedListing;
   isActive: boolean;
@@ -223,6 +200,7 @@ function FeedCard({
   onToggleMute: () => void;
   onOpenGrid: () => void;
   progress: string;
+  showImageOnly?: boolean;
 }) {
   const { user } = useAuth();
   const addToCartMut = useAddToCart();
@@ -325,30 +303,21 @@ function FeedCard({
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black">
-      {item.video_url && isActive ? (
-        <video
-          src={item.video_url}
-          className="absolute inset-0 h-full w-full object-cover"
-          autoPlay
-          loop
-          muted={muted}
-          playsInline
-        />
-      ) : (
+    <div className="pointer-events-none absolute inset-0">
+      {showImageOnly && (
         <img
           src={item.image_url ?? ""}
           alt={item.title}
-          className={`absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
+          className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
         />
       )}
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
+      <div className="pointer-events-auto absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
         <button
           onClick={onOpenGrid}
-          className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white"
+          className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white active:scale-95 transition"
           aria-label="Browse all"
         >
           <Grid2x2 className="h-4 w-4" />
@@ -356,14 +325,14 @@ function FeedCard({
         <span className="text-[10px] uppercase tracking-widest text-white/70">{progress}</span>
         <button
           onClick={onToggleMute}
-          className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white"
+          className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white active:scale-95 transition"
           aria-label={muted ? "Unmute" : "Mute"}
         >
           {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </button>
       </div>
 
-      <div className="absolute right-3 bottom-28 z-10 flex flex-col items-center gap-5 md:bottom-32">
+      <div className="pointer-events-auto absolute right-3 bottom-28 z-10 flex flex-col items-center gap-5 md:bottom-32">
         <Link to="/farmers/$slug" params={{ slug: sellerSlug }} className="relative">
           <span className="grid h-12 w-12 place-items-center rounded-full border-2 border-white bg-primary/30 font-serif text-lg text-white overflow-hidden">
             {item.seller_avatar ? (
@@ -395,7 +364,7 @@ function FeedCard({
         <Action icon={Share2} label="Share" onClick={() => setPanel("share")} />
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 z-10 p-4 pb-[max(env(safe-area-inset-bottom),16px)] pr-20 text-white md:p-6 md:pr-24">
+      <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 p-4 pb-[max(env(safe-area-inset-bottom),72px)] pr-20 text-white md:p-6 md:pr-24">
         <Link
           to="/farmers/$slug"
           params={{ slug: sellerSlug }}
@@ -419,7 +388,7 @@ function FeedCard({
           </div>
           <button
             onClick={handleAddToCart}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:brightness-110"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:brightness-110 active:scale-[0.98] transition"
           >
             <ShoppingBasket className="h-4 w-4" /> Add to cart
           </button>
@@ -431,13 +400,14 @@ function FeedCard({
 
       {panel && (
         <div
-          className="absolute inset-0 z-20 flex items-end bg-black/35"
+          className="pointer-events-auto absolute inset-0 z-20 flex items-end bg-black/35"
           onClick={() => setPanel(null)}
         >
           <div
-            className="max-h-[72%] w-full rounded-t-3xl bg-background text-foreground shadow-2xl"
+            className="max-h-[72%] w-full rounded-t-3xl bg-background text-foreground shadow-2xl animate-in slide-in-from-bottom duration-300"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted" />
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <h3 className="font-serif text-xl">{panel === "comments" ? "Comments" : "Share"}</h3>
               <button
@@ -535,7 +505,6 @@ function formatCount(n: number) {
   return String(n);
 }
 
-// Legacy export for discover page
 export function feedScore() {
   return 0;
 }

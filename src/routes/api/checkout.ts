@@ -14,6 +14,7 @@ export const Route = createFileRoute("/api/checkout")({
             deliveryAddress?: string;
             deliveryLat?: number;
             deliveryLng?: number;
+            otpVerified?: boolean;
           };
 
           if (!body.userId || !body.email || !body.phone) {
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/api/checkout")({
             deliveryAddress: body.deliveryAddress,
             deliveryLat: body.deliveryLat,
             deliveryLng: body.deliveryLng,
+            otpVerified: body.otpVerified,
           });
 
           return Response.json(result);

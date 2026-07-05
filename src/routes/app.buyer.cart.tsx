@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Info } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Info, Smartphone } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useCart, useUpdateCartItem, useRemoveCartItem } from "@/hooks/use-marketplace";
+import { HIGH_VALUE_OTP_THRESHOLD_GHS } from "@/lib/delivery-constants";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 export const Route = createFileRoute("/app/buyer/cart")({
   head: () => ({ meta: [{ title: "Cart · AgroLink" }] }),
@@ -24,8 +26,18 @@ function Cart() {
   const [paying, setPaying] = useState(false);
   const [done, setDone] = useState(false);
   const [displayText, setDisplayText] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
 
-  const [deliveryQuote, setDeliveryQuote] = useState<{ total: number; breakdown: string[]; distanceKm: number } | null>(null);
+  const [deliveryQuote, setDeliveryQuote] = useState<{
+    total: number;
+    breakdown: string[];
+    distanceKm: number;
+    orderedStops?: { lat: number; lng: number; label?: string }[];
+  } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
 
   const subtotal = items.reduce(
@@ -35,6 +47,15 @@ function Cart() {
   const delivery = deliveryQuote?.total ?? 0;
   const platformFee = Math.round(subtotal * 0.06 * 100) / 100;
   const total = subtotal + delivery + platformFee;
+  const needsOtp = total >= HIGH_VALUE_OTP_THRESHOLD_GHS;
+
+  const pickupStops = useMemo(() => {
+    const stops = items
+      .map((i) => i.listing)
+      .filter((l): l is NonNullable<typeof l> => !!l?.lat && !!l?.lng)
+      .map((l) => ({ lat: l.lat, lng: l.lng, label: l.location_name }));
+    return [...new Map(stops.map((s) => [`${s.lat},${s.lng}`, s])).values()];
+  }, [items]);
 
   useEffect(() => {
     if (!items.length) {
@@ -55,17 +76,67 @@ function Cart() {
         deliveryLng: first.lng + 0.05,
         weightKg,
         vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
+        pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
       }),
     })
       .then((r) => r.json())
       .then((q) => setDeliveryQuote(q))
       .catch(() => setDeliveryQuote(null))
       .finally(() => setQuoteLoading(false));
-  }, [items]);
+  }, [items, pickupStops]);
+
+  async function sendOtp() {
+    if (!user?.id) return;
+    setOtpLoading(true);
+    try {
+      const res = await fetch("/api/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          phone: profile?.phone ?? "+233551234987",
+          orderTotalGhs: total,
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; message?: string; demoCode?: string };
+      if (!res.ok || !data.ok) throw new Error(data.message ?? "Could not send code");
+      setOtpSent(true);
+      if (data.demoCode) setDemoOtpHint(data.demoCode);
+      toast.success(data.message ?? "Code sent");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "SMS failed");
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
+  async function verifyOtp() {
+    if (!user?.id || otpCode.length < 6) return;
+    setOtpLoading(true);
+    try {
+      const res = await fetch("/api/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, code: otpCode }),
+      });
+      const data = (await res.json()) as { ok?: boolean; message?: string };
+      if (!data.ok) throw new Error(data.message ?? "Invalid code");
+      setOtpVerified(true);
+      toast.success("Verified — you can pay now");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Verification failed");
+    } finally {
+      setOtpLoading(false);
+    }
+  }
 
   async function pay() {
     if (!user?.id || !user.email) {
       toast.error("Sign in to checkout");
+      return;
+    }
+    if (needsOtp && !otpVerified) {
+      toast.error(`Verify your phone for orders over GHS ${HIGH_VALUE_OTP_THRESHOLD_GHS}`);
       return;
     }
     setPaying(true);
@@ -79,6 +150,7 @@ function Cart() {
           phone: profile?.phone ?? "+233551234987",
           momoProvider: channel,
           deliveryAddress: profile?.region ?? "Greater Accra",
+          otpVerified: needsOtp ? otpVerified : undefined,
         }),
       });
       const data = (await res.json()) as { orderId?: string; displayText?: string; error?: string };
@@ -213,6 +285,11 @@ function Cart() {
                   <div key={line}>{line}</div>
                 ))}
                 <div>{deliveryQuote.distanceKm.toFixed(1)} km via OSRM routing</div>
+                {deliveryQuote.orderedStops && deliveryQuote.orderedStops.length > 1 && (
+                  <div className="text-primary font-medium">
+                    {deliveryQuote.orderedStops.length} farm pickups · co-op batch route
+                  </div>
+                )}
               </div>
             )}
             <div className="flex justify-between">
@@ -224,6 +301,57 @@ function Cart() {
               <dd className="font-serif text-xl">GHS {total.toFixed(2)}</dd>
             </div>
           </dl>
+
+          {needsOtp && (
+            <div className="mt-6 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Smartphone className="h-4 w-4 text-primary" />
+                B2B verification (GHS {HIGH_VALUE_OTP_THRESHOLD_GHS}+)
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Hubtel SMS OTP required before checkout.
+              </p>
+              {!otpVerified ? (
+                <div className="mt-4 space-y-3">
+                  {!otpSent ? (
+                    <button
+                      onClick={sendOtp}
+                      disabled={otpLoading}
+                      className="w-full rounded-full border border-primary py-2.5 text-sm text-primary hover:bg-primary/10 disabled:opacity-50"
+                    >
+                      {otpLoading ? "Sending…" : "Send verification code"}
+                    </button>
+                  ) : (
+                    <>
+                      {demoOtpHint && (
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          Demo code: <span className="font-mono font-bold">{demoOtpHint}</span>
+                        </p>
+                      )}
+                      <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                        <InputOTPGroup>
+                          {[0, 1, 2, 3, 4, 5].map((i) => (
+                            <InputOTPSlot key={i} index={i} />
+                          ))}
+                        </InputOTPGroup>
+                      </InputOTP>
+                      <button
+                        onClick={verifyOtp}
+                        disabled={otpLoading || otpCode.length < 6}
+                        className="w-full rounded-full bg-primary py-2.5 text-sm text-primary-foreground disabled:opacity-50"
+                      >
+                        {otpLoading ? "Checking…" : "Verify code"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Phone verified
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="mt-6">
             <label className="text-xs uppercase tracking-widest text-muted-foreground">
@@ -242,7 +370,7 @@ function Cart() {
 
           <button
             onClick={pay}
-            disabled={paying || items.length === 0 || done || quoteLoading || !deliveryQuote}
+            disabled={paying || items.length === 0 || done || quoteLoading || !deliveryQuote || (needsOtp && !otpVerified)}
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background hover:bg-foreground/90 disabled:opacity-50"
           >
             {paying ? (

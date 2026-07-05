@@ -72,11 +72,22 @@ export async function computeDeliveryQuote(params: {
   deliveryLng: number;
   weightKg: number;
   vehicleType?: VehicleType;
+  pickupStops?: { lat: number; lng: number; label?: string }[];
 }) {
-  const from = { lat: params.pickupLat, lng: params.pickupLng };
   const to = { lat: params.deliveryLat, lng: params.deliveryLng };
-  const osrmKm = await fetchOsrmDistanceKm(from, to);
-  const distanceKm = osrmKm ?? haversineKm(from, to);
+  let distanceKm: number;
+  let orderedStops: { lat: number; lng: number; label?: string }[] | undefined;
+
+  if (params.pickupStops && params.pickupStops.length > 1) {
+    const { computeMultiStopDistanceKm } = await import("@/server/batch-routing");
+    const batch = await computeMultiStopDistanceKm(params.pickupStops, to);
+    distanceKm = batch.distanceKm;
+    orderedStops = batch.orderedStops;
+  } else {
+    const from = { lat: params.pickupLat, lng: params.pickupLng };
+    const osrmKm = await fetchOsrmDistanceKm(from, to);
+    distanceKm = osrmKm ?? haversineKm(from, to);
+  }
   const cfg = await getActivePricingConfig();
   const surgeMult = cfg.surge_multiplier > 1 ? cfg.surge_multiplier : undefined;
   const quote = calculateDeliveryQuote(
@@ -89,5 +100,5 @@ export async function computeDeliveryQuote(params: {
     cfg,
   );
   const platformFee = calculatePlatformFee(params.weightKg > 0 ? quote.total : quote.total, cfg);
-  return { ...quote, distanceKm, platformFee, pricingConfig: cfg };
+  return { ...quote, distanceKm, platformFee, pricingConfig: cfg, orderedStops };
 }

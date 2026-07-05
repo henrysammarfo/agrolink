@@ -13,6 +13,7 @@ export const Route = createFileRoute("/api/delivery/quote")({
             deliveryLng: number;
             weightKg: number;
             vehicleType?: "motorcycle" | "pickup" | "truck" | "minivan";
+            pickupStops?: { lat: number; lng: number; label?: string }[];
           };
 
           if (
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/api/delivery/quote")({
             deliveryLng: body.deliveryLng,
             weightKg: body.weightKg ?? 0,
             vehicleType: body.vehicleType,
+            pickupStops: body.pickupStops,
           });
 
           return Response.json(quote);

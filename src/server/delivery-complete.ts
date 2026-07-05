@@ -36,6 +36,8 @@ export async function completeDelivery(deliveryId: string, driverUserId: string)
     .update({ status: "dispatched", updated_at: new Date().toISOString() })
     .eq("id", order.id);
 
+  const { releaseEscrow } = await import("@/server/paystack-subaccounts");
+  await releaseEscrow(order.id);
   const payout = await processOrderPayouts(order.id);
 
   await supabaseAdmin.from("notifications").insert({

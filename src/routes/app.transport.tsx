@@ -4,6 +4,7 @@ import { MapPin, Truck, Clock, Package, Check, Navigation, Loader2 } from "lucid
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { TransportGate, VerifiedTransportGate } from "@/components/app/RoleGate";
+import { JobAcceptCountdown } from "@/components/transport/JobAcceptCountdown";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile } from "@/hooks/use-marketplace";
@@ -55,7 +56,11 @@ function TransportOverview() {
     if (!user?.id || !isIndex) return;
     loadJobs();
     const interval = setInterval(loadJobs, 15_000);
-    return () => clearInterval(interval);
+    const reassign = setInterval(() => fetch("/api/deliveries/reassign-expired").catch(() => {}), 10_000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(reassign);
+    };
   }, [user?.id, isIndex, loadJobs]);
 
   useEffect(() => {
@@ -139,6 +144,9 @@ function TransportOverview() {
                 <>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-widest text-primary">{active ? "Active job" : "Available job"}</span>
+                    {featured.status === "requested" && featured.accept_deadline && (
+                      <JobAcceptCountdown deadline={featured.accept_deadline} onExpired={loadJobs} compact />
+                    )}
                   </div>
                   <div className="mt-2">
                     <div className="text-xs text-muted-foreground inline-flex flex-wrap items-center gap-x-3">
@@ -150,7 +158,11 @@ function TransportOverview() {
                       <div className="mt-2 text-xs text-muted-foreground inline-flex items-center gap-1"><Truck className="h-3 w-3" /> {featured.estimated_distance_km} km · <Clock className="h-3 w-3 ml-2" /> {featured.status.replace(/_/g, " ")}</div>
                     )}
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-4 flex flex-col gap-3">
+                    {featured.status === "requested" && featured.accept_deadline && (
+                      <JobAcceptCountdown deadline={featured.accept_deadline} onExpired={loadJobs} />
+                    )}
+                    <div className="flex items-center gap-2">
                     {featured.status === "requested" && (
                       <button onClick={() => acceptJob(featured.id)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 py-3 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Accept job</button>
                     )}
@@ -167,6 +179,7 @@ function TransportOverview() {
                       <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Mark delivered</button>
                     )}
                     <Link to="/app/transport/jobs" className="rounded-full border border-border px-4 py-3 text-sm text-muted-foreground">All jobs</Link>
+                    </div>
                   </div>
                 </>
               ) : (

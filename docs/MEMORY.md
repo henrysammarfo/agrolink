@@ -29,6 +29,7 @@ Last updated: 2026-07-05
 | Surge pricing | Done | `surge_multiplier` in pricing config |
 | Follow system | Done | Live toggle on farmer profiles |
 | OSS library | Done | `docs/OSS_REFERENCE.md` — TikTok, Bolt, Uber, Yango, DoorDash |
+| Extra recommendations | Done | See below |
 | Logistics | Done | Realtime driver location + OSRM + verified driver gate |
 | Admin | Done | Live payments + disputes from Supabase |
 | Marketing pages | Done | Home, farmers directory — Supabase-backed, no mock-data.ts |
@@ -48,13 +49,24 @@ Last updated: 2026-07-05
 
 `VITE_DEMO_MODE=true` — demo user on `/app/*` without login. **Production: omit or false.**
 
+## Extra recommendations (implemented 2026-07-05)
+
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| react-vertical-feed TikTok scroll | Done | `FeedPlayer.tsx` + immersive `/app/buyer/feed` shell |
+| 30s job accept + auto-reassign | Done | `accept_deadline`, `JobAcceptCountdown`, `/api/deliveries/reassign-expired` |
+| Paystack subaccounts escrow | Done | `paystack-subaccounts.ts`, split at MoMo charge, release on delivery |
+| Multi-farm batch routing | Done | `batch-routing.ts` OSRM multi-stop + cart co-op quote |
+| Hubtel SMS OTP (GHS 500+) | Done | `/api/otp/send`, `/api/otp/verify`, cart UI |
+| Premium app UX | Done | TikTok immersive feed nav, Bolt countdown sheets |
+| Capacitor / APK scaffold | Done | `capacitor.config.ts`, `manifest.webmanifest`, `docs/APK_BUILD.md` |
+
 ## Known gaps
 
-- Native React Native app (PWA first; see OSS_REFERENCE for RN clones to port)
+- Native React Native app (Capacitor APK path documented; RN clones in OSS_REFERENCE for future port)
 - Twi language toggle
 - Live streaming
-- Paystack Subaccounts escrow (recommended — see OSS_REFERENCE)
-- 30-second job accept countdown (Bolt pattern)
+- `@capacitor/geolocation` native plugin (browser geo works today)
 
 ## Key decisions
 

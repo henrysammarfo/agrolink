@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MapPin, Truck, Clock, Check, Package, Loader2, Navigation } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { VerifiedTransportGate } from "@/components/app/RoleGate";
+import { JobAcceptCountdown } from "@/components/transport/JobAcceptCountdown";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useTransportJobs } from "@/hooks/use-marketplace";
 import { acceptDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
@@ -31,7 +32,22 @@ function Jobs() {
   const [filter, setFilter] = useState<"all" | "requested" | "active" | "delivered">("all");
   const qc = useQueryClient();
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["transport-jobs", driver?.id] });
+  const refresh = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["transport-jobs", driver?.id] });
+  }, [qc, driver?.id]);
+
+  useEffect(() => {
+    const poll = () => fetch("/api/deliveries/reassign-expired").catch(() => {});
+    poll();
+    const id = setInterval(poll, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!driver?.id) return;
+    const id = setInterval(refresh, 5_000);
+    return () => clearInterval(id);
+  }, [driver?.id, refresh]);
 
   const visible = jobs.filter((j) => {
     if (filter === "all") return true;
@@ -105,13 +121,19 @@ function Jobs() {
           const st = STATUS_MAP[j.status] ?? { label: j.status, tone: "" };
           const payout = j.delivery_fee ?? (j.estimated_distance_km ? Math.round(Number(j.estimated_distance_km) * 2.5 + 15) : null);
           return (
-          <div key={j.id} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div key={j.id} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between shadow-sm">
             <div className="min-w-0">
-              <div className="flex items-center gap-3 text-xs uppercase tracking-widest">
+              <div className="flex items-center gap-3 text-xs uppercase tracking-widest flex-wrap">
                 <span className="font-mono text-primary/80">{j.id.slice(0, 8)}</span>
                 <span className={st.tone}>{st.label}</span>
+                {j.status === "requested" && j.accept_deadline && (
+                  <JobAcceptCountdown deadline={j.accept_deadline} onExpired={refresh} compact />
+                )}
               </div>
               <h3 className="mt-1 font-serif text-xl">{j.pickup_address} → {j.delivery_address}</h3>
+              {j.pickup_stops && j.pickup_stops.length > 1 && (
+                <p className="mt-1 text-xs text-primary">{j.pickup_stops.length} co-op farm stops</p>
+              )}
               <div className="mt-2 inline-flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-rose-500" /> Produce run</span>
                 {j.estimated_distance_km != null && (
