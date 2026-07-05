@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { Phone, MessageCircle, Clock, Navigation, Loader2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Phone, MessageCircle, Clock, Navigation } from "lucide-react";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { fetchOsrmRoute } from "@/lib/api/driver";
 import { subscribeToDelivery, subscribeToDriverLocation } from "@/lib/api/orders";
 import type { OrderRow } from "@/lib/types/marketplace";
+import { toast } from "sonner";
 
 const STATUS_STEPS = ["confirmed", "processing", "dispatched", "delivered"] as const;
 
-export function LiveTrackCard({ order }: { order: OrderRow }) {
+type Props = { order: OrderRow; fullscreen?: boolean };
+
+export function LiveTrackCard({ order, fullscreen }: Props) {
   const delivery = order.delivery;
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -24,15 +28,11 @@ export function LiveTrackCard({ order }: { order: OrderRow }) {
         setEtaMin(Math.round(r.duration_min));
       }
     });
-  }, [delivery?.id]);
+  }, [delivery?.id, delivery?.pickup_lat, delivery?.pickup_lng, delivery?.delivery_lat, delivery?.delivery_lng]);
 
   useEffect(() => {
     if (!delivery?.id) return;
-    return subscribeToDelivery(delivery.id, (updated) => {
-      if (updated.driver_id && delivery.driver?.current_lat) {
-        setDriverPos({ lat: delivery.driver.current_lat!, lng: delivery.driver.current_lng! });
-      }
-    });
+    return subscribeToDelivery(delivery.id, () => {});
   }, [delivery?.id]);
 
   useEffect(() => {
@@ -40,10 +40,19 @@ export function LiveTrackCard({ order }: { order: OrderRow }) {
     return subscribeToDriverLocation(delivery.driver_id, (pos) => setDriverPos(pos));
   }, [delivery?.driver_id]);
 
+  const callDriver = () => {
+    const phone = delivery?.driver?.profile?.phone;
+    if (phone) window.location.href = `tel:${phone}`;
+    else toast.info("Driver phone not available yet");
+  };
+
+  const messageDriver = () => {
+    toast.info("Opening inbox…", { description: "In-app chat coming soon — use call for now." });
+  };
+
   if (!delivery) {
     return (
-      <div className="rounded-3xl border border-border bg-card p-8 text-center text-muted-foreground">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+      <div className={`${fullscreen ? "min-h-[60vh] bg-black" : "rounded-3xl border border-border bg-card"} p-8 text-center text-muted-foreground`}>
         <p className="mt-3 text-sm">Preparing delivery…</p>
       </div>
     );
@@ -51,12 +60,7 @@ export function LiveTrackCard({ order }: { order: OrderRow }) {
 
   const pins = [
     { lat: delivery.pickup_lat, lng: delivery.pickup_lng, label: "Farm", kind: "farm" as const },
-    {
-      lat: delivery.delivery_lat,
-      lng: delivery.delivery_lng,
-      label: "You",
-      kind: "buyer" as const,
-    },
+    { lat: delivery.delivery_lat, lng: delivery.delivery_lng, label: "You", kind: "buyer" as const },
     ...(driverPos
       ? [{ lat: driverPos.lat, lng: driverPos.lng, label: "Driver", kind: "driver" as const }]
       : []),
@@ -65,10 +69,12 @@ export function LiveTrackCard({ order }: { order: OrderRow }) {
   const currentIndex = STATUS_STEPS.indexOf(order.status as (typeof STATUS_STEPS)[number]);
   const progress = currentIndex >= 0 ? (currentIndex + 1) / STATUS_STEPS.length : 0.25;
 
+  const mapHeight = fullscreen ? "min-h-[55vh] h-[55vh]" : "280px";
+
   return (
-    <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-      <div className="relative h-[280px] md:h-[340px]">
-        <CorridorMap pins={pins} route={routeCoords} animateDriver={false} driverLabel="Driver" />
+    <div className={`overflow-hidden ${fullscreen ? "bg-black" : "rounded-3xl border border-border bg-card shadow-sm"}`}>
+      <div className={`relative ${fullscreen ? "h-[55vh] min-h-[55vh]" : "h-[280px] md:h-[340px]"}`}>
+        <CorridorMap pins={pins} route={routeCoords} animateDriver={!!driverPos} driverLabel="Driver" dark height={mapHeight} />
         <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-4">
           <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-background/95 px-4 py-2 text-xs shadow-lg backdrop-blur">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
@@ -83,63 +89,96 @@ export function LiveTrackCard({ order }: { order: OrderRow }) {
             )}
           </div>
         </div>
+        {fullscreen && (
+          <Link
+            to="/app/buyer/orders"
+            className="pointer-events-auto absolute bottom-4 right-4 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white backdrop-blur"
+          >
+            All orders
+          </Link>
+        )}
       </div>
 
-      <div className="p-5 md:p-6">
-        <div className="flex items-center gap-4">
-          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary/15 font-serif text-xl text-primary">
-            {(delivery.driver?.profile?.display_name ?? "D")[0]}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase tracking-widest text-primary/80">
-              {order.id.slice(0, 8)}
+      {fullscreen ? (
+        <div className="bg-black/90 p-5 text-white border-t border-white/10">
+          <div className="flex items-center gap-4">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/30 font-sans text-lg font-bold">
+              {(delivery.driver?.profile?.display_name ?? "D")[0]}
             </div>
-            <div className="truncate font-serif text-xl">
-              {delivery.driver?.profile?.display_name ?? "Finding driver…"}
+            <div className="flex-1 min-w-0">
+              <div className="font-sans font-semibold truncate">
+                {delivery.driver?.profile?.display_name ?? "Finding driver…"}
+              </div>
+              <div className="text-xs text-white/70">{delivery.pickup_address} → {delivery.delivery_address}</div>
             </div>
-            <div className="mt-0.5 text-xs text-muted-foreground">
-              {delivery.driver?.vehicle_type ?? "Vehicle"} · {delivery.driver?.plate_number ?? "—"}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white"
-              aria-label="Call"
-            >
+            <button onClick={callDriver} className="grid h-10 w-10 place-items-center rounded-full bg-emerald-500" aria-label="Call">
               <Phone className="h-4 w-4" />
             </button>
-            <button
-              className="grid h-11 w-11 place-items-center rounded-full border border-border"
-              aria-label="Message"
-            >
+            <button onClick={messageDriver} className="grid h-10 w-10 place-items-center rounded-full border border-white/20" aria-label="Message">
               <MessageCircle className="h-4 w-4" />
             </button>
           </div>
         </div>
-
-        <div className="mt-5 rounded-2xl bg-background p-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <Navigation className="h-3 w-3 text-primary" /> {delivery.pickup_address} →{" "}
-              {delivery.delivery_address}
-            </span>
-            <span>{Math.round(progress * 100)}%</span>
+      ) : (
+        <div className="p-5 md:p-6">
+          <div className="flex items-center gap-4">
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary/15 font-sans text-xl font-bold text-primary">
+              {(delivery.driver?.profile?.display_name ?? "D")[0]}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] uppercase tracking-widest text-primary/80">{order.id.slice(0, 8)}</div>
+              <div className="truncate font-sans text-xl font-semibold">
+                {delivery.driver?.profile?.display_name ?? "Finding driver…"}
+              </div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {delivery.driver?.vehicle_type ?? "Vehicle"} · {delivery.driver?.plate_number ?? "—"}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={callDriver}
+                className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white"
+                aria-label="Call driver"
+              >
+                <Phone className="h-4 w-4" />
+              </button>
+              <button
+                onClick={messageDriver}
+                className="grid h-11 w-11 place-items-center rounded-full border border-border"
+                aria-label="Message driver"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
-            <div
-              className="h-full bg-gradient-to-r from-emerald-500 via-primary to-accent transition-[width]"
-              style={{ width: `${Math.max(6, progress * 100)}%` }}
-            />
+
+          <div className="mt-5 rounded-2xl bg-background p-4">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <Navigation className="h-3 w-3 text-primary" /> {delivery.pickup_address} → {delivery.delivery_address}
+              </span>
+              <span>{Math.round(progress * 100)}%</span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
+              <div
+                className="h-full bg-gradient-to-r from-emerald-500 via-primary to-accent transition-[width]"
+                style={{ width: `${Math.max(6, progress * 100)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center justify-between">
+            <div className="font-sans text-2xl font-bold text-primary">GHS {order.total_amount}</div>
+            <Link
+              to="/app/buyer/orders/$orderId/track"
+              params={{ orderId: order.id }}
+              className="text-xs uppercase tracking-widest text-primary hover:underline"
+            >
+              Full-screen track
+            </Link>
           </div>
         </div>
-
-        <div className="mt-5 flex items-center justify-between">
-          <div className="font-serif text-2xl text-primary">GHS {order.total_amount}</div>
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">
-            {order.payment_status}
-          </span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

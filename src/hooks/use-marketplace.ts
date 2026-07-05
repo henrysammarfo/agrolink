@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchFeedListings, fetchSellerListings } from "@/lib/api/listings";
-import { fetchCartItems, addToCart, updateCartItemQuantity, removeCartItem } from "@/lib/api/cart";
+import { fetchCartItems, addToCart, updateCartItemQuantity, removeCartItem, reorderFromOrder } from "@/lib/api/cart";
 import { fetchBuyerOrders, fetchSellerOrders, fetchAvailableDeliveries, fetchDriverDeliveries } from "@/lib/api/orders";
 import { fetchNotifications, fetchMessages } from "@/lib/api/notifications";
 import { fetchDriverProfile } from "@/lib/api/driver-onboarding";
 import { fetchPublicSellers, fetchProfileStats, fetchUserListings, fetchUserBookmarks, fetchUserLikedListings, fetchMarketingStats } from "@/lib/api/profiles";
-import { fetchUserPayouts, fetchFarmerRevenue, fetchAdminPayments } from "@/lib/api/payouts";
+import { fetchUserPayouts, fetchFarmerRevenue, fetchAdminPayments, fetchDriverEarnings } from "@/lib/api/payouts";
 import { fetchDisputes } from "@/lib/api/disputes";
 
 export function useFeed(lat?: number, lng?: number) {
@@ -194,6 +194,24 @@ export function useDisputes() {
     queryKey: ["disputes"],
     queryFn: fetchDisputes,
     refetchInterval: 30_000,
+  });
+}
+
+export function useDriverEarnings(userId?: string) {
+  return useQuery({
+    queryKey: ["driver-earnings", userId],
+    queryFn: () => fetchDriverEarnings(userId!),
+    enabled: !!userId,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useReorderCart() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, order }: { userId: string; order: { items?: { listing_id: string; quantity: number }[] } }) =>
+      reorderFromOrder(userId, order),
+    onSuccess: (_, { userId }) => qc.invalidateQueries({ queryKey: ["cart", userId] }),
   });
 }
 

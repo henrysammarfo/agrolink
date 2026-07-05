@@ -1,14 +1,24 @@
 /**
- * Curated demo produce listings for Greater Accra corridor.
- * Used when VITE_DEMO_MODE is on and Supabase feed is empty (screenshots / local dev).
+ * Curated seed produce listings — self-hosted media only (/public/media/demo/*).
+ * Used when Supabase feed is empty (demo mode or VITE_SEED_FEED=true).
  */
 import type { FeedListing } from "@/lib/types/marketplace";
+import { resolveMediaUrl, resolveVideoUrl } from "@/lib/media-urls";
 
 const DEMO_SELLER = "a0000001-0001-4000-8000-000000000001";
 
-export const DEMO_FEED_LISTINGS: FeedListing[] = [
+const MEDIA = {
+  tomato: "/media/demo/tomato.svg",
+  okra: "/media/demo/okra.svg",
+  pepper: "/media/demo/pepper.svg",
+  garden_egg: "/media/demo/garden-egg.svg",
+  leafy_greens: "/media/demo/greens.svg",
+  onion: "/media/demo/onion.svg",
+} as const;
+
+export const SEED_FEED_LISTINGS: FeedListing[] = [
   {
-    id: "demo-listing-001",
+    id: "seed-listing-001",
     seller_id: DEMO_SELLER,
     title: "Vine-ripe Dodowa tomatoes",
     crop_type: "tomato",
@@ -20,8 +30,8 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     location_name: "Dodowa",
     lat: 5.883,
     lng: -0.089,
-    image_url: "https://images.unsplash.com/photo-1592924357228-91a4daadc663?w=800&q=80",
-    video_url: "https://assets.mixkit.co/videos/preview/mixkit-close-up-of-a-fresh-red-tomato-40772-large.mp4",
+    image_url: MEDIA.tomato,
+    video_url: null,
     status: "active",
     view_count: 842,
     like_count: 156,
@@ -39,7 +49,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     distance_km: 2.4,
   },
   {
-    id: "demo-listing-002",
+    id: "seed-listing-002",
     seller_id: "a0000001-0001-4000-8000-000000000002",
     title: "Afienya okra — chef grade",
     crop_type: "okra",
@@ -51,7 +61,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     location_name: "Afienya",
     lat: 5.712,
     lng: 0.017,
-    image_url: "https://images.unsplash.com/photo-1628773822503-93039bcf061c?w=800&q=80",
+    image_url: MEDIA.okra,
     video_url: null,
     status: "active",
     view_count: 412,
@@ -70,7 +80,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     distance_km: 5.1,
   },
   {
-    id: "demo-listing-003",
+    id: "seed-listing-003",
     seller_id: "a0000001-0001-4000-8000-000000000003",
     title: "Shito pepper blend",
     crop_type: "pepper",
@@ -82,8 +92,8 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     location_name: "Tema Community 25",
     lat: 5.669,
     lng: -0.017,
-    image_url: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=800&q=80",
-    video_url: "https://assets.mixkit.co/videos/preview/mixkit-red-chili-peppers-close-up-41775-large.mp4",
+    image_url: MEDIA.pepper,
+    video_url: null,
     status: "active",
     view_count: 1204,
     like_count: 312,
@@ -101,7 +111,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     distance_km: 8.2,
   },
   {
-    id: "demo-listing-004",
+    id: "seed-listing-004",
     seller_id: "a0000001-0001-4000-8000-000000000004",
     title: "Garden eggs — Ada Foah",
     crop_type: "garden_egg",
@@ -113,7 +123,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     location_name: "Ada Foah",
     lat: 5.786,
     lng: 0.633,
-    image_url: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=800&q=80",
+    image_url: MEDIA.garden_egg,
     video_url: null,
     status: "active",
     view_count: 298,
@@ -132,7 +142,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     distance_km: 12.5,
   },
   {
-    id: "demo-listing-005",
+    id: "seed-listing-005",
     seller_id: "a0000001-0001-4000-8000-000000000005",
     title: "Morning kale & kontomire",
     crop_type: "leafy_greens",
@@ -144,7 +154,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     location_name: "Osu",
     lat: 5.556,
     lng: -0.182,
-    image_url: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=800&q=80",
+    image_url: MEDIA.leafy_greens,
     video_url: null,
     status: "active",
     view_count: 567,
@@ -163,7 +173,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     distance_km: 1.8,
   },
   {
-    id: "demo-listing-006",
+    id: "seed-listing-006",
     seller_id: "a0000001-0001-4000-8000-000000000006",
     title: "Techiman onions — bulk",
     crop_type: "onion",
@@ -175,7 +185,7 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
     location_name: "Tema Harbour",
     lat: 5.639,
     lng: -0.006,
-    image_url: "https://images.unsplash.com/photo-1518977956812-cd3dbadaaf31?w=800&q=80",
+    image_url: MEDIA.onion,
     video_url: null,
     status: "active",
     view_count: 934,
@@ -195,16 +205,29 @@ export const DEMO_FEED_LISTINGS: FeedListing[] = [
   },
 ];
 
-/** Fallback b-roll when listing has image only (react-riyils needs a video URL) */
-export const FALLBACK_PRODUCE_VIDEO =
-  "https://assets.mixkit.co/videos/preview/mixkit-close-up-of-a-fresh-red-tomato-40772-large.mp4";
+/** @deprecated use SEED_FEED_LISTINGS */
+export const DEMO_FEED_LISTINGS = SEED_FEED_LISTINGS;
 
 export function isDemoMode(): boolean {
   return import.meta.env.VITE_DEMO_MODE === "true";
 }
 
+export function isSeedFeedEnabled(): boolean {
+  return isDemoMode() || import.meta.env.VITE_SEED_FEED === "true";
+}
+
+export function sanitizeListingMedia(listing: FeedListing): FeedListing {
+  const fallback = MEDIA[listing.crop_type as keyof typeof MEDIA] ?? "/media/demo/tomato.svg";
+  return {
+    ...listing,
+    image_url: resolveMediaUrl(listing.image_url, fallback),
+    video_url: resolveVideoUrl(listing.video_url, listing.image_url),
+  };
+}
+
 export function mergeDemoFeedIfEmpty(listings: FeedListing[]): FeedListing[] {
-  if (listings.length > 0) return listings;
-  if (!isDemoMode()) return listings;
-  return [...DEMO_FEED_LISTINGS];
+  const sanitized = listings.map(sanitizeListingMedia);
+  if (sanitized.length > 0) return sanitized;
+  if (!isSeedFeedEnabled()) return sanitized;
+  return SEED_FEED_LISTINGS.map(sanitizeListingMedia);
 }

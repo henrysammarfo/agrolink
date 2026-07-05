@@ -1,9 +1,10 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { ArrowRight, TrendingUp, Loader2 } from "lucide-react";
+import { ArrowRight, TrendingUp } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { LiveTrackCard } from "@/components/track/LiveTrackCard";
 import { useAuth } from "@/lib/auth";
 import { useBuyerOrders, useFeedTeaser } from "@/hooks/use-marketplace";
+import { FeedTeaserSkeleton } from "@/components/feed/FeedSkeleton";
 import { MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
 
 export const Route = createFileRoute("/app/buyer")({
@@ -15,7 +16,7 @@ function BuyerOverview() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, profile } = useAuth();
   const { data: orders = [], isLoading } = useBuyerOrders(user?.id);
-  const { data: feed = [] } = useFeedTeaser(3);
+  const { data: feed = [], isLoading: feedLoading } = useFeedTeaser(3);
 
   if (pathname !== "/app/buyer") return <Outlet />;
 
@@ -54,7 +55,7 @@ function BuyerOverview() {
           </Link>
         </div>
         {isLoading ? (
-          <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          <FeedTeaserSkeleton />
         ) : (
           <div className="space-y-5">
             {inTransit.slice(0, 1).map((o) => (
@@ -106,7 +107,10 @@ function BuyerOverview() {
             <TrendingUp className="h-4 w-4 text-accent" />
           </div>
           <div className="mt-5 space-y-3">
-            {feed.map((l) => (
+            {feedLoading ? (
+              <FeedTeaserSkeleton />
+            ) : (
+              feed.map((l) => (
               <Link
                 key={l.id}
                 to="/app/buyer/feed"
@@ -121,7 +125,8 @@ function BuyerOverview() {
                 </div>
                 <div className="text-sm text-primary">GHS {l.price_per_unit}</div>
               </Link>
-            ))}
+            ))
+            )}
           </div>
         </div>
       </section>

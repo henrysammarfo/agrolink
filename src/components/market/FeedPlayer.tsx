@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { VerticalFeed, type VerticalFeedRef, type VideoItem } from "react-vertical-feed";
 import {
@@ -23,7 +23,6 @@ import {
   X,
   Send,
   Copy,
-  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useFeed, useAddToCart } from "@/hooks/use-marketplace";
@@ -39,8 +38,11 @@ import {
 } from "@/lib/api/engagement";
 import type { FeedListing } from "@/lib/types/marketplace";
 import type { FeedComment } from "@/lib/types/marketplace";
-import { FALLBACK_PRODUCE_VIDEO, isDemoMode } from "@/lib/demo-listings";
+import { isDemoMode, isSeedFeedEnabled } from "@/lib/demo-listings";
 import { getCurrentPosition } from "@/lib/native-geolocation";
+import { triggerLikeHaptic } from "@/lib/haptics";
+import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
+import { CategoryChips, filterByCategory } from "@/components/feed/CategoryChips";
 
 export { FEED_ALGORITHM_COPY };
 
@@ -56,7 +58,13 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   const [active, setActive] = useState(initialIndex);
   const [muted, setMuted] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
+  const [category, setCategory] = useState("all");
   const feedRef = useRef<VerticalFeedRef>(null);
+
+  const filteredListings = useMemo(
+    () => filterByCategory(rankedListings, category),
+    [rankedListings, category],
+  );
 
   useEffect(() => {
     void getCurrentPosition().then((p) => {
@@ -65,12 +73,12 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   }, []);
 
   useEffect(() => {
-    if (rankedListings.length && feedRef.current) {
+    if (filteredListings.length && feedRef.current) {
       feedRef.current.scrollToItem(initialIndex, "auto");
     }
-  }, [initialIndex, rankedListings.length]);
+  }, [initialIndex, filteredListings.length]);
 
-  const feedItems: VideoItem[] = rankedListings.map((l) => ({
+  const feedItems: VideoItem[] = filteredListings.map((l) => ({
     id: l.id,
     src: l.video_url ?? l.image_url ?? "",
     poster: l.image_url ?? undefined,
@@ -87,17 +95,16 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
 
   if (isLoading) {
     return (
-      <div className={`${wrapperClass} grid place-items-center`}>
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
-        <p className="mt-3 text-sm text-white/70">Finding fresh produce near you…</p>
+      <div className={wrapperClass}>
+        <FeedSkeleton />
       </div>
     );
   }
 
-  if (error || (rankedListings.length === 0 && !isDemoMode())) {
+  if (error || (filteredListings.length === 0 && !isSeedFeedEnabled())) {
     return (
       <div className={`${wrapperClass} grid place-items-center p-8 text-center`}>
-        <p className="text-white font-serif text-2xl">No listings yet</p>
+        <p className="text-white font-sans text-2xl font-semibold">No listings yet</p>
         <p className="mt-2 text-sm text-white/70">
           Be the first to post produce from the corridor.
         </p>
@@ -112,39 +119,56 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   }
 
   if (fullscreen) {
-    const riyilsVideos = rankedListings.map((l) => ({
-      id: l.id,
-      videoUrl: l.video_url ?? FALLBACK_PRODUCE_VIDEO,
-      thumbnailUrl: l.image_url ?? undefined,
-    }));
+    const riyilsVideos = filteredListings
+      .filter((l) => !!l.video_url)
+      .map((l) => ({
+        id: l.id,
+        videoUrl: l.video_url!,
+        thumbnailUrl: l.image_url ?? undefined,
+      }));
+
+    const activeListing = filteredListings[active];
 
     return (
       <div className={wrapperClass}>
-        <PlaybackControllerProvider>
-          <RiyilsObserverProvider logLevel="warn">
-            <RiyilsViewer
-              videos={riyilsVideos}
-              initialIndex={initialIndex}
-              onClose={() => {}}
-              onVideoChange={setActive}
-              progressBarColor="transparent"
-              controls={[]}
-            />
-          </RiyilsObserverProvider>
-        </PlaybackControllerProvider>
+        {riyilsVideos.length > 0 ? (
+          <PlaybackControllerProvider>
+            <RiyilsObserverProvider logLevel="warn">
+              <RiyilsViewer
+                videos={riyilsVideos}
+                initialIndex={Math.min(initialIndex, riyilsVideos.length - 1)}
+                onClose={() => {}}
+                onVideoChange={(idx) => {
+                  const vid = riyilsVideos[idx];
+                  const listingIdx = filteredListings.findIndex((l) => l.id === vid?.id);
+                  if (listingIdx >= 0) setActive(listingIdx);
+                }}
+                progressBarColor="transparent"
+                controls={[]}
+              />
+            </RiyilsObserverProvider>
+          </PlaybackControllerProvider>
+        ) : activeListing ? (
+          <img
+            src={activeListing.image_url ?? "/media/demo/tomato.svg"}
+            alt={activeListing.title}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : null}
 
         {typeof document !== "undefined" &&
-          rankedListings[active] &&
+          activeListing &&
           createPortal(
             <div className="agrolink-feed-overlay fixed inset-0">
+              <CategoryChips active={category} onChange={setCategory} />
               <FeedCardOverlay
-                item={rankedListings[active]}
+                item={activeListing}
                 isActive
                 muted={muted}
                 onToggleMute={() => setMuted((m) => !m)}
                 onOpenGrid={() => setShowGrid(true)}
-                progress={`${active + 1} / ${rankedListings.length}`}
-                showImageOnly={!rankedListings[active].video_url}
+                progress={`${active + 1} / ${filteredListings.length}`}
+                showImageOnly={!activeListing.video_url}
               />
             </div>,
             document.body,
@@ -153,7 +177,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
         {showGrid && (
           <div className="fixed inset-0 z-[10060] bg-background/95 backdrop-blur-xl">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <h3 className="font-serif text-2xl">Browse all</h3>
+              <h3 className="font-sans text-xl font-semibold">Browse all</h3>
               <button
                 onClick={() => setShowGrid(false)}
                 className="grid h-10 w-10 place-items-center rounded-full hover:bg-secondary"
@@ -166,7 +190,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
               className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4"
               style={{ maxHeight: "calc(100% - 60px)" }}
             >
-              {rankedListings.map((l, i) => (
+              {filteredListings.map((l, i) => (
                 <button
                   key={l.id}
                   onClick={() => {
@@ -182,7 +206,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-left">
-                    <div className="font-serif text-sm text-white">{l.title}</div>
+                    <div className="font-sans text-sm font-medium text-white">{l.title}</div>
                     <div className="text-[10px] text-white/70">
                       GHS {l.price_per_unit}/{l.unit}
                     </div>
@@ -209,21 +233,24 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
         renderItemOverlay={(item, i) => {
           const listing = (item.metadata as { listing: FeedListing }).listing;
           return (
-            <FeedCardOverlay
-              item={listing}
-              isActive={i === active}
-              muted={muted}
-              onToggleMute={() => setMuted((m) => !m)}
-              onOpenGrid={() => setShowGrid(true)}
-              progress={`${i + 1} / ${rankedListings.length}`}
-              showImageOnly={!listing.video_url}
-            />
+            <>
+              {i === 0 && <CategoryChips active={category} onChange={setCategory} />}
+              <FeedCardOverlay
+                item={listing}
+                isActive={i === active}
+                muted={muted}
+                onToggleMute={() => setMuted((m) => !m)}
+                onOpenGrid={() => setShowGrid(true)}
+                progress={`${i + 1} / ${filteredListings.length}`}
+                showImageOnly={!listing.video_url}
+              />
+            </>
           );
         }}
       />
 
       <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex z-20">
-        {rankedListings.map((_, i) => (
+        {filteredListings.map((_, i) => (
           <span
             key={i}
             className={`block h-6 w-1 rounded-full transition-all ${i === active ? "bg-white" : "bg-white/30"}`}
@@ -302,6 +329,8 @@ function FeedCardOverlay({
   const [comments, setComments] = useState<FeedComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [panel, setPanel] = useState<"comments" | "share" | null>(null);
+  const [showLikeBurst, setShowLikeBurst] = useState(false);
+  const lastTap = useRef(0);
   const sellerSlug = item.seller_slug ?? item.seller_id.slice(0, 8);
   const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
 
@@ -328,6 +357,17 @@ function FeedCardOverlay({
     } catch {
       setLiked(!next);
     }
+  };
+
+  const onDoubleTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 320) {
+      if (!liked) void handleLike();
+      triggerLikeHaptic();
+      setShowLikeBurst(true);
+      setTimeout(() => setShowLikeBurst(false), 700);
+    }
+    lastTap.current = now;
   };
 
   const handleSave = async () => {
@@ -396,12 +436,18 @@ function FeedCardOverlay({
 
   return (
     <div className="pointer-events-none absolute inset-0">
+      <div className="pointer-events-auto absolute inset-0 z-[1]" onClick={onDoubleTap} aria-hidden />
       {showImageOnly && (
         <img
-          src={item.image_url ?? ""}
+          src={item.image_url ?? "/media/demo/tomato.svg"}
           alt={item.title}
           className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
         />
+      )}
+      {showLikeBurst && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center z-30">
+          <Heart className="h-24 w-24 text-rose-500 fill-rose-500 animate-ping opacity-90" />
+        </div>
       )}
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
@@ -426,7 +472,7 @@ function FeedCardOverlay({
 
       <div className="pointer-events-auto absolute right-3 bottom-28 z-10 flex flex-col items-center gap-5 md:bottom-32">
         <Link to="/farmers/$slug" params={{ slug: sellerSlug }} className="relative">
-          <span className="grid h-12 w-12 place-items-center rounded-full border-2 border-white bg-primary/30 font-serif text-lg text-white overflow-hidden">
+          <span className="grid h-12 w-12 place-items-center rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white overflow-hidden">
             {item.seller_avatar ? (
               <img src={item.seller_avatar} alt="" className="h-full w-full object-cover" />
             ) : (
@@ -465,7 +511,7 @@ function FeedCardOverlay({
           @{sellerSlug.replace(/-/g, "")}{" "}
           {item.seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
         </Link>
-        <h2 className="mt-2 font-serif text-3xl leading-tight text-white md:text-4xl">
+        <h2 className="mt-2 font-sans text-2xl font-bold leading-tight text-white md:text-3xl">
           {item.title}
         </h2>
         <p className="mt-1 max-w-[80%] text-sm text-white/85">
@@ -475,7 +521,7 @@ function FeedCardOverlay({
         </p>
         <div className="mt-4 flex items-center gap-3">
           <div className="rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
-            <span className="font-serif text-xl text-white">GHS {item.price_per_unit}</span>
+            <span className="font-sans text-xl font-bold text-white">GHS {item.price_per_unit}</span>
             <span className="ml-1 text-xs text-white/70">/{item.unit}</span>
           </div>
           <button
@@ -501,7 +547,7 @@ function FeedCardOverlay({
           >
             <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted" />
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <h3 className="font-serif text-xl">{panel === "comments" ? "Comments" : "Share"}</h3>
+              <h3 className="font-sans text-lg font-semibold">{panel === "comments" ? "Comments" : "Share"}</h3>
               <button
                 onClick={() => setPanel(null)}
                 className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary"
@@ -514,7 +560,7 @@ function FeedCardOverlay({
                 <div className="no-scrollbar flex-1 space-y-4 overflow-y-auto px-4 py-4">
                   {comments.map((c) => (
                     <div key={c.id} className="flex gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-serif text-primary">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-sans font-semibold text-primary">
                         {c.author[0]}
                       </span>
                       <div>

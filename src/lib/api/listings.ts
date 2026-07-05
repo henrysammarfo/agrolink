@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedListing, ListingStatus, CropType } from "@/lib/types/marketplace";
 import { rankListings } from "@/lib/feed-algorithm";
-import { mergeDemoFeedIfEmpty, isDemoMode, DEMO_FEED_LISTINGS } from "@/lib/demo-listings";
+import { mergeDemoFeedIfEmpty, isSeedFeedEnabled, SEED_FEED_LISTINGS } from "@/lib/demo-listings";
 
 export async function fetchFeedListings(opts?: {
   lat?: number;
@@ -31,8 +31,8 @@ export async function fetchFeedListings(opts?: {
       withDemo.length === limit ? (withDemo[withDemo.length - 1]?.id ?? null) : null;
     return { listings: withDemo, nextCursor };
   } catch (err) {
-    if (isDemoMode()) {
-      const ranked = rankListings(DEMO_FEED_LISTINGS, opts?.lat, opts?.lng);
+    if (isSeedFeedEnabled()) {
+      const ranked = rankListings(SEED_FEED_LISTINGS, opts?.lat, opts?.lng);
       return { listings: ranked, nextCursor: null };
     }
     throw err;

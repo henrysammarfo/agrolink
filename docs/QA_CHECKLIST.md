@@ -3,11 +3,26 @@
 ## Build gate (must pass before deploy)
 
 ```bash
-bun run lint
-bun run build
+npm run lint
+npm run build
 ```
 
-Both must exit 0.
+Both must exit 0. **Last verified:** 2026-07-05 — build pass on `cursor/agrolink-production-live-cc54`.
+
+## P0–P2 parity (2026-07-05)
+
+- [x] Self-hosted feed media — no Mixkit/Unsplash in prod (`media-urls.ts`)
+- [x] Sticky mobile checkout bar on cart
+- [x] Feed sans typography + double-tap like
+- [x] Category chips on feed
+- [x] Skeleton loaders (feed, cart, home teaser)
+- [x] Dark reactive map (`CorridorMap` updates pins/route)
+- [x] Driver earnings widget + slide-to-confirm
+- [x] Fullscreen tracking route + OrderTracker wired
+- [x] Cart uses geolocation for delivery quote
+- [x] Reorder from history
+- [x] Web push SW handlers + VAPID optional
+- [x] Farmer profile message/share stubs
 
 ## Smoke tests
 

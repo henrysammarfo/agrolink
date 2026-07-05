@@ -1,14 +1,15 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { MapPin, Truck, Clock, Package, Check, Navigation, Loader2 } from "lucide-react";
+import { MapPin, Truck, Clock, Package, Check, Navigation, Loader2, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell } from "@/components/app/AppShell";
+import { AppShell, StatCard } from "@/components/app/AppShell";
 import { TransportGate, VerifiedTransportGate } from "@/components/app/RoleGate";
 import { JobAcceptCountdown } from "@/components/transport/JobAcceptCountdown";
 import { PodCaptureSheet } from "@/components/transport/PodCaptureSheet";
+import { SlideToConfirm } from "@/components/ui/SlideToConfirm";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { useAuth } from "@/lib/auth";
-import { useDriverProfile } from "@/hooks/use-marketplace";
+import { useDriverProfile, useDriverEarnings } from "@/hooks/use-marketplace";
 import {
   fetchAvailableDeliveries, fetchDriverDeliveries, acceptDelivery, advanceDeliveryStatus,
   completeDeliveryViaApi,
@@ -29,6 +30,7 @@ function TransportOverview() {
 
   const { user } = useAuth();
   const { data: driverProfile, refetch } = useDriverProfile(user?.id);
+  const { data: earnings } = useDriverEarnings(user?.id);
   const [jobs, setJobs] = useState<DeliveryRow[]>([]);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,7 @@ function TransportOverview() {
       { lat: featured.pickup_lat, lng: featured.pickup_lng },
       { lat: featured.delivery_lat, lng: featured.delivery_lng },
     ).then((r) => { if (r) setRouteCoords(r.coordinates); });
-  }, [featured?.id, isIndex]);
+  }, [featured?.id, featured?.pickup_lat, featured?.pickup_lng, featured?.delivery_lat, featured?.delivery_lng, isIndex]);
 
   if (!isIndex) return <Outlet />;
 
@@ -137,17 +139,40 @@ function TransportOverview() {
     ...(driverProfile?.current_lat ? [{ lat: driverProfile.current_lat, lng: driverProfile.current_lng!, label: "You", kind: "driver" as const }] : []),
   ] : [];
 
+  const slideLabel =
+    featured?.status === "driver_enroute_pickup"
+      ? "Slide to confirm pickup"
+      : featured?.status === "enroute_delivery"
+        ? "Slide to confirm delivery"
+        : null;
+
   return (
     <VerifiedTransportGate>
       <AppShell role="transport">
         <div className="relative -mx-6 -mt-6 md:-mx-10 md:-mt-10 h-[calc(100vh-140px)] min-h-[560px] overflow-hidden">
-          <CorridorMap pins={mapPins} route={routeCoords} animateDriver={false} driverLabel="You" />
+          <CorridorMap pins={mapPins} route={routeCoords} animateDriver={false} driverLabel="You" dark />
 
-          <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4">
+          <div className="pointer-events-none absolute inset-x-0 top-4 flex flex-col items-center gap-3 px-4">
             <button onClick={toggleOnline} className={`pointer-events-auto inline-flex items-center gap-3 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg backdrop-blur transition ${online ? "bg-emerald-500 text-white" : "bg-background/95 text-foreground border border-border"}`}>
               <span className={`h-2.5 w-2.5 rounded-full ${online ? "bg-white animate-ping" : "bg-muted-foreground"}`} />
               {online ? "You're online" : "Go online"}
             </button>
+            {earnings && (
+              <div className="pointer-events-auto grid w-full max-w-xs grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-black/60 p-3 text-white backdrop-blur">
+                <div className="text-center">
+                  <div className="text-[10px] uppercase tracking-widest text-white/60">Today</div>
+                  <div className="font-sans text-lg font-bold">GHS {earnings.today.toFixed(0)}</div>
+                </div>
+                <div className="text-center border-x border-white/10">
+                  <div className="text-[10px] uppercase tracking-widest text-white/60">Week</div>
+                  <div className="font-sans text-lg font-bold">GHS {earnings.week.toFixed(0)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] uppercase tracking-widest text-white/60">Trips</div>
+                  <div className="font-sans text-lg font-bold">{earnings.trips}</div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="absolute inset-x-0 bottom-0 px-3 md:px-6 pb-4">
@@ -176,29 +201,38 @@ function TransportOverview() {
                     {featured.status === "requested" && featured.accept_deadline && (
                       <JobAcceptCountdown deadline={featured.accept_deadline} onExpired={loadJobs} />
                     )}
-                    <div className="flex items-center gap-2">
-                    {featured.status === "requested" && (
-                      <button onClick={() => acceptJob(featured.id)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 py-3 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Accept job</button>
+                    {slideLabel ? (
+                      <SlideToConfirm
+                        label={slideLabel}
+                        tone={featured.status === "enroute_delivery" ? "blue" : "primary"}
+                        onConfirm={() => advance(featured)}
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {featured.status === "requested" && (
+                          <button onClick={() => acceptJob(featured.id)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 py-3 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Accept job</button>
+                        )}
+                        {featured.status === "driver_assigned" && (
+                          <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"><Navigation className="h-4 w-4" /> En route to pickup</button>
+                        )}
+                        {featured.status === "picked_up" && (
+                          <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-semibold text-white"><Truck className="h-4 w-4" /> En route to buyer</button>
+                        )}
+                        <Link to="/app/transport/jobs" className="rounded-full border border-border px-4 py-3 text-sm text-muted-foreground">All jobs</Link>
+                      </div>
                     )}
-                    {featured.status === "driver_assigned" && (
-                      <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"><Navigation className="h-4 w-4" /> En route to pickup</button>
+                    {slideLabel && (
+                      <Link to="/app/transport/jobs" className="block text-center text-xs text-muted-foreground hover:text-foreground">All jobs</Link>
                     )}
-                    {featured.status === "driver_enroute_pickup" && (
-                      <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"><Package className="h-4 w-4" /> Confirm pickup</button>
-                    )}
-                    {featured.status === "picked_up" && (
-                      <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-semibold text-white"><Truck className="h-4 w-4" /> En route to buyer</button>
-                    )}
-                    {featured.status === "enroute_delivery" && (
-                      <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Photo & complete</button>
-                    )}
-                    <Link to="/app/transport/jobs" className="rounded-full border border-border px-4 py-3 text-sm text-muted-foreground">All jobs</Link>
-                    </div>
                   </div>
                 </>
               ) : (
                 <div className="text-center py-4">
-                  <div className="font-serif text-xl">{online ? "Waiting for jobs…" : "Go online to receive jobs"}</div>
+                  <Wallet className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                  <div className="mt-2 font-sans text-lg font-semibold">{online ? "Waiting for jobs…" : "Go online to receive jobs"}</div>
+                  {earnings && earnings.week > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">GHS {earnings.week.toFixed(2)} earned this week</p>
+                  )}
                 </div>
               )}
             </div>

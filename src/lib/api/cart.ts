@@ -98,6 +98,17 @@ export async function removeCartItem(userId: string, itemId: string) {
   if (error) throw error;
 }
 
+export async function reorderFromOrder(userId: string, order: { items?: { listing_id: string; quantity: number }[] }) {
+  if (!order.items?.length) return 0;
+  let added = 0;
+  for (const item of order.items) {
+    if (!item.listing_id) continue;
+    await addToCart(userId, item.listing_id, item.quantity);
+    added++;
+  }
+  return added;
+}
+
 export async function clearCart(userId: string) {
   const cartId = await getOrCreateCart(userId);
   const { error } = await supabase.from("cart_items").delete().eq("cart_id", cartId);

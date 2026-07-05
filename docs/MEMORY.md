@@ -66,6 +66,30 @@ Last updated: 2026-07-05
 | Demo feed seed | Done | `demo-listings.ts` + `scripts/seed-demo-listings.mjs` |
 | Brand app icons | Done | `public/icons/` from BrandMark gradient |
 
+## P0–P2 UX parity (verified 2026-07-05, `npm run build` pass)
+
+| Priority | Feature | Status | Files |
+|----------|---------|--------|-------|
+| P0 | Self-hosted feed media (no Mixkit/Unsplash in prod) | Done | `media-urls.ts`, `public/media/demo/*`, `demo-listings.ts` |
+| P0 | Sticky mobile checkout bar | Done | `app.buyer.cart.tsx` |
+| P0 | Feed overlay sans typography | Done | `FeedPlayer.tsx` — Inter/sans in overlay |
+| P0 | Double-tap like + haptic | Done | `FeedPlayer.tsx`, `haptics.ts` |
+| P0 | Seed listings when DB empty | Done | `VITE_DEMO_MODE` or `VITE_SEED_FEED=true` |
+| P0 | Full-bleed feed (no sidebar) | Done | `AppShell.tsx` `IMMERSIVE_PATHS` |
+| P0 | Skeleton loaders (feed/cart/teaser) | Done | `FeedSkeleton.tsx` |
+| P1 | Dark map tiles + reactive CorridorMap | Done | `CorridorMap.tsx` |
+| P1 | Driver earnings widget | Done | `fetchDriverEarnings`, `app.transport.tsx` |
+| P1 | Slide-to-confirm pickup/deliver | Done | `SlideToConfirm.tsx` |
+| P1 | Fullscreen order tracking | Done | `/app/buyer/orders/$orderId/track` |
+| P1 | OrderTracker wired | Done | `app.buyer.orders.tsx`, `buildTrackedOrder()` |
+| P1 | Cart delivery coords from geolocation | Done | `getCurrentPosition()` in cart |
+| P2 | Web push polish (SW + VAPID) | Done | `push-client.ts`, `sw.js` |
+| P2 | PostHog/Sentry optional init | Done | `analytics.ts`, `VITE_POSTHOG_KEY`, `VITE_SENTRY_DSN` |
+| P2 | RiyilsExplore grid on farmer profile | Done | `farmers.$slug.tsx` |
+| P2 | Category chips on feed | Done | `CategoryChips.tsx` |
+| P2 | Reorder from past orders | Done | `reorderFromOrder`, history table |
+| P2 | Message/Share stubs | Done | `farmers.$slug.tsx`, `LiveTrackCard.tsx` |
+
 ## Launch path: PWA (not APK)
 
 Production mobile = **installable PWA** over HTTPS. See `docs/PWA.md`.

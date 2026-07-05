@@ -1,11 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, Loader2 } from "lucide-react";
+import { Search, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { StatusBadge } from "./app.buyer";
 import { LiveTrackCard } from "@/components/track/LiveTrackCard";
+import { OrderTracker } from "@/components/order/OrderTracker";
+import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
 import { useAuth } from "@/lib/auth";
-import { useBuyerOrders } from "@/hooks/use-marketplace";
+import { useBuyerOrders, useReorderCart } from "@/hooks/use-marketplace";
+import { buildTrackedOrder } from "@/lib/types/fulfillment";
 
 export const Route = createFileRoute("/app/buyer/orders")({
   head: () => ({ meta: [{ title: "Orders · AgroLink" }] }),
@@ -15,13 +19,32 @@ export const Route = createFileRoute("/app/buyer/orders")({
 function Orders() {
   const { user } = useAuth();
   const { data: orders = [], isLoading } = useBuyerOrders(user?.id);
+  const reorder = useReorderCart();
   const [tab, setTab] = useState<"active" | "history">("active");
   const [q, setQ] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const activeOrders = orders.filter((o) => !["delivered", "cancelled"].includes(o.status));
   const historyOrders = orders
     .filter((o) => ["delivered", "cancelled"].includes(o.status))
     .filter((o) => !q || o.id.includes(q));
+
+  const handleReorder = async (orderId: string) => {
+    if (!user?.id) return;
+    const order = orders.find((o) => o.id === orderId);
+    if (!order?.items?.length) {
+      toast.error("No items to reorder");
+      return;
+    }
+    try {
+      const count = await reorder.mutateAsync({ userId: user.id, order });
+      toast.success(`Added ${count} item${count !== 1 ? "s" : ""} to cart`, {
+        action: { label: "View cart", onClick: () => { window.location.href = "/app/buyer/cart"; } },
+      });
+    } catch {
+      toast.error("Could not reorder");
+    }
+  };
 
   return (
     <AppShell role="buyer">
@@ -61,13 +84,20 @@ function Orders() {
       </div>
 
       {isLoading ? (
-        <div className="grid place-items-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <FeedSkeleton />
       ) : tab === "active" ? (
         <div className="space-y-6">
           {activeOrders.map((o) => (
-            <LiveTrackCard key={o.id} order={o} />
+            <div key={o.id} className="space-y-4">
+              <LiveTrackCard order={o} />
+              <button
+                onClick={() => setExpandedId(expandedId === o.id ? null : o.id)}
+                className="text-xs text-primary hover:underline"
+              >
+                {expandedId === o.id ? "Hide" : "Show"} fulfillment timeline
+              </button>
+              {expandedId === o.id && <OrderTracker order={buildTrackedOrder(o)} />}
+            </div>
           ))}
           {activeOrders.length === 0 && (
             <div className="rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
@@ -84,6 +114,7 @@ function Orders() {
                 <th className="px-5 py-4 text-left">Placed</th>
                 <th className="px-5 py-4 text-right">Total</th>
                 <th className="px-5 py-4 text-right">Status</th>
+                <th className="px-5 py-4 text-right" />
               </tr>
             </thead>
             <tbody>
@@ -93,9 +124,18 @@ function Orders() {
                   <td className="px-5 py-4 text-muted-foreground">
                     {new Date(o.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-5 py-4 text-right font-serif">GHS {o.total_amount}</td>
+                  <td className="px-5 py-4 text-right font-sans font-semibold">GHS {o.total_amount}</td>
                   <td className="px-5 py-4 text-right">
                     <StatusBadge status={o.status} />
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <button
+                      onClick={() => handleReorder(o.id)}
+                      disabled={reorder.isPending}
+                      className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Reorder
+                    </button>
                   </td>
                 </tr>
               ))}

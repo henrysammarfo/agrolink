@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
  * Seed demo farmers + active listings into Supabase (requires service role).
- * Usage: SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-demo-listings.mjs
+ * Uses self-hosted /media/demo/* assets only — no Mixkit/Unsplash.
+ * Usage: SITE_URL=https://your-domain SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-demo-listings.mjs
  */
 import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SITE = process.env.SITE_URL ?? "http://localhost:5173";
 
 if (!url || !key) {
   console.error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
@@ -14,6 +16,8 @@ if (!url || !key) {
 }
 
 const admin = createClient(url, key, { auth: { persistSession: false } });
+
+const media = (name) => `${SITE}/media/demo/${name}.svg`;
 
 const DEMO_FARMERS = [
   { id: "a0000001-0001-4000-8000-000000000001", email: "ama-farm@demo.agrolink.app", name: "Ama Mensah", slug: "ama-mensah-farm" },
@@ -32,8 +36,8 @@ const LISTINGS = [
     location_name: "Dodowa",
     lat: 5.883,
     lng: -0.089,
-    image_url: "https://images.unsplash.com/photo-1592924357228-91a4daadc663?w=800&q=80",
-    video_url: "https://assets.mixkit.co/videos/preview/mixkit-close-up-of-a-fresh-red-tomato-40772-large.mp4",
+    image_url: media("tomato"),
+    video_url: null,
     organic: true,
     hashtags: ["tomato", "organic", "dodowa"],
   },
@@ -47,7 +51,7 @@ const LISTINGS = [
     location_name: "Afienya",
     lat: 5.712,
     lng: 0.017,
-    image_url: "https://images.unsplash.com/photo-1628773822503-93039bcf061c?w=800&q=80",
+    image_url: media("okra"),
     organic: false,
     hashtags: ["okra", "afienya"],
   },
@@ -61,8 +65,8 @@ const LISTINGS = [
     location_name: "Tema Community 25",
     lat: 5.669,
     lng: -0.017,
-    image_url: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=800&q=80",
-    video_url: "https://assets.mixkit.co/videos/preview/mixkit-red-chili-peppers-close-up-41775-large.mp4",
+    image_url: media("pepper"),
+    video_url: null,
     organic: true,
     hashtags: ["pepper", "shito"],
   },

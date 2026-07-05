@@ -50,6 +50,7 @@ import { Route as ApiOtpSendRouteImport } from './routes/api/otp/send'
 import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
 import { Route as ApiDeliveriesReassignExpiredRouteImport } from './routes/api/deliveries/reassign-expired'
 import { Route as ApiDeliveriesCompleteRouteImport } from './routes/api/deliveries/complete'
+import { Route as AppBuyerOrdersOrderIdTrackRouteImport } from './routes/app.buyer.orders.$orderId.track'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -257,6 +258,12 @@ const ApiDeliveriesCompleteRoute = ApiDeliveriesCompleteRouteImport.update({
   path: '/api/deliveries/complete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppBuyerOrdersOrderIdTrackRoute =
+  AppBuyerOrdersOrderIdTrackRouteImport.update({
+    id: '/$orderId/track',
+    path: '/$orderId/track',
+    getParentRoute: () => AppBuyerOrdersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -294,12 +301,13 @@ export interface FileRoutesByFullPath {
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
-  '/app/buyer/orders': typeof AppBuyerOrdersRoute
+  '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -336,12 +344,13 @@ export interface FileRoutesByTo {
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
-  '/app/buyer/orders': typeof AppBuyerOrdersRoute
+  '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -380,12 +389,13 @@ export interface FileRoutesById {
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
-  '/app/buyer/orders': typeof AppBuyerOrdersRoute
+  '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -431,6 +441,7 @@ export interface FileRouteTypes {
     | '/app/farmer/payouts'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/app/buyer/orders/$orderId/track'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -473,6 +484,7 @@ export interface FileRouteTypes {
     | '/app/farmer/payouts'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/app/buyer/orders/$orderId/track'
   id:
     | '__root__'
     | '/'
@@ -516,6 +528,7 @@ export interface FileRouteTypes {
     | '/app/farmer/payouts'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/app/buyer/orders/$orderId/track'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -830,6 +843,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDeliveriesCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/buyer/orders/$orderId/track': {
+      id: '/app/buyer/orders/$orderId/track'
+      path: '/$orderId/track'
+      fullPath: '/app/buyer/orders/$orderId/track'
+      preLoaderRoute: typeof AppBuyerOrdersOrderIdTrackRouteImport
+      parentRoute: typeof AppBuyerOrdersRoute
+    }
   }
 }
 
@@ -849,16 +869,28 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
   AppAdminRouteChildren,
 )
 
+interface AppBuyerOrdersRouteChildren {
+  AppBuyerOrdersOrderIdTrackRoute: typeof AppBuyerOrdersOrderIdTrackRoute
+}
+
+const AppBuyerOrdersRouteChildren: AppBuyerOrdersRouteChildren = {
+  AppBuyerOrdersOrderIdTrackRoute: AppBuyerOrdersOrderIdTrackRoute,
+}
+
+const AppBuyerOrdersRouteWithChildren = AppBuyerOrdersRoute._addFileChildren(
+  AppBuyerOrdersRouteChildren,
+)
+
 interface AppBuyerRouteChildren {
   AppBuyerCartRoute: typeof AppBuyerCartRoute
   AppBuyerFeedRoute: typeof AppBuyerFeedRoute
-  AppBuyerOrdersRoute: typeof AppBuyerOrdersRoute
+  AppBuyerOrdersRoute: typeof AppBuyerOrdersRouteWithChildren
 }
 
 const AppBuyerRouteChildren: AppBuyerRouteChildren = {
   AppBuyerCartRoute: AppBuyerCartRoute,
   AppBuyerFeedRoute: AppBuyerFeedRoute,
-  AppBuyerOrdersRoute: AppBuyerOrdersRoute,
+  AppBuyerOrdersRoute: AppBuyerOrdersRouteWithChildren,
 }
 
 const AppBuyerRouteWithChildren = AppBuyerRoute._addFileChildren(

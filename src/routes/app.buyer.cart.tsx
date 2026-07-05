@@ -3,10 +3,16 @@ import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Info, Sm
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { CartSkeleton } from "@/components/feed/FeedSkeleton";
 import { useAuth } from "@/lib/auth";
 import { useCart, useUpdateCartItem, useRemoveCartItem } from "@/hooks/use-marketplace";
 import { HIGH_VALUE_OTP_THRESHOLD_GHS } from "@/lib/delivery-constants";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { getCurrentPosition } from "@/lib/native-geolocation";
+import { trackEvent } from "@/lib/analytics";
+
+/** Default buyer drop-off — East Legon corridor */
+const DEFAULT_DELIVERY = { lat: 5.65, lng: -0.165 };
 
 export const Route = createFileRoute("/app/buyer/cart")({
   head: () => ({ meta: [{ title: "Cart · AgroLink" }] }),
@@ -31,6 +37,8 @@ function Cart() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
+  const [deliveryCoords, setDeliveryCoords] = useState(DEFAULT_DELIVERY);
+  const [orderId, setOrderId] = useState<string | null>(null);
 
   const [deliveryQuote, setDeliveryQuote] = useState<{
     total: number;
@@ -58,6 +66,12 @@ function Cart() {
   }, [items]);
 
   useEffect(() => {
+    void getCurrentPosition().then((p) => {
+      if (p) setDeliveryCoords({ lat: p.lat, lng: p.lng });
+    });
+  }, []);
+
+  useEffect(() => {
     if (!items.length) {
       setDeliveryQuote(null);
       return;
@@ -72,8 +86,8 @@ function Cart() {
       body: JSON.stringify({
         pickupLat: first.lat,
         pickupLng: first.lng,
-        deliveryLat: first.lat + 0.05,
-        deliveryLng: first.lng + 0.05,
+        deliveryLat: deliveryCoords.lat,
+        deliveryLng: deliveryCoords.lng,
         weightKg,
         vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
         pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
@@ -83,7 +97,7 @@ function Cart() {
       .then((q) => setDeliveryQuote(q))
       .catch(() => setDeliveryQuote(null))
       .finally(() => setQuoteLoading(false));
-  }, [items, pickupStops]);
+  }, [items, pickupStops, deliveryCoords]);
 
   async function sendOtp() {
     if (!user?.id) return;
@@ -156,7 +170,9 @@ function Cart() {
       const data = (await res.json()) as { orderId?: string; displayText?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
       setDisplayText(data.displayText ?? "Approve payment on your phone.");
+      setOrderId(data.orderId ?? null);
       setDone(true);
+      trackEvent("checkout_initiated", { total, channel });
       toast.success("Payment initiated", {
         description: data.displayText ?? "Check your phone to approve MoMo.",
       });
@@ -172,9 +188,8 @@ function Cart() {
   if (isLoading) {
     return (
       <AppShell role="buyer">
-        <div className="grid place-items-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <PageHeader eyebrow="Checkout" title="Your" italic="cart" />
+        <CartSkeleton />
       </AppShell>
     );
   }
@@ -198,15 +213,19 @@ function Cart() {
           <ShieldCheck className="inline h-4 w-4 text-primary mr-2" />
           {displayText}
           <button
-            onClick={() => navigate({ to: "/app/buyer/orders" })}
+            onClick={() =>
+              orderId
+                ? navigate({ to: "/app/buyer/orders/$orderId/track", params: { orderId } })
+                : navigate({ to: "/app/buyer/orders" })
+            }
             className="mt-3 block text-primary underline-offset-4 hover:underline"
           >
-            Track your order →
+            Track your order full-screen →
           </button>
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] pb-28 md:pb-0">
         <div className="space-y-4">
           {items.map((it) => (
             <div
@@ -381,6 +400,22 @@ function Cart() {
             {paying ? "Processing…" : `Pay GHS ${total.toFixed(2)} via MoMo`}
           </button>
         </aside>
+      </div>
+
+      {/* DoorDash-style sticky checkout bar (mobile) */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-4 pb-[max(env(safe-area-inset-bottom),16px)] backdrop-blur md:hidden">
+        <div className="mb-2 flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{items.length} item{items.length !== 1 ? "s" : ""}</span>
+          <span className="font-sans text-lg font-bold">GHS {total.toFixed(2)}</span>
+        </div>
+        <button
+          onClick={pay}
+          disabled={paying || items.length === 0 || done || quoteLoading || !deliveryQuote || (needsOtp && !otpVerified)}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-50"
+        >
+          <ArrowRight className="h-4 w-4" />
+          {paying ? "Processing…" : `Pay GHS ${total.toFixed(2)}`}
+        </button>
       </div>
     </AppShell>
   );

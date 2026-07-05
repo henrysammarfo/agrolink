@@ -52,6 +52,25 @@ function FarmerProfile() {
     enabled: !!user?.id,
   });
 
+  const handleShare = async () => {
+    const url = `${location.origin}/farmers/${slug}`;
+    try {
+      if (navigator.share) await navigator.share({ title: profile?.display_name ?? "Farmer", url });
+      else await navigator.clipboard.writeText(url);
+      toast.success("Profile link copied");
+    } catch {
+      toast.error("Share cancelled");
+    }
+  };
+
+  const handleMessage = () => {
+    if (!user?.id) {
+      toast.error("Sign in to message");
+      return;
+    }
+    toast.info("Opening inbox", { description: "Direct messages launch from /app/inbox soon." });
+  };
+
   const onFollow = async () => {
     if (!user?.id) {
       toast.error("Sign in to follow");
@@ -139,10 +158,18 @@ function FarmerProfile() {
               {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
               {isFollowing ? "Following" : "Follow"}
             </button>
-            <button className="grid h-10 w-10 place-items-center rounded-full border border-border" aria-label="Message">
+            <button
+              onClick={handleMessage}
+              className="grid h-10 w-10 place-items-center rounded-full border border-border hover:bg-secondary"
+              aria-label="Message"
+            >
               <MessageCircle className="h-4 w-4" />
             </button>
-            <button className="grid h-10 w-10 place-items-center rounded-full border border-border" aria-label="Share">
+            <button
+              onClick={handleShare}
+              className="grid h-10 w-10 place-items-center rounded-full border border-border hover:bg-secondary"
+              aria-label="Share"
+            >
               <Share2 className="h-4 w-4" />
             </button>
           </div>
@@ -167,21 +194,27 @@ function FarmerProfile() {
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-1 sm:gap-2">
+        {/* RiyilsExplore-style grid — 3-col vertical tiles */}
+        <div className="mt-5 grid grid-cols-3 gap-0.5 sm:gap-1">
           {listings.map((l) => (
-            <Link key={l.id} to="/market" className="group relative aspect-[9/16] overflow-hidden rounded-md bg-muted">
+            <Link
+              key={l.id}
+              to="/app/buyer/feed"
+              className="group relative aspect-[9/16] overflow-hidden bg-muted"
+            >
               <img
                 src={l.image_url ?? MARKETING_FALLBACK_IMAGE}
                 alt={l.title}
                 loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 group-active:scale-105"
               />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                <div className="font-serif text-sm text-white">{l.title}</div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+              <div className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/80 to-transparent p-2 transition-transform group-hover:translate-y-0">
+                <div className="font-sans text-xs font-medium text-white line-clamp-1">{l.title}</div>
                 <div className="text-[10px] text-white/80">GHS {l.price_per_unit}/{l.unit}</div>
               </div>
-              <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[10px] text-white">
-                <Play className="h-3 w-3 fill-current" /> {l.view_count}
+              <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded bg-black/50 px-1.5 py-0.5 text-[9px] text-white">
+                <Play className="h-2.5 w-2.5 fill-current" /> {l.view_count}
               </span>
             </Link>
           ))}

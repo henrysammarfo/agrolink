@@ -1,5 +1,46 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export async function fetchDriverEarnings(userId: string, days = 7) {
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  const { data: profile } = await supabase
+    .from("driver_profiles")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!profile?.id) return { today: 0, week: 0, trips: 0, series: [] as { day: string; ghs: number }[] };
+
+  const { data } = await supabase
+    .from("deliveries")
+    .select("delivery_fee, status, updated_at")
+    .eq("driver_id", profile.id)
+    .eq("status", "delivered")
+    .gte("updated_at", since);
+
+  const delivered = data ?? [];
+  const todayStr = new Date().toLocaleDateString("en-GH");
+  const today = delivered
+    .filter((d) => new Date(d.updated_at).toLocaleDateString("en-GH") === todayStr)
+    .reduce((s, d) => s + Number(d.delivery_fee ?? 0), 0);
+  const week = delivered.reduce((s, d) => s + Number(d.delivery_fee ?? 0), 0);
+
+  const byDay = new Map<string, number>();
+  for (let d = days - 1; d >= 0; d--) {
+    const date = new Date(Date.now() - d * 86400000);
+    byDay.set(date.toLocaleDateString("en-GH", { weekday: "short" }), 0);
+  }
+  for (const row of delivered) {
+    const day = new Date(row.updated_at).toLocaleDateString("en-GH", { weekday: "short" });
+    byDay.set(day, (byDay.get(day) ?? 0) + Number(row.delivery_fee ?? 0));
+  }
+
+  return {
+    today,
+    week,
+    trips: delivered.length,
+    series: Array.from(byDay.entries()).map(([day, ghs]) => ({ day, ghs })),
+  };
+}
+
 export async function fetchUserPayouts(userId: string) {
   const { data, error } = await supabase
     .from("payouts")
