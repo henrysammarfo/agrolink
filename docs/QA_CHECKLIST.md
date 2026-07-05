@@ -7,7 +7,7 @@ npm run lint
 npm run build
 ```
 
-Both must exit 0. **Last verified:** 2026-07-05 — build pass on `cursor/agrolink-production-live-cc54`.
+Both must exit 0. **Last verified:** 2026-07-05 — build + stress:comms on `cursor/agrolink-production-live-cc54`.
 
 ## P0–P2 parity (2026-07-05)
 
@@ -29,6 +29,16 @@ Both must exit 0. **Last verified:** 2026-07-05 — build pass on `cursor/agroli
 - [x] Engagement notifications (like/comment/follow)
 - [x] Unread badge on bell
 - [x] Message farmer/driver opens chat thread
+
+## Production comms + media (2026-07-05)
+
+- [x] Demo listing media uploads to Supabase Storage (`npm run upload:media`, `npm run seed:demo`)
+- [x] WhatsApp toggle persists to DB + WATI/Hubtel SMS in `notifyUser`
+- [x] Chat image attachments (upload + inline display)
+- [x] ⌘K global search (listings, farmers, orders)
+- [x] PostHog events: feed, checkout, driver, search, chat, admin surge
+- [x] Admin surge pricing UI at `/app/admin/pricing`
+- [x] Stress script: `npm run stress:comms`
 
 ## Smoke tests
 
@@ -67,6 +77,12 @@ Both must exit 0. **Last verified:** 2026-07-05 — build pass on `cursor/agroli
 
 ## Stress tests
 
+```bash
+npm run build
+npm run stress:comms   # against preview on :3000
+```
+
+- [x] Search API burst (10 concurrent) — `stress-comms.mjs`
 - [ ] Feed with 100+ listings: scroll remains smooth
 - [ ] 10 concurrent webhook deliveries: no duplicate orders (idempotency)
 - [ ] 20 driver location updates/sec: Realtime channel stable

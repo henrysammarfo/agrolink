@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { useAuth, type AppRole } from "@/lib/auth";
 import { registerForPushNotifications } from "@/lib/push-client";
+import { fetchNotificationPrefs, saveNotificationPrefs } from "@/lib/api/settings";
+import { trackEvent } from "@/lib/analytics";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({ meta: [{ title: "Settings · AgroLink" }] }),
@@ -15,17 +17,51 @@ function Settings() {
   const [whatsapp, setWhatsapp] = useState(true);
   const [push, setPush] = useState(true);
   const [marketing, setMarketing] = useState(false);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
   const { theme, setTheme } = useTheme();
   const { roles, addRole, profile, user } = useAuth();
   const role = roles.includes("admin") ? "admin" : roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
 
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchNotificationPrefs(user.id)
+      .then((p) => {
+        setWhatsapp(p.whatsapp);
+        setPush(p.push);
+        setMarketing(p.marketing);
+      })
+      .finally(() => setPrefsLoaded(true));
+  }, [user?.id]);
+
+  const persistPref = async (key: "whatsapp" | "push" | "marketing", value: boolean) => {
+    if (!user?.id) return;
+    try {
+      await saveNotificationPrefs(user.id, { [key]: value });
+      trackEvent("notification_pref_updated", { key, value });
+    } catch {
+      toast.error("Could not save preference");
+    }
+  };
+
+  const onWhatsappToggle = async (enabled: boolean) => {
+    setWhatsapp(enabled);
+    await persistPref("whatsapp", enabled);
+    toast.success(enabled ? "WhatsApp order updates enabled" : "WhatsApp updates off");
+  };
+
   const onPushToggle = async (enabled: boolean) => {
     setPush(enabled);
+    await persistPref("push", enabled);
     if (enabled && user?.id) {
       const ok = await registerForPushNotifications(user.id);
       if (ok) toast.success("Push enabled — you'll get Bolt-style job alerts");
       else toast.error("Allow notifications in browser settings");
     }
+  };
+
+  const onMarketingToggle = async (enabled: boolean) => {
+    setMarketing(enabled);
+    await persistPref("marketing", enabled);
   };
 
   const enableRole = async (next: Exclude<AppRole, "admin">) => {
@@ -78,9 +114,10 @@ function Settings() {
         </Card>
 
         <Card title="Notifications">
-          <Toggle label="WhatsApp updates" desc="Order status, dispatch and payment alerts." value={whatsapp} onChange={setWhatsapp} />
+          {!prefsLoaded && <p className="text-xs text-muted-foreground">Loading preferences…</p>}
+          <Toggle label="WhatsApp updates" desc="Order status via WATI (Hubtel SMS fallback)." value={whatsapp} onChange={onWhatsappToggle} />
           <Toggle label="Push notifications" desc="Driver job alerts (Bolt/Yango-style ping)." value={push} onChange={onPushToggle} />
-          <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={setMarketing} />
+          <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={onMarketingToggle} />
         </Card>
 
         <Card title="Payment">

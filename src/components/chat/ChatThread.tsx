@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Send, Loader2, Package } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Package, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import {
   fetchThreadMessages,
@@ -8,6 +8,8 @@ import {
   markThreadRead,
   subscribeToMessages,
 } from "@/lib/api/chat";
+import { uploadChatAttachment } from "@/lib/api/settings";
+import { trackEvent } from "@/lib/analytics";
 import type { MessageRow } from "@/lib/types/marketplace";
 
 type Props = {
@@ -23,7 +25,9 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchThreadMessages(userId, partnerId)
@@ -48,17 +52,23 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  const onSend = async () => {
-    const content = text.trim();
-    if (!content || sending) return;
+  const dispatchSend = async (opts: {
+    content: string;
+    attachmentUrl?: string;
+    attachmentType?: "image" | "video";
+  }) => {
+    const content = opts.content.trim();
+    if (!content && !opts.attachmentUrl) return;
     setSending(true);
     const optimistic: MessageRow = {
       id: `opt-${Date.now()}`,
       sender_id: userId,
       receiver_id: partnerId,
-      content,
+      content: content || "📷 Photo",
       read: false,
       created_at: new Date().toISOString(),
+      attachment_url: opts.attachmentUrl ?? null,
+      attachment_type: opts.attachmentType ?? null,
       sender: { display_name: senderName },
     };
     setMessages((m) => [...m, optimistic]);
@@ -70,6 +80,12 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
         content,
         orderId,
         senderName,
+        attachmentUrl: opts.attachmentUrl,
+        attachmentType: opts.attachmentType,
+      });
+      trackEvent("chat_message_sent", {
+        has_attachment: !!opts.attachmentUrl,
+        attachment_type: opts.attachmentType ?? null,
       });
     } catch {
       setMessages((m) => m.filter((x) => x.id !== optimistic.id));
@@ -77,6 +93,29 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
       toast.error("Could not send message");
     } finally {
       setSending(false);
+    }
+  };
+
+  const onSend = () => void dispatchSend({ content: text });
+
+  const onPickImage = async (file: File) => {
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      toast.error("Images and short videos only");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Max file size is 10 MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { url, type } = await uploadChatAttachment(file, userId);
+      await dispatchSend({ content: text, attachmentUrl: url, attachmentType: type });
+    } catch {
+      toast.error("Could not upload attachment");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   };
 
@@ -118,7 +157,24 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
                       : "bg-muted text-foreground rounded-bl-md"
                   }`}
                 >
-                  {m.content}
+                  {m.attachment_url && m.attachment_type === "image" && (
+                    <a href={m.attachment_url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={m.attachment_url}
+                        alt="Attachment"
+                        className="mb-2 max-h-48 rounded-xl object-cover"
+                      />
+                    </a>
+                  )}
+                  {m.attachment_url && m.attachment_type === "video" && (
+                    <video
+                      src={m.attachment_url}
+                      controls
+                      className="mb-2 max-h-48 rounded-xl"
+                    />
+                  )}
+                  {m.content && m.content !== "📷 Photo" && <div>{m.content}</div>}
+                  {!m.attachment_url && m.content === "📷 Photo" && <div>{m.content}</div>}
                   <div className={`mt-1 text-[9px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </div>
@@ -133,6 +189,25 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
       <div className="border-t border-border p-3 pb-[max(env(safe-area-inset-bottom),12px)]">
         <div className="flex items-center gap-2">
           <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void onPickImage(f);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading || sending}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border text-muted-foreground hover:border-primary/40 disabled:opacity-45"
+            aria-label="Attach photo"
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+          </button>
+          <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), onSend())}
@@ -141,7 +216,7 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
           />
           <button
             onClick={onSend}
-            disabled={!text.trim() || sending}
+            disabled={(!text.trim() && !uploading) || sending}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
             aria-label="Send"
           >

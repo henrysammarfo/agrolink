@@ -22,13 +22,16 @@ const desktopRoutes = [
   { name: "12-app-transport-register", path: "/app/transport/register", wait: 2000 },
   { name: "13-app-settings", path: "/app/settings", wait: 1500 },
   { name: "14-app-create", path: "/app/create", wait: 1500 },
+  { name: "15-app-admin-pricing", path: "/app/admin/pricing", wait: 2000 },
+  { name: "16-app-inbox", path: "/app/inbox", wait: 2000 },
 ];
 
 const mobileRoutes = [
-  { name: "15-mobile-feed", path: "/app/buyer/feed", wait: 3500 },
-  { name: "16-mobile-buyer", path: "/app/buyer", wait: 2000 },
-  { name: "17-mobile-transport", path: "/app/transport", wait: 2000 },
-  { name: "18-mobile-home", path: "/", wait: 2500 },
+  { name: "17-mobile-feed", path: "/app/buyer/feed", wait: 3500 },
+  { name: "18-mobile-buyer", path: "/app/buyer", wait: 2000 },
+  { name: "19-mobile-transport", path: "/app/transport", wait: 2000 },
+  { name: "20-mobile-home", path: "/", wait: 2500 },
+  { name: "21-mobile-inbox", path: "/app/inbox", wait: 2000 },
 ];
 
 await mkdir(OUT, { recursive: true });

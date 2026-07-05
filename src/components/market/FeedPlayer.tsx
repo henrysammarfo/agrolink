@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { useFeed, useAddToCart } from "@/hooks/use-marketplace";
 import { useAuth } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
 import { FEED_ALGORITHM_COPY } from "@/lib/feed-algorithm";
 import {
   toggleLike,
@@ -70,6 +71,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
     void getCurrentPosition().then((p) => {
       if (p) setCoords({ lat: p.lat, lng: p.lng });
     });
+    trackEvent("feed_view");
   }, []);
 
   useEffect(() => {
@@ -358,6 +360,7 @@ function FeedCardOverlay({
         listingTitle: item.title,
         actorName: profile?.display_name ?? "Someone",
       });
+      trackEvent("feed_like", { listing_id: item.id, liked: next });
     } catch {
       setLiked(!next);
     }
@@ -383,6 +386,7 @@ function FeedCardOverlay({
     setSaved(next);
     try {
       await toggleBookmark(item.id, user.id, next);
+      trackEvent("feed_save", { listing_id: item.id, saved: next });
       toast.success(next ? "Saved" : "Removed");
     } catch {
       setSaved(!next);
@@ -413,6 +417,7 @@ function FeedCardOverlay({
         ...c,
       ]);
       setCommentText("");
+      trackEvent("feed_comment", { listing_id: item.id });
     } catch {
       toast.error("Could not post comment");
     }
@@ -425,6 +430,7 @@ function FeedCardOverlay({
     }
     try {
       await addToCartMut.mutateAsync({ userId: user.id, listingId: item.id, quantity: 1 });
+      trackEvent("feed_add_to_cart", { listing_id: item.id, price: item.price_per_unit });
       toast.success("Added to cart", { description: item.title });
     } catch {
       toast.error("Could not add to cart");
@@ -436,6 +442,7 @@ function FeedCardOverlay({
     try {
       if (navigator.share) await navigator.share({ title: item.title, url });
       else await navigator.clipboard.writeText(url);
+      trackEvent("feed_share", { listing_id: item.id });
       toast.success("Link ready");
     } catch {
       toast.error("Share failed");

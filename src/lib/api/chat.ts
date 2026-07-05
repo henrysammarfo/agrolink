@@ -15,7 +15,7 @@ export async function fetchConversations(userId: string): Promise<Conversation[]
   const { data, error } = await supabase
     .from("messages")
     .select(
-      "id, sender_id, receiver_id, content, read, created_at, order_id, sender:profiles!messages_sender_id_fkey(display_name, avatar_url), receiver:profiles!messages_receiver_id_fkey(display_name, avatar_url)",
+      "id, sender_id, receiver_id, content, read, created_at, order_id, attachment_url, sender:profiles!messages_sender_id_fkey(display_name, avatar_url), receiver:profiles!messages_receiver_id_fkey(display_name, avatar_url)",
     )
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order("created_at", { ascending: false })
@@ -41,7 +41,7 @@ export async function fetchConversations(userId: string): Promise<Conversation[]
       partnerId,
       partnerName: partner?.display_name ?? "User",
       partnerAvatar: partner?.avatar_url ?? null,
-      lastMessage: row.content,
+      lastMessage: row.content || (row.attachment_url ? "📷 Photo" : ""),
       lastAt: row.created_at,
       unread,
       orderId: row.order_id ?? undefined,
@@ -75,6 +75,8 @@ export async function sendChatMessage(opts: {
   content: string;
   orderId?: string;
   senderName?: string;
+  attachmentUrl?: string;
+  attachmentType?: "image" | "video";
 }) {
   const res = await fetch("/api/chat/send", {
     method: "POST",

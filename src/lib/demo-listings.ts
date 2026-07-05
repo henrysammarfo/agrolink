@@ -7,13 +7,22 @@ import { resolveMediaUrl, resolveVideoUrl } from "@/lib/media-urls";
 
 const DEMO_SELLER = "a0000001-0001-4000-8000-000000000001";
 
+/** Prefer Supabase Storage URLs in production; fall back to local /media/demo/* */
+function demoMedia(name: string): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (supabaseUrl) {
+    return `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/listing-images/demo/${name}.svg`;
+  }
+  return `/media/demo/${name}.svg`;
+}
+
 const MEDIA = {
-  tomato: "/media/demo/tomato.svg",
-  okra: "/media/demo/okra.svg",
-  pepper: "/media/demo/pepper.svg",
-  garden_egg: "/media/demo/garden-egg.svg",
-  leafy_greens: "/media/demo/greens.svg",
-  onion: "/media/demo/onion.svg",
+  tomato: demoMedia("tomato"),
+  okra: demoMedia("okra"),
+  pepper: demoMedia("pepper"),
+  garden_egg: demoMedia("garden-egg"),
+  leafy_greens: demoMedia("greens"),
+  onion: demoMedia("onion"),
 } as const;
 
 export const SEED_FEED_LISTINGS: FeedListing[] = [

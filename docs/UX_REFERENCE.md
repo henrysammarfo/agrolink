@@ -13,7 +13,7 @@ AgroLink maps product patterns from consumer apps to Ghana produce logistics. Th
 | Double-tap like + haptic | Feed overlay | `FeedPlayer.tsx`, `haptics.ts` | Done |
 | Category chips (For You filters) | Feed top bar | `CategoryChips.tsx` | Done |
 | Profile grid (posts) | `/farmers/$slug` | RiyilsExplore-style 3-col grid | Done |
-| Follow / message / share | Farmer profile header | Follow live; message/share toast stubs | Done |
+| Follow / message / share | Farmer profile header | Follow live; message → chat thread | Done |
 | For You ranking | Feed algorithm | `feed-algorithm.ts` | Done |
 | Sans typography in feed | Feed overlay | Serif reserved for marketing only | Done |
 | Skeleton loaders | Feed, cart, home | `FeedSkeleton.tsx` | Done |
@@ -38,13 +38,21 @@ AgroLink maps product patterns from consumer apps to Ghana produce logistics. Th
 | Full-screen order tracking | `/app/buyer/orders/$orderId/track` | Done |
 | OrderTracker timeline | Orders + track page | Done |
 | Reorder from history | Orders history tab | Done |
-| Call/Message driver stubs | `LiveTrackCard` | Done |
+| Call/Message driver | `LiveTrackCard` | Done — opens chat thread |
+
+## Search + admin
+
+| Pattern | Screen | Status |
+|---------|--------|--------|
+| ⌘K command palette | App header | Done — `GlobalSearch.tsx` |
+| Admin surge toggle | `/app/admin/pricing` | Done |
 
 ## Media policy
 
-- **Production feed:** Supabase Storage URLs only; external CDN blocked via `media-urls.ts`
-- **Seed/demo:** Self-hosted `/public/media/demo/*.svg`; set `VITE_SEED_FEED=true` or run `npm run seed:demo`
-- **No Mixkit/Unsplash** in production paths (removed from seed + demo listings)
+- **Production feed:** Supabase Storage URLs (`listing-images`, `listing-videos`); external CDN blocked via `media-urls.ts`
+- **Seed/demo:** Run `npm run upload:media` then `npm run seed:demo` — stores under `listing-images/demo/*`
+- **Client fallback:** `demo-listings.ts` builds storage URLs from `VITE_SUPABASE_URL` when DB empty
+- **No Mixkit/Unsplash** in production paths
 
 ## OSS — what we actually use
 
@@ -57,7 +65,8 @@ See `docs/OSS_REFERENCE.md` for full mapping.
 
 ## Optional analytics
 
-- PostHog: `VITE_POSTHOG_KEY` (+ optional `VITE_POSTHOG_HOST`)
+- PostHog: `VITE_POSTHOG_KEY` (+ optional `VITE_POSTHOG_HOST`) — events listed in `docs/API_KEYS.md`
+- Sentry: `VITE_SENTRY_DSN`
 - Sentry: `VITE_SENTRY_DSN` (install `@sentry/browser` when enabling)
 - Web push: `VITE_VAPID_PUBLIC_KEY` for real PushManager subscriptions
 

@@ -104,6 +104,21 @@ Last updated: 2026-07-05
 | Message farmer/driver | Done | Profile + track card → chat route |
 | VAPID key generator | Done | `npm run vapid:generate` |
 
+## Production comms + media batch (2026-07-05)
+
+| Priority | Feature | Status | Implementation |
+|----------|---------|--------|----------------|
+| 1 | Listing media → Supabase Storage | Done | `scripts/upload-listing-media.mjs`, `seed-demo-listings.mjs` uploads to `listing-images/demo/*`; `demo-listings.ts` uses storage URLs when `VITE_SUPABASE_URL` set |
+| 2 | WhatsApp order updates (WATI + Hubtel SMS) | Done | `server/whatsapp.ts`, `comms.ts` respects `profiles.whatsapp_enabled`; settings toggle wired to `/api/settings/notifications` |
+| 3 | Chat image attachments | Done | `messages.attachment_url`, `chat-attachments` bucket, `ChatThread.tsx` upload + display |
+| 4 | ⌘K global search | Done | `GlobalSearch.tsx`, `/api/search/global`, `AppShell` trigger (desktop + mobile) |
+| 5 | PostHog event wiring | Done | `feed_*`, `driver_*`, `checkout_initiated`, `search`, `chat_message_sent`, `admin_surge_updated` |
+| 6 | Admin surge pricing UI | Done | `/app/admin/pricing`, `/api/admin/pricing` PATCH |
+
+Migration: `20260705120000_comms_media_search.sql`
+
+Stress tests: `npm run stress:comms`
+
 ## Launch path: PWA (not APK)
 
 Production mobile = **installable PWA** over HTTPS. See `docs/PWA.md`.

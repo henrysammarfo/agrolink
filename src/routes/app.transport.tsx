@@ -10,6 +10,7 @@ import { SlideToConfirm } from "@/components/ui/SlideToConfirm";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useDriverEarnings } from "@/hooks/use-marketplace";
+import { trackEvent } from "@/lib/analytics";
 import {
   fetchAvailableDeliveries, fetchDriverDeliveries, acceptDelivery, advanceDeliveryStatus,
   completeDeliveryViaApi,
@@ -87,6 +88,7 @@ function TransportOverview() {
     try {
       await updateDriverAvailability(user.id, !online);
       refetch();
+      trackEvent("driver_online_toggle", { online: !online });
       toast.success(online ? "You are offline" : "You are online");
     } catch { toast.error("Could not update status"); }
   };
@@ -95,6 +97,7 @@ function TransportOverview() {
     if (!driverProfile?.id) return;
     try {
       await acceptDelivery(id, driverProfile.id);
+      trackEvent("driver_job_accept", { delivery_id: id });
       toast.success("Job accepted");
       loadJobs();
     } catch { toast.error("Could not accept job"); }
@@ -115,6 +118,7 @@ function TransportOverview() {
     }
     try {
       await advanceDeliveryStatus(job.id, status);
+      trackEvent("driver_status_advance", { delivery_id: job.id, status });
       toast.success("Status updated");
       loadJobs();
     } catch { toast.error("Could not update status"); }
@@ -124,6 +128,7 @@ function TransportOverview() {
     if (!podJob || !user?.id) return;
     try {
       await completeDeliveryViaApi(podJob.id, user.id, podPhotoUrl);
+      trackEvent("driver_delivery_complete", { delivery_id: podJob.id, source: "map" });
       toast.success("Delivery completed — POD saved, payouts sent!");
       setPodJob(null);
       loadJobs();

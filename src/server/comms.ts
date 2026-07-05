@@ -1,12 +1,14 @@
-/** Central notifications + web push delivery (VAPID) + FCM fallback */
+/** Central notifications + web push + WhatsApp delivery */
 
 import webpush from "web-push";
+import { sendWhatsAppMessage, orderStatusWhatsAppBody } from "@/server/whatsapp";
 
 type NotifyPayload = {
   type: string;
   title: string;
   body?: string;
   link?: string;
+  whatsappExtras?: Record<string, string>;
 };
 
 let vapidReady = false;
@@ -33,6 +35,24 @@ export async function notifyUser(userId: string, payload: NotifyPayload) {
     link: payload.link ?? null,
   });
 
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("phone, whatsapp_enabled, push_enabled")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profile?.whatsapp_enabled !== false && profile?.phone) {
+    const waBody = orderStatusWhatsAppBody(payload.type, {
+      body: payload.body ?? payload.title,
+      link: payload.link ?? "",
+      preview: payload.body ?? payload.title,
+      ...payload.whatsappExtras,
+    });
+    await sendWhatsAppMessage(profile.phone, waBody);
+  }
+
+  if (profile?.push_enabled === false) return;
+
   const { data: tokens } = await supabaseAdmin
     .from("push_tokens")
     .select("token, platform")
@@ -43,9 +63,7 @@ export async function notifyUser(userId: string, payload: NotifyPayload) {
 
   for (const row of tokens ?? []) {
     if (row.platform === "web") {
-      await sendWebPush(row.token, payload).catch((e) =>
-        console.warn("[WebPush] failed", e),
-      );
+      await sendWebPush(row.token, payload).catch((e) => console.warn("[WebPush] failed", e));
     } else if (fcmKey) {
       await sendFcm(row.token, payload.title, payload.body ?? "", payload.link, fcmKey);
     }
@@ -55,14 +73,12 @@ export async function notifyUser(userId: string, payload: NotifyPayload) {
 async function sendWebPush(storedToken: string, payload: NotifyPayload) {
   ensureVapid();
   if (!vapidReady) return;
-
   let subscription: webpush.PushSubscription;
   try {
     subscription = JSON.parse(storedToken) as webpush.PushSubscription;
   } catch {
     return;
   }
-
   await webpush.sendNotification(
     subscription,
     JSON.stringify({
@@ -83,10 +99,7 @@ async function sendFcm(
   try {
     await fetch("https://fcm.googleapis.com/fcm/send", {
       method: "POST",
-      headers: {
-        Authorization: `key=${serverKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `key=${serverKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         to: token,
         notification: { title, body },
@@ -104,7 +117,6 @@ export async function notifyDriversOfNewJob(
   feeGhs: number,
 ) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
   const { data: drivers } = await supabaseAdmin
     .from("driver_profiles")
     .select("user_id")
@@ -116,7 +128,13 @@ export async function notifyDriversOfNewJob(
   const link = "/app/transport/jobs";
 
   for (const d of drivers ?? []) {
-    await notifyUser(d.user_id, { type: "delivery_job", title, body, link });
+    await notifyUser(d.user_id, {
+      type: "delivery_job",
+      title,
+      body,
+      link,
+      whatsappExtras: { pickup: pickupAddress, fee: String(feeGhs.toFixed(0)) },
+    });
   }
 
   await supabaseAdmin.from("audit_log").insert({
@@ -133,28 +151,35 @@ export async function sendChatMessageServer(opts: {
   content: string;
   orderId?: string;
   senderName?: string;
+  attachmentUrl?: string;
+  attachmentType?: "image" | "video";
 }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const text = opts.content.trim() || (opts.attachmentUrl ? "📷 Photo" : "");
+  if (!text && !opts.attachmentUrl) throw new Error("Empty message");
 
   const { data: msg, error } = await supabaseAdmin
     .from("messages")
     .insert({
       sender_id: opts.senderId,
       receiver_id: opts.receiverId,
-      content: opts.content.trim(),
+      content: text,
       order_id: opts.orderId ?? null,
+      attachment_url: opts.attachmentUrl ?? null,
+      attachment_type: opts.attachmentType ?? null,
     })
     .select("id")
     .single();
 
   if (error) throw error;
 
-  const preview = opts.content.length > 80 ? `${opts.content.slice(0, 80)}…` : opts.content;
+  const preview = opts.attachmentUrl ? "Sent a photo" : text.slice(0, 80);
   await notifyUser(opts.receiverId, {
     type: "message",
     title: opts.senderName ? `Message from ${opts.senderName}` : "New message",
     body: preview,
     link: `/app/inbox/chat/${opts.senderId}${opts.orderId ? `?order=${opts.orderId}` : ""}`,
+    whatsappExtras: { preview },
   });
 
   return msg.id as string;

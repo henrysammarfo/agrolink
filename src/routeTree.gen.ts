@@ -39,11 +39,14 @@ import { Route as AppFarmerListingsRouteImport } from './routes/app.farmer.listi
 import { Route as AppBuyerOrdersRouteImport } from './routes/app.buyer.orders'
 import { Route as AppBuyerFeedRouteImport } from './routes/app.buyer.feed'
 import { Route as AppBuyerCartRouteImport } from './routes/app.buyer.cart'
+import { Route as AppAdminPricingRouteImport } from './routes/app.admin.pricing'
 import { Route as AppAdminPaymentsRouteImport } from './routes/app.admin.payments'
 import { Route as AppAdminListingsRouteImport } from './routes/app.admin.listings'
 import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
 import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks/paystack'
 import { Route as ApiVerifyGhanaCardRouteImport } from './routes/api/verify/ghana-card'
+import { Route as ApiSettingsNotificationsRouteImport } from './routes/api/settings/notifications'
+import { Route as ApiSearchGlobalRouteImport } from './routes/api/search/global'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiOtpVerifyRouteImport } from './routes/api/otp/verify'
 import { Route as ApiOtpSendRouteImport } from './routes/api/otp/send'
@@ -52,6 +55,7 @@ import { Route as ApiDeliveriesReassignExpiredRouteImport } from './routes/api/d
 import { Route as ApiDeliveriesCompleteRouteImport } from './routes/api/deliveries/complete'
 import { Route as ApiCommsNotifyRouteImport } from './routes/api/comms/notify'
 import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
+import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.$userId'
 import { Route as AppBuyerOrdersOrderIdTrackRouteImport } from './routes/app.buyer.orders.$orderId.track'
 
@@ -205,6 +209,11 @@ const AppBuyerCartRoute = AppBuyerCartRouteImport.update({
   path: '/cart',
   getParentRoute: () => AppBuyerRoute,
 } as any)
+const AppAdminPricingRoute = AppAdminPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminPaymentsRoute = AppAdminPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
@@ -228,6 +237,17 @@ const ApiWebhooksPaystackRoute = ApiWebhooksPaystackRouteImport.update({
 const ApiVerifyGhanaCardRoute = ApiVerifyGhanaCardRouteImport.update({
   id: '/api/verify/ghana-card',
   path: '/api/verify/ghana-card',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSettingsNotificationsRoute =
+  ApiSettingsNotificationsRouteImport.update({
+    id: '/api/settings/notifications',
+    path: '/api/settings/notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSearchGlobalRoute = ApiSearchGlobalRouteImport.update({
+  id: '/api/search/global',
+  path: '/api/search/global',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
@@ -271,6 +291,11 @@ const ApiChatSendRoute = ApiChatSendRouteImport.update({
   path: '/api/chat/send',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminPricingRoute = ApiAdminPricingRouteImport.update({
+  id: '/api/admin/pricing',
+  path: '/api/admin/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppInboxChatUserIdRoute = AppInboxChatUserIdRouteImport.update({
   id: '/chat/$userId',
   path: '/chat/$userId',
@@ -306,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
@@ -314,11 +340,14 @@ export interface FileRoutesByFullPath {
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
   '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/search/global': typeof ApiSearchGlobalRoute
+  '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
+  '/app/admin/pricing': typeof AppAdminPricingRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
@@ -352,6 +381,7 @@ export interface FileRoutesByTo {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app': typeof AppIndexRoute
+  '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
@@ -360,11 +390,14 @@ export interface FileRoutesByTo {
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
   '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/search/global': typeof ApiSearchGlobalRoute
+  '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
+  '/app/admin/pricing': typeof AppAdminPricingRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
@@ -400,6 +433,7 @@ export interface FileRoutesById {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
@@ -408,11 +442,14 @@ export interface FileRoutesById {
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
   '/api/push/register': typeof ApiPushRegisterRoute
+  '/api/search/global': typeof ApiSearchGlobalRoute
+  '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
+  '/app/admin/pricing': typeof AppAdminPricingRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
@@ -449,6 +486,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/admin/pricing'
     | '/api/chat/send'
     | '/api/comms/notify'
     | '/api/deliveries/complete'
@@ -457,11 +495,14 @@ export interface FileRouteTypes {
     | '/api/otp/send'
     | '/api/otp/verify'
     | '/api/push/register'
+    | '/api/search/global'
+    | '/api/settings/notifications'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
     | '/app/admin/payments'
+    | '/app/admin/pricing'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
     | '/app/buyer/orders'
@@ -495,6 +536,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app'
+    | '/api/admin/pricing'
     | '/api/chat/send'
     | '/api/comms/notify'
     | '/api/deliveries/complete'
@@ -503,11 +545,14 @@ export interface FileRouteTypes {
     | '/api/otp/send'
     | '/api/otp/verify'
     | '/api/push/register'
+    | '/api/search/global'
+    | '/api/settings/notifications'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
     | '/app/admin/payments'
+    | '/app/admin/pricing'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
     | '/app/buyer/orders'
@@ -542,6 +587,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/admin/pricing'
     | '/api/chat/send'
     | '/api/comms/notify'
     | '/api/deliveries/complete'
@@ -550,11 +596,14 @@ export interface FileRouteTypes {
     | '/api/otp/send'
     | '/api/otp/verify'
     | '/api/push/register'
+    | '/api/search/global'
+    | '/api/settings/notifications'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
     | '/app/admin/listings'
     | '/app/admin/payments'
+    | '/app/admin/pricing'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
     | '/app/buyer/orders'
@@ -580,6 +629,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiModerateRoute: typeof ApiModerateRoute
+  ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiChatSendRoute: typeof ApiChatSendRoute
   ApiCommsNotifyRoute: typeof ApiCommsNotifyRoute
   ApiDeliveriesCompleteRoute: typeof ApiDeliveriesCompleteRoute
@@ -588,6 +638,8 @@ export interface RootRouteChildren {
   ApiOtpSendRoute: typeof ApiOtpSendRoute
   ApiOtpVerifyRoute: typeof ApiOtpVerifyRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
+  ApiSearchGlobalRoute: typeof ApiSearchGlobalRoute
+  ApiSettingsNotificationsRoute: typeof ApiSettingsNotificationsRoute
   ApiVerifyGhanaCardRoute: typeof ApiVerifyGhanaCardRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
 }
@@ -804,6 +856,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBuyerCartRouteImport
       parentRoute: typeof AppBuyerRoute
     }
+    '/app/admin/pricing': {
+      id: '/app/admin/pricing'
+      path: '/pricing'
+      fullPath: '/app/admin/pricing'
+      preLoaderRoute: typeof AppAdminPricingRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/app/admin/payments': {
       id: '/app/admin/payments'
       path: '/payments'
@@ -837,6 +896,20 @@ declare module '@tanstack/react-router' {
       path: '/api/verify/ghana-card'
       fullPath: '/api/verify/ghana-card'
       preLoaderRoute: typeof ApiVerifyGhanaCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/settings/notifications': {
+      id: '/api/settings/notifications'
+      path: '/api/settings/notifications'
+      fullPath: '/api/settings/notifications'
+      preLoaderRoute: typeof ApiSettingsNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/search/global': {
+      id: '/api/search/global'
+      path: '/api/search/global'
+      fullPath: '/api/search/global'
+      preLoaderRoute: typeof ApiSearchGlobalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/push/register': {
@@ -895,6 +968,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatSendRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/pricing': {
+      id: '/api/admin/pricing'
+      path: '/api/admin/pricing'
+      fullPath: '/api/admin/pricing'
+      preLoaderRoute: typeof ApiAdminPricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/inbox/chat/$userId': {
       id: '/app/inbox/chat/$userId'
       path: '/chat/$userId'
@@ -916,12 +996,14 @@ interface AppAdminRouteChildren {
   AppAdminDisputesRoute: typeof AppAdminDisputesRoute
   AppAdminListingsRoute: typeof AppAdminListingsRoute
   AppAdminPaymentsRoute: typeof AppAdminPaymentsRoute
+  AppAdminPricingRoute: typeof AppAdminPricingRoute
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminDisputesRoute: AppAdminDisputesRoute,
   AppAdminListingsRoute: AppAdminListingsRoute,
   AppAdminPaymentsRoute: AppAdminPaymentsRoute,
+  AppAdminPricingRoute: AppAdminPricingRoute,
 }
 
 const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
@@ -1048,6 +1130,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiModerateRoute: ApiModerateRoute,
+  ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiChatSendRoute: ApiChatSendRoute,
   ApiCommsNotifyRoute: ApiCommsNotifyRoute,
   ApiDeliveriesCompleteRoute: ApiDeliveriesCompleteRoute,
@@ -1056,6 +1139,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOtpSendRoute: ApiOtpSendRoute,
   ApiOtpVerifyRoute: ApiOtpVerifyRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
+  ApiSearchGlobalRoute: ApiSearchGlobalRoute,
+  ApiSettingsNotificationsRoute: ApiSettingsNotificationsRoute,
   ApiVerifyGhanaCardRoute: ApiVerifyGhanaCardRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,
 }

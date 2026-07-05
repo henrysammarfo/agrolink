@@ -8,6 +8,7 @@ import { JobAcceptCountdown } from "@/components/transport/JobAcceptCountdown";
 import { PodCaptureSheet } from "@/components/transport/PodCaptureSheet";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useTransportJobs } from "@/hooks/use-marketplace";
+import { trackEvent } from "@/lib/analytics";
 import { acceptDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
 import type { DeliveryRow } from "@/lib/types/marketplace";
 import { useQueryClient } from "@tanstack/react-query";
@@ -62,6 +63,7 @@ function Jobs() {
     if (!driver?.id) return;
     try {
       await acceptDelivery(id, driver.id);
+      trackEvent("driver_job_accept", { delivery_id: id, source: "jobs_list" });
       toast.success("Job accepted");
       refresh();
     } catch {
@@ -84,6 +86,7 @@ function Jobs() {
     }
     try {
       await advanceDeliveryStatus(job.id, status);
+      trackEvent("driver_status_advance", { delivery_id: job.id, status });
       refresh();
     } catch {
       toast.error("Could not update");
@@ -94,6 +97,7 @@ function Jobs() {
     if (!podJob || !user?.id) return;
     try {
       await completeDeliveryViaApi(podJob.id, user.id, podPhotoUrl);
+      trackEvent("driver_delivery_complete", { delivery_id: podJob.id });
       toast.success("Completed — POD saved, payouts sent");
       setPodJob(null);
       refresh();

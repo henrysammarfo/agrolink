@@ -2,12 +2,13 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
-  ChevronLeft, Bell, Search, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
-  ShieldCheck, AlertTriangle, CreditCard, ListChecks, ArrowLeft,
+  ChevronLeft, Bell, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
+  ShieldCheck, AlertTriangle, CreditCard, ListChecks, ArrowLeft, Zap, Search,
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
 import { useUnreadCounts } from "@/hooks/use-marketplace";
+import { GlobalSearch, SearchTrigger } from "@/components/app/GlobalSearch";
 
 export type AppRole = AuthRole;
 
@@ -36,6 +37,7 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
     { to: "/app/admin/payments", label: "Payments", icon: CreditCard },
     { to: "/app/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { to: "/app/admin/listings", label: "Listings", icon: ListChecks },
+    { to: "/app/admin/pricing", label: "Surge", icon: Zap },
   ],
 };
 
@@ -51,6 +53,7 @@ export function AppShell({
   unreadInbox?: number;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { profile, roles, signOut, user } = useAuth();
   const { data: unread } = useUnreadCounts(user?.id);
@@ -194,16 +197,18 @@ export function AppShell({
             <span className="font-serif text-lg">AgroLink</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground w-80 max-w-full">
-            <Search className="h-4 w-4" />
-            <input
-              placeholder={`Search ${role === "buyer" ? "produce, farmers" : role === "farmer" ? "orders, buyers" : role === "admin" ? "users, payments, disputes" : "jobs"}`}
-              className="w-full bg-transparent outline-none placeholder:text-muted-foreground/70 text-foreground"
-            />
-            <kbd className="rounded border border-border px-1.5 text-[10px]">⌘K</kbd>
-          </div>
+          <SearchTrigger onClick={() => setSearchOpen(true)} />
+          <GlobalSearch role={role} open={searchOpen} onOpenChange={setSearchOpen} />
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="md:hidden grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+              aria-label="Search"
+            >
+              <Search className="h-4 w-4" />
+            </button>
             <Link to="/app/inbox" className="relative grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground">
               <Bell className="h-4 w-4" />
               {unreadInbox > 0 && (
