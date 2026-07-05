@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Play, Leaf, Truck, Sparkles, BadgeCheck, MapPin, ShoppingBasket, Tractor, Wallet } from "lucide-react";
+import { ArrowRight, Play, Leaf, Truck, Sparkles, BadgeCheck, MapPin, ShoppingBasket, Tractor, Wallet, Loader2 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { HERO_VIDEO_URL, farmers, listings, testimonials } from "@/lib/mock-data";
+import { HERO_VIDEO_URL, MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
+import { TESTIMONIALS, formatGmv } from "@/lib/config/marketing";
+import { useFeedTeaser, useMarketingStats, usePublicSellers } from "@/hooks/use-marketplace";
 import produceHero from "@/assets/produce-hero.jpg";
 
 export const Route = createFileRoute("/")({
@@ -45,7 +47,6 @@ function Hero() {
       >
         <source src={HERO_VIDEO_URL} type="video/mp4" />
       </video>
-      {/* Bright video: only a soft bottom fade for text legibility, no global dim */}
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/40 to-transparent" />
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-background/40 to-transparent" />
 
@@ -98,16 +99,17 @@ function Hero() {
 }
 
 function StatsStrip() {
-  const stats = [
-    { value: "1,240+", label: "Farmers onboarded" },
-    { value: "GHS 4.2M", label: "Paid out to farms" },
-    { value: "38 min", label: "Avg pickup → delivery" },
-    { value: "94%", label: "Order completion rate" },
+  const { data: stats } = useMarketingStats();
+  const items = [
+    { value: stats?.sellers ? `${stats.sellers}+` : "—", label: "Sellers on platform" },
+    { value: formatGmv(stats?.gmv ?? 0), label: "Paid out to farms" },
+    { value: stats?.completedOrders ? `${stats.completedOrders}` : "—", label: "Completed orders" },
+    { value: stats?.activeListings ? `${stats.activeListings}` : "—", label: "Live listings" },
   ];
   return (
     <section className="border-y border-border bg-card/40">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-y-10 px-6 py-14 md:grid-cols-4 md:px-12">
-        {stats.map((s) => (
+        {items.map((s) => (
           <div key={s.label} className="text-center md:text-left">
             <div className="font-serif text-4xl md:text-5xl text-foreground">{s.value}</div>
             <div className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">{s.label}</div>
@@ -119,6 +121,7 @@ function StatsStrip() {
 }
 
 function LiveFeedTeaser() {
+  const { data: listings = [], isLoading } = useFeedTeaser(6);
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 md:px-12 md:py-32">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
@@ -134,42 +137,51 @@ function LiveFeedTeaser() {
         </Link>
       </div>
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {listings.slice(0, 6).map((l) => (
-          <Link
-            key={l.id}
-            to="/market"
-            className="group relative overflow-hidden rounded-3xl border border-border bg-card transition-all duration-500 hover:border-primary/40"
-          >
-            <div className="aspect-[4/5] overflow-hidden">
-              <img
-                src={l.image}
-                alt={l.produce}
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/10 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-5">
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-foreground/70">
-                <MapPin className="h-3 w-3" />
-                {l.location} · {l.postedHoursAgo}h ago
+      {isLoading ? (
+        <div className="mt-12 flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : listings.length === 0 ? (
+        <div className="mt-12 rounded-3xl border border-dashed border-border p-16 text-center text-muted-foreground">
+          No listings yet — farmers are posting the first harvest.
+        </div>
+      ) : (
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {listings.map((l) => (
+            <Link
+              key={l.id}
+              to="/market"
+              className="group relative overflow-hidden rounded-3xl border border-border bg-card transition-all duration-500 hover:border-primary/40"
+            >
+              <div className="aspect-[4/5] overflow-hidden">
+                <img
+                  src={l.image_url ?? MARKETING_FALLBACK_IMAGE}
+                  alt={l.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
               </div>
-              <h3 className="mt-2 font-serif text-2xl text-foreground">{l.produce}</h3>
-              <div className="mt-3 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">by {l.farmer}</span>
-                <span className="font-medium text-primary">GHS {l.pricePerKg}/kg</span>
-              </div>
-              {(l.trending || l.organic) && (
-                <div className="mt-3 flex gap-2">
-                  {l.trending && <Badge tone="amber">Trending</Badge>}
-                  {l.organic && <Badge tone="green">Organic</Badge>}
+              <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/10 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-5">
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-foreground/70">
+                  <MapPin className="h-3 w-3" />
+                  {l.location_name}
                 </div>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
+                <h3 className="mt-2 font-serif text-2xl text-foreground">{l.title}</h3>
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">by {l.seller_name ?? "Farmer"}</span>
+                  <span className="font-medium text-primary">GHS {l.price_per_unit}/{l.unit}</span>
+                </div>
+                {l.organic && (
+                  <div className="mt-3 flex gap-2">
+                    <Badge tone="green">Organic</Badge>
+                  </div>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -189,8 +201,8 @@ function HowItWorks() {
   const steps = [
     { icon: Tractor, title: "Farmer lists", body: "Snap a short video or photo of fresh harvest. Set quantity, price, pickup window." },
     { icon: ShoppingBasket, title: "Buyer discovers", body: "Vertical swipe feed. AI matches your kitchen to nearby supply in real time." },
-    { icon: Truck, title: "We dispatch", body: "Transport partners get auto-routed pickups. Live tracking, same-day delivery." },
-    { icon: Wallet, title: "Mobile money settles", body: "Hubtel + MTN MoMo + Vodafone Cash. Farmers paid the same evening." },
+    { icon: Truck, title: "We dispatch", body: "Verified drivers get auto-routed pickups. Live tracking, same-day delivery." },
+    { icon: Wallet, title: "Mobile money settles", body: "Paystack + MTN MoMo + Vodafone Cash. Farmers paid the same evening." },
   ];
   return (
     <section className="border-t border-border bg-card/30">
@@ -220,6 +232,7 @@ function HowItWorks() {
 }
 
 function FeaturedFarmers() {
+  const { data: farmers = [], isLoading } = usePublicSellers(6);
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 md:px-12 md:py-32">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
@@ -234,33 +247,53 @@ function FeaturedFarmers() {
         </Link>
       </div>
 
-      <div className="mt-12 grid gap-6 md:grid-cols-3">
-        {farmers.map((f) => (
-          <Link
-            key={f.slug}
-            to="/farmers/$slug"
-            params={{ slug: f.slug }}
-            className="group overflow-hidden rounded-3xl border border-border bg-card transition-colors hover:border-primary/40"
-          >
-            <div className="aspect-[4/5] overflow-hidden">
-              <img src={f.image} alt={f.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            </div>
-            <div className="p-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-serif text-2xl text-foreground">{f.name}</h3>
-                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                  <BadgeCheck className="h-3.5 w-3.5 text-primary" />
-                  {f.rating}
-                </span>
+      {isLoading ? (
+        <div className="mt-12 flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : farmers.length === 0 ? (
+        <div className="mt-12 rounded-3xl border border-dashed border-border p-16 text-center text-muted-foreground">
+          Seller profiles appear here as farmers join AgroLink.
+        </div>
+      ) : (
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {farmers.map((f) => (
+            <Link
+              key={f.id}
+              to="/farmers/$slug"
+              params={{ slug: f.slug ?? f.id }}
+              className="group overflow-hidden rounded-3xl border border-border bg-card transition-colors hover:border-primary/40"
+            >
+              <div className="aspect-[4/5] overflow-hidden bg-muted">
+                {f.avatar_url ? (
+                  <img src={f.avatar_url} alt={f.display_name ?? ""} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                ) : (
+                  <div className="grid h-full place-items-center font-serif text-6xl text-primary/30">
+                    {(f.display_name ?? "F")[0]}
+                  </div>
+                )}
               </div>
-              <p className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
-                {f.location} · {f.region}
-              </p>
-              <p className="mt-4 text-sm font-light text-muted-foreground leading-relaxed line-clamp-2">{f.bio}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-serif text-2xl text-foreground">{f.display_name ?? "Farmer"}</h3>
+                  {f.seller_rating != null && (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <BadgeCheck className="h-3.5 w-3.5 text-primary" />
+                      {f.seller_rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
+                  {f.region ?? "Greater Accra"} · {f.listing_count ?? 0} listings
+                </p>
+                <p className="mt-4 text-sm font-light text-muted-foreground leading-relaxed line-clamp-2">
+                  {f.bio ?? "Fresh produce from Greater Accra farms."}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -274,7 +307,7 @@ function Testimonials() {
           Trusted by chefs, growers <span className="italic">and</span> drivers.
         </h2>
         <div className="mt-14 grid gap-6 md:grid-cols-3">
-          {testimonials.map((t, i) => (
+          {TESTIMONIALS.map((t, i) => (
             <figure key={i} className="rounded-3xl border border-border bg-background p-8">
               <Leaf className="h-5 w-5 text-primary" />
               <blockquote className="mt-5 font-serif text-2xl text-foreground leading-snug">
@@ -297,7 +330,6 @@ function ClosingCTA() {
     <section className="relative overflow-hidden">
       <div className="absolute inset-0">
         <img src={produceHero} alt="" className="h-full w-full object-cover" />
-        {/* very light wash so the image stays bright + readable */}
         <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-background/10 to-background/10" />
       </div>
       <div className="relative mx-auto max-w-3xl px-6 py-32 md:py-40 text-center">

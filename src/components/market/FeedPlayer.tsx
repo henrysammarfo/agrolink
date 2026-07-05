@@ -1,99 +1,258 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { VerticalFeed, type VerticalFeedRef, type VideoItem } from "react-vertical-feed";
 import {
-  Heart, MessageCircle, Share2, Bookmark, ShoppingBasket, MapPin, BadgeCheck,
-  Volume2, VolumeX, Music2, Grid2x2, X, Send, Copy, MessageSquare,
+  PlaybackControllerProvider,
+  RiyilsObserverProvider,
+  RiyilsViewer,
+} from "react-riyils";
+import "react-riyils/dist/index.css";
+import "@/styles/riyils-overrides.css";
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  ShoppingBasket,
+  MapPin,
+  BadgeCheck,
+  Volume2,
+  VolumeX,
+  Grid2x2,
+  X,
+  Send,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
-import { listings, type FeedComment, type Listing } from "@/lib/mock-data";
+import { useFeed, useAddToCart } from "@/hooks/use-marketplace";
+import { useAuth } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
+import { FEED_ALGORITHM_COPY } from "@/lib/feed-algorithm";
+import {
+  toggleLike,
+  fetchUserLiked,
+  fetchComments,
+  addComment,
+  toggleBookmark,
+  fetchUserBookmarked,
+} from "@/lib/api/engagement";
+import type { FeedListing } from "@/lib/types/marketplace";
+import type { FeedComment } from "@/lib/types/marketplace";
+import { isDemoMode, isSeedFeedEnabled } from "@/lib/demo-listings";
+import { getCurrentPosition } from "@/lib/native-geolocation";
+import { triggerLikeHaptic } from "@/lib/haptics";
+import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
+import { CategoryChips, filterByCategory } from "@/components/feed/CategoryChips";
+
+export { FEED_ALGORITHM_COPY };
 
 type Props = {
   initialIndex?: number;
-  /** When true, the feed fills the viewport (mobile-app feel). When false, it sits in a phone-frame inside a section. */
   fullscreen?: boolean;
 };
 
 export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
-  const rankedListings = useMemo(() => [...listings].sort((a, b) => feedScore(b) - feedScore(a)), []);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const { data, isLoading, error } = useFeed(coords?.lat, coords?.lng);
+  const rankedListings = data?.listings ?? [];
   const [active, setActive] = useState(initialIndex);
   const [muted, setMuted] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [category, setCategory] = useState("all");
+  const feedRef = useRef<VerticalFeedRef>(null);
 
-  // IntersectionObserver-based active tracking on scroll-snap
+  const filteredListings = useMemo(
+    () => filterByCategory(rankedListings, category),
+    [rankedListings, category],
+  );
+
   useEffect(() => {
-    const root = containerRef.current;
-    if (!root) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting && e.intersectionRatio > 0.6) {
-            const idx = Number((e.target as HTMLElement).dataset.idx);
-            if (!Number.isNaN(idx)) setActive(idx);
-          }
-        });
-      },
-      { root, threshold: [0.6, 0.9] },
-    );
-    itemRefs.current.forEach((el) => el && obs.observe(el));
-    return () => obs.disconnect();
+    void getCurrentPosition().then((p) => {
+      if (p) setCoords({ lat: p.lat, lng: p.lng });
+    });
+    trackEvent("feed_view");
   }, []);
 
-  // Scroll to initial index once
   useEffect(() => {
-    const el = itemRefs.current[initialIndex];
-    el?.scrollIntoView({ behavior: "auto", block: "start" });
-  }, [initialIndex]);
+    if (filteredListings.length && feedRef.current) {
+      feedRef.current.scrollToItem(initialIndex, "auto");
+    }
+  }, [initialIndex, filteredListings.length]);
 
-  // Keyboard arrows
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown") scrollToIdx(Math.min(active + 1, rankedListings.length - 1));
-      else if (e.key === "ArrowUp") scrollToIdx(Math.max(active - 1, 0));
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [active, rankedListings.length]);
-
-  function scrollToIdx(i: number) {
-    itemRefs.current[i]?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  const feedItems: VideoItem[] = filteredListings.map((l) => ({
+    id: l.id,
+    src: l.video_url ?? l.image_url ?? "",
+    poster: l.image_url ?? undefined,
+    muted,
+    autoPlay: true,
+    loop: true,
+    playsInline: true,
+    metadata: { listing: l },
+  }));
 
   const wrapperClass = fullscreen
-    ? "fixed inset-0 z-0 bg-black"
+    ? "h-full w-full bg-black"
     : "relative mx-auto aspect-[9/16] w-full max-w-[420px] overflow-hidden rounded-[2rem] border border-border bg-black shadow-[var(--shadow-cinema)]";
+
+  if (isLoading) {
+    return (
+      <div className={wrapperClass}>
+        <FeedSkeleton />
+      </div>
+    );
+  }
+
+  if (error || (filteredListings.length === 0 && !isSeedFeedEnabled())) {
+    return (
+      <div className={`${wrapperClass} grid place-items-center p-8 text-center`}>
+        <p className="text-white font-sans text-2xl font-semibold">No listings yet</p>
+        <p className="mt-2 text-sm text-white/70">
+          Be the first to post produce from the corridor.
+        </p>
+        <Link
+          to="/app/create"
+          className="mt-6 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground"
+        >
+          Post a listing
+        </Link>
+      </div>
+    );
+  }
+
+  if (fullscreen) {
+    const riyilsVideos = filteredListings
+      .filter((l) => !!l.video_url)
+      .map((l) => ({
+        id: l.id,
+        videoUrl: l.video_url!,
+        thumbnailUrl: l.image_url ?? undefined,
+      }));
+
+    const activeListing = filteredListings[active];
+
+    return (
+      <div className={wrapperClass}>
+        {riyilsVideos.length > 0 ? (
+          <PlaybackControllerProvider>
+            <RiyilsObserverProvider logLevel="warn">
+              <RiyilsViewer
+                videos={riyilsVideos}
+                initialIndex={Math.min(initialIndex, riyilsVideos.length - 1)}
+                onClose={() => {}}
+                onVideoChange={(idx) => {
+                  const vid = riyilsVideos[idx];
+                  const listingIdx = filteredListings.findIndex((l) => l.id === vid?.id);
+                  if (listingIdx >= 0) setActive(listingIdx);
+                }}
+                progressBarColor="transparent"
+                controls={[]}
+              />
+            </RiyilsObserverProvider>
+          </PlaybackControllerProvider>
+        ) : activeListing ? (
+          <img
+            src={activeListing.image_url ?? "/media/demo/tomato.svg"}
+            alt={activeListing.title}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : null}
+
+        {typeof document !== "undefined" &&
+          activeListing &&
+          createPortal(
+            <div className="agrolink-feed-overlay fixed inset-0">
+              <CategoryChips active={category} onChange={setCategory} />
+              <FeedCardOverlay
+                item={activeListing}
+                isActive
+                muted={muted}
+                onToggleMute={() => setMuted((m) => !m)}
+                onOpenGrid={() => setShowGrid(true)}
+                progress={`${active + 1} / ${filteredListings.length}`}
+                showImageOnly={!activeListing.video_url}
+              />
+            </div>,
+            document.body,
+          )}
+
+        {showGrid && (
+          <div className="fixed inset-0 z-[10060] bg-background/95 backdrop-blur-xl">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h3 className="font-sans text-xl font-semibold">Browse all</h3>
+              <button
+                onClick={() => setShowGrid(false)}
+                className="grid h-10 w-10 place-items-center rounded-full hover:bg-secondary"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div
+              className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4"
+              style={{ maxHeight: "calc(100% - 60px)" }}
+            >
+              {filteredListings.map((l, i) => (
+                <button
+                  key={l.id}
+                  onClick={() => {
+                    setShowGrid(false);
+                    setActive(i);
+                  }}
+                  className="relative aspect-[9/16] overflow-hidden rounded-2xl"
+                >
+                  <img
+                    src={l.image_url ?? "/placeholder-produce.jpg"}
+                    alt={l.title}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-left">
+                    <div className="font-sans text-sm font-medium text-white">{l.title}</div>
+                    <div className="text-[10px] text-white/70">
+                      GHS {l.price_per_unit}/{l.unit}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={wrapperClass}>
-      <div
-        ref={containerRef}
-        className="no-scrollbar h-full w-full overflow-y-auto snap-y snap-mandatory"
-        style={{ scrollSnapType: "y mandatory" }}
-      >
-        {rankedListings.map((l, i) => (
-          <div
-            key={l.id}
-            ref={(el) => { itemRefs.current[i] = el; }}
-            data-idx={i}
-            className="relative h-full w-full snap-start snap-always"
-            style={{ minHeight: "100%" }}
-          >
-            <FeedCard
-              item={l}
-              isActive={i === active}
-              muted={muted}
-              onToggleMute={() => setMuted((m) => !m)}
-              onOpenGrid={() => setShowGrid(true)}
-              progress={`${i + 1} / ${rankedListings.length}`}
-            />
-          </div>
-        ))}
-      </div>
+      <VerticalFeed
+        ref={feedRef}
+        items={feedItems}
+        className="h-full w-full"
+        style={{ height: "100%", scrollSnapType: "y mandatory" }}
+        threshold={0.75}
+        onCurrentItemChange={setActive}
+        onVideoError={() => {}}
+        renderItemOverlay={(item, i) => {
+          const listing = (item.metadata as { listing: FeedListing }).listing;
+          return (
+            <>
+              {i === 0 && <CategoryChips active={category} onChange={setCategory} />}
+              <FeedCardOverlay
+                item={listing}
+                isActive={i === active}
+                muted={muted}
+                onToggleMute={() => setMuted((m) => !m)}
+                onOpenGrid={() => setShowGrid(true)}
+                progress={`${i + 1} / ${filteredListings.length}`}
+                showImageOnly={!listing.video_url}
+              />
+            </>
+          );
+        }}
+      />
 
-      {/* progress rail */}
-      <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex">
-        {rankedListings.map((_, i) => (
+      <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex z-20">
+        {filteredListings.map((_, i) => (
           <span
             key={i}
             className={`block h-6 w-1 rounded-full transition-all ${i === active ? "bg-white" : "bg-white/30"}`}
@@ -101,26 +260,42 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
         ))}
       </div>
 
-      {/* grid drawer */}
       {showGrid && (
         <div className="absolute inset-0 z-30 bg-background/95 backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h3 className="font-serif text-2xl">Browse all</h3>
-            <button onClick={() => setShowGrid(false)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-secondary" aria-label="Close">
+            <button
+              onClick={() => setShowGrid(false)}
+              className="grid h-10 w-10 place-items-center rounded-full hover:bg-secondary"
+              aria-label="Close"
+            >
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4" style={{ maxHeight: "calc(100% - 60px)" }}>
+          <div
+            className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4"
+            style={{ maxHeight: "calc(100% - 60px)" }}
+          >
             {rankedListings.map((l, i) => (
               <button
                 key={l.id}
-                onClick={() => { setShowGrid(false); scrollToIdx(i); }}
+                onClick={() => {
+                  setShowGrid(false);
+                  feedRef.current?.scrollToItem(i, "smooth");
+                }}
                 className="relative aspect-[9/16] overflow-hidden rounded-2xl"
               >
-                <img src={l.image} alt={l.produce} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                <img
+                  src={l.image_url ?? "/placeholder-produce.jpg"}
+                  alt={l.title}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-left">
-                  <div className="font-serif text-sm text-white">{l.produce}</div>
-                  <div className="text-[10px] text-white/70">GHS {l.pricePerKg}/kg</div>
+                  <div className="font-serif text-sm text-white">{l.title}</div>
+                  <div className="text-[10px] text-white/70">
+                    GHS {l.price_per_unit}/{l.unit}
+                  </div>
                 </div>
               </button>
             ))}
@@ -131,166 +306,321 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   );
 }
 
-function FeedCard({
-  item, isActive, muted, onToggleMute, onOpenGrid, progress,
+function FeedCardOverlay({
+  item,
+  isActive,
+  muted,
+  onToggleMute,
+  onOpenGrid,
+  progress,
+  showImageOnly,
 }: {
-  item: Listing;
+  item: FeedListing;
   isActive: boolean;
   muted: boolean;
   onToggleMute: () => void;
   onOpenGrid: () => void;
   progress: string;
+  showImageOnly?: boolean;
 }) {
-  const [liked, setLiked] = useState(() => readBool(`agrolink:feed:${item.id}:liked`));
-  const [saved, setSaved] = useState(() => readBool(`agrolink:feed:${item.id}:saved`));
-  const [likes, setLikes] = useState(() => readNumber(`agrolink:feed:${item.id}:likes`, item.likes ?? 120));
-  const [comments, setComments] = useState<FeedComment[]>(() => readComments(item));
+  const { user, profile } = useAuth();
+  const addToCartMut = useAddToCart();
+  const [liked, setLiked] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [likes, setLikes] = useState(item.like_count);
+  const [comments, setComments] = useState<FeedComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [panel, setPanel] = useState<"comments" | "share" | null>(null);
+  const [showLikeBurst, setShowLikeBurst] = useState(false);
+  const lastTap = useRef(0);
+  const sellerSlug = item.seller_slug ?? item.seller_id.slice(0, 8);
+  const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
 
-  const addComment = () => {
-    const text = commentText.trim();
-    if (!text) return;
-    setComments((curr) => [{ id: `local-${Date.now()}`, author: "You", text, at: "now" }, ...curr]);
-    setCommentText("");
-    toast.success("Comment posted", { description: item.produce });
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchUserLiked(item.id, user.id).then(setLiked);
+    fetchUserBookmarked(item.id, user.id).then(setSaved);
+  }, [item.id, user?.id]);
+
+  useEffect(() => {
+    if (panel === "comments") fetchComments(item.id).then(setComments);
+  }, [panel, item.id]);
+
+  const handleLike = async () => {
+    if (!user?.id) {
+      toast.error("Sign in to like");
+      return;
+    }
+    const next = !liked;
+    setLiked(next);
+    setLikes((n) => Math.max(0, n + (next ? 1 : -1)));
+    try {
+      await toggleLike(item.id, user.id, next, {
+        sellerId: item.seller_id,
+        listingTitle: item.title,
+        actorName: profile?.display_name ?? "Someone",
+      });
+      trackEvent("feed_like", { listing_id: item.id, liked: next });
+    } catch {
+      setLiked(!next);
+    }
   };
 
-  useEffect(() => writeNumber(`agrolink:feed:${item.id}:likes`, likes), [item.id, likes]);
-  useEffect(() => writeBool(`agrolink:feed:${item.id}:liked`, liked), [item.id, liked]);
-  useEffect(() => writeBool(`agrolink:feed:${item.id}:saved`, saved), [item.id, saved]);
-  useEffect(() => writeComments(item.id, comments), [item.id, comments]);
+  const onDoubleTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 320) {
+      if (!liked) void handleLike();
+      triggerLikeHaptic();
+      setShowLikeBurst(true);
+      setTimeout(() => setShowLikeBurst(false), 700);
+    }
+    lastTap.current = now;
+  };
+
+  const handleSave = async () => {
+    if (!user?.id) {
+      toast.error("Sign in to save");
+      return;
+    }
+    const next = !saved;
+    setSaved(next);
+    try {
+      await toggleBookmark(item.id, user.id, next);
+      trackEvent("feed_save", { listing_id: item.id, saved: next });
+      toast.success(next ? "Saved" : "Removed");
+    } catch {
+      setSaved(!next);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!user?.id) {
+      toast.error("Sign in to comment");
+      return;
+    }
+    const text = commentText.trim();
+    if (!text) return;
+    try {
+      await addComment(item.id, user.id, text, {
+        sellerId: item.seller_id,
+        listingTitle: item.title,
+        actorName: profile?.display_name ?? "You",
+      });
+      setComments((c) => [
+        {
+          id: `new-${Date.now()}`,
+          user_id: user.id,
+          author: "You",
+          content: text,
+          created_at: new Date().toISOString(),
+        },
+        ...c,
+      ]);
+      setCommentText("");
+      trackEvent("feed_comment", { listing_id: item.id });
+    } catch {
+      toast.error("Could not post comment");
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!user?.id) {
+      toast.error("Sign in to add to cart");
+      return;
+    }
+    try {
+      await addToCartMut.mutateAsync({ userId: user.id, listingId: item.id, quantity: 1 });
+      trackEvent("feed_add_to_cart", { listing_id: item.id, price: item.price_per_unit });
+      toast.success("Added to cart", { description: item.title });
+    } catch {
+      toast.error("Could not add to cart");
+    }
+  };
 
   const shareListing = async () => {
     const url = `${location.origin}/market?listing=${item.id}`;
     try {
-      if (navigator.share) await navigator.share({ title: `${item.produce} on AgroLink`, text: `${item.produce} from ${item.farmer}`, url });
+      if (navigator.share) await navigator.share({ title: item.title, url });
       else await navigator.clipboard.writeText(url);
-      toast.success("Share link ready", { description: item.produce });
+      trackEvent("feed_share", { listing_id: item.id });
+      toast.success("Link ready");
     } catch {
-      toast.error("Share failed", { description: "Try copying the link instead." });
+      toast.error("Share failed");
     }
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black">
-      <img
-        src={item.image}
-        alt={item.produce}
-        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
-      />
-      {/* dual gradient for legibility — keep image bright in the middle */}
+    <div className="pointer-events-none absolute inset-0">
+      <div className="pointer-events-auto absolute inset-0 z-[1]" onClick={onDoubleTap} aria-hidden />
+      {showImageOnly && (
+        <img
+          src={item.image_url ?? "/media/demo/tomato.svg"}
+          alt={item.title}
+          className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
+        />
+      )}
+      {showLikeBurst && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center z-30">
+          <Heart className="h-24 w-24 text-rose-500 fill-rose-500 animate-ping opacity-90" />
+        </div>
+      )}
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
-      {/* top bar */}
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
-        <button onClick={onOpenGrid} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white" aria-label="Browse all">
+      <div className="pointer-events-auto absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
+        <button
+          onClick={onOpenGrid}
+          className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white active:scale-95 transition"
+          aria-label="Browse all"
+        >
           <Grid2x2 className="h-4 w-4" />
         </button>
         <span className="text-[10px] uppercase tracking-widest text-white/70">{progress}</span>
-        <button onClick={onToggleMute} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white" aria-label={muted ? "Unmute" : "Mute"}>
+        <button
+          onClick={onToggleMute}
+          className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white active:scale-95 transition"
+          aria-label={muted ? "Unmute" : "Mute"}
+        >
           {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </button>
       </div>
 
-      {/* right action rail */}
-      <div className="absolute right-3 bottom-28 z-10 flex flex-col items-center gap-5 md:bottom-32">
-        <Link to="/farmers/$slug" params={{ slug: item.farmerSlug }} className="relative">
-          <span className="grid h-12 w-12 place-items-center rounded-full border-2 border-white bg-primary/30 font-serif text-lg text-white">
-            {item.farmer.split(" ").map((p) => p[0]).join("").slice(0, 2)}
+      <div className="pointer-events-auto absolute right-3 bottom-28 z-10 flex flex-col items-center gap-5 md:bottom-32">
+        <Link to="/farmers/$slug" params={{ slug: sellerSlug }} className="relative">
+          <span className="grid h-12 w-12 place-items-center rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white overflow-hidden">
+            {item.seller_avatar ? (
+              <img src={item.seller_avatar} alt="" className="h-full w-full object-cover" />
+            ) : (
+              (item.seller_name?.[0] ?? "?")
+            )}
           </span>
-          <span className="absolute -bottom-1 left-1/2 grid h-5 w-5 -translate-x-1/2 place-items-center rounded-full bg-destructive text-[11px] font-bold text-white">+</span>
         </Link>
         <Action
           icon={Heart}
           label={formatCount(likes)}
           active={liked}
           activeClass="text-rose-500 fill-rose-500"
-          onClick={() => { const next = !liked; setLiked(next); setLikes((n) => Math.max(0, n + (next ? 1 : -1))); }}
+          onClick={handleLike}
         />
-        <Action icon={MessageCircle} label={formatCount(comments.length)} onClick={() => setPanel("comments")} />
-        <Action icon={Bookmark} label="Save" active={saved} activeClass="text-amber-sun fill-amber-sun" onClick={() => setSaved((v) => !v)} />
+        <Action
+          icon={MessageCircle}
+          label={formatCount(item.comment_count)}
+          onClick={() => setPanel("comments")}
+        />
+        <Action
+          icon={Bookmark}
+          label="Save"
+          active={saved}
+          activeClass="text-amber-sun fill-amber-sun"
+          onClick={handleSave}
+        />
         <Action icon={Share2} label="Share" onClick={() => setPanel("share")} />
       </div>
 
-      {/* bottom meta */}
-      <div className="absolute inset-x-0 bottom-0 z-10 p-4 pb-[max(env(safe-area-inset-bottom),16px)] pr-20 text-white md:p-6 md:pr-24">
-        <Link to="/farmers/$slug" params={{ slug: item.farmerSlug }} className="inline-flex items-center gap-1.5 text-sm font-medium text-white hover:underline">
-          @{item.farmerSlug.replace("-", "")} <BadgeCheck className="h-3.5 w-3.5 text-primary" />
+      <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 p-4 pb-[max(env(safe-area-inset-bottom),72px)] pr-20 text-white md:p-6 md:pr-24">
+        <Link
+          to="/farmers/$slug"
+          params={{ slug: sellerSlug }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-white hover:underline"
+        >
+          @{sellerSlug.replace(/-/g, "")}{" "}
+          {item.seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
         </Link>
-        <h2 className="mt-2 font-serif text-3xl leading-tight text-white md:text-4xl">{item.produce}</h2>
+        <h2 className="mt-2 font-sans text-2xl font-bold leading-tight text-white md:text-3xl">
+          {item.title}
+        </h2>
         <p className="mt-1 max-w-[80%] text-sm text-white/85">
-          Fresh from {item.location} · {item.quantityKg}kg available · posted {item.postedHoursAgo}h ago
-          {item.organic && " · #organic"}
-          {item.trending && " · #trending"}
+          {item.location_name} · {item.quantity}
+          {item.unit} available · {hoursAgo}h ago
+          {item.distance_km != null && ` · ${item.distance_km.toFixed(1)} km`}
         </p>
-        <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-white/70">
-          <Music2 className="h-3.5 w-3.5" />
-          <span className="truncate">Original sound · {item.farmer}</span>
-        </div>
-
         <div className="mt-4 flex items-center gap-3">
           <div className="rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
-            <span className="font-serif text-xl text-white">GHS {item.pricePerKg}</span>
-            <span className="ml-1 text-xs text-white/70">/kg</span>
+            <span className="font-sans text-xl font-bold text-white">GHS {item.price_per_unit}</span>
+            <span className="ml-1 text-xs text-white/70">/{item.unit}</span>
           </div>
-          <button className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:brightness-110">
+          <button
+            onClick={handleAddToCart}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:brightness-110 active:scale-[0.98] transition"
+          >
             <ShoppingBasket className="h-4 w-4" /> Add to cart
           </button>
         </div>
         <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-white/65">
-          <MapPin className="h-3 w-3" /> {item.location}, Greater Accra
+          <MapPin className="h-3 w-3" /> {item.location_name}
         </div>
       </div>
 
       {panel && (
-        <div className="absolute inset-0 z-20 flex items-end bg-black/35" onClick={() => setPanel(null)}>
-          <div className="max-h-[72%] w-full rounded-t-3xl bg-background text-foreground shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="pointer-events-auto absolute inset-0 z-20 flex items-end bg-black/35"
+          onClick={() => setPanel(null)}
+        >
+          <div
+            className="max-h-[72%] w-full rounded-t-3xl bg-background text-foreground shadow-2xl animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted" />
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <div>
-                <h3 className="font-serif text-xl">{panel === "comments" ? "Comments" : "Share listing"}</h3>
-                <p className="text-xs text-muted-foreground">{item.produce} · {item.farmer}</p>
-              </div>
-              <button onClick={() => setPanel(null)} className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary" aria-label="Close panel">
+              <h3 className="font-sans text-lg font-semibold">{panel === "comments" ? "Comments" : "Share"}</h3>
+              <button
+                onClick={() => setPanel(null)}
+                className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
-
             {panel === "comments" ? (
               <div className="flex max-h-[calc(72vh-72px)] flex-col">
                 <div className="no-scrollbar flex-1 space-y-4 overflow-y-auto px-4 py-4">
-                  {comments.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No comments yet. Ask the farmer a question.</div>
-                  )}
                   {comments.map((c) => (
                     <div key={c.id} className="flex gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-serif text-primary">{c.author[0]}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 text-xs"><span className="font-medium">{c.author}</span><span className="text-muted-foreground">{c.at}</span></div>
-                        <p className="mt-1 text-sm text-foreground/85">{c.text}</p>
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-sans font-semibold text-primary">
+                        {c.author[0]}
+                      </span>
+                      <div>
+                        <div className="text-xs font-medium">{c.author}</div>
+                        <p className="mt-1 text-sm">{c.content}</p>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="flex items-center gap-2 border-t border-border p-3">
-                  <input value={commentText} onChange={(e) => setCommentText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment()} placeholder="Add a comment…" className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary" />
-                  <button onClick={addComment} disabled={!commentText.trim()} className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45" aria-label="Post comment">
+                  <input
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                    placeholder="Add a comment…"
+                    className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary"
+                  />
+                  <button
+                    onClick={handleAddComment}
+                    disabled={!commentText.trim()}
+                    className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
+                  >
                     <Send className="h-4 w-4" />
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="grid gap-3 p-4 sm:grid-cols-3">
-                <button onClick={shareListing} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40">
-                  <Share2 className="h-5 w-5 text-primary" /> <span className="text-sm font-medium">System share</span>
+              <div className="grid gap-3 p-4 sm:grid-cols-2">
+                <button
+                  onClick={shareListing}
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
+                >
+                  <Share2 className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">Share</span>
                 </button>
-                <button onClick={() => { navigator.clipboard?.writeText(`${location.origin}/market?listing=${item.id}`); toast.success("Link copied"); }} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40">
-                  <Copy className="h-5 w-5 text-accent" /> <span className="text-sm font-medium">Copy link</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(`${location.origin}/market?listing=${item.id}`);
+                    toast.success("Copied");
+                  }}
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
+                >
+                  <Copy className="h-5 w-5" />
+                  <span className="text-sm font-medium">Copy link</span>
                 </button>
-                <Link to="/app/inbox" className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40">
-                  <MessageSquare className="h-5 w-5 text-emerald-600" /> <span className="text-sm font-medium">Send in DM</span>
-                </Link>
               </div>
             )}
           </div>
@@ -301,7 +631,11 @@ function FeedCard({
 }
 
 function Action({
-  icon: Icon, label, onClick, active, activeClass,
+  icon: Icon,
+  label,
+  onClick,
+  active,
+  activeClass,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -324,50 +658,6 @@ function formatCount(n: number) {
   return String(n);
 }
 
-export function feedScore(item: Listing) {
-  const freshness = Math.max(0, 48 - item.postedHoursAgo) * 3;
-  const engagement = (item.likes ?? 0) * 0.7 + (item.comments?.length ?? 0) * 25 + (item.views ?? 0) * 0.02;
-  const trust = item.organic ? 35 : 0;
-  const trend = item.trending ? 90 : 0;
-  return freshness + engagement + trust + trend;
-}
-
-export const FEED_ALGORITHM_COPY = "Score = Freshness ((48 - hours old) × 3) + Engagement (likes × 0.7 + comments × 25 + views × 0.02) + Trust badges (+35 organic) + Trending boost (+90). The order is deterministic, not random.";
-
-function readBool(key: string) {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem(key) === "1";
-}
-
-function writeBool(key: string, value: boolean) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, value ? "1" : "0");
-}
-
-function readNumber(key: string, fallback: number) {
-  if (typeof window === "undefined") return fallback;
-  const value = Number(localStorage.getItem(key));
-  return Number.isFinite(value) && value >= 0 ? value : fallback;
-}
-
-function writeNumber(key: string, value: number) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, String(value));
-}
-
-function readComments(item: Listing) {
-  if (typeof window === "undefined") return item.comments ?? [];
-  try {
-    const stored = localStorage.getItem(`agrolink:feed:${item.id}:comments`);
-    if (!stored) return item.comments ?? [];
-    const parsed = JSON.parse(stored) as FeedComment[];
-    return Array.isArray(parsed) ? parsed : item.comments ?? [];
-  } catch {
-    return item.comments ?? [];
-  }
-}
-
-function writeComments(id: string, comments: FeedComment[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(`agrolink:feed:${id}:comments`, JSON.stringify(comments));
+export function feedScore() {
+  return 0;
 }

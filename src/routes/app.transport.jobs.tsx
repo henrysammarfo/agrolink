@@ -1,49 +1,124 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { MapPin, Truck, Clock, Check, Package } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { MapPin, Truck, Clock, Check, Package, Loader2, Navigation } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { TransportGate } from "@/components/app/RoleGate";
-import { transportJobs, type TransportJob } from "@/lib/mock-data";
+import { VerifiedTransportGate } from "@/components/app/RoleGate";
+import { JobAcceptCountdown } from "@/components/transport/JobAcceptCountdown";
+import { PodCaptureSheet } from "@/components/transport/PodCaptureSheet";
+import { useAuth } from "@/lib/auth";
+import { useDriverProfile, useTransportJobs } from "@/hooks/use-marketplace";
+import { trackEvent } from "@/lib/analytics";
+import { acceptDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
+import type { DeliveryRow } from "@/lib/types/marketplace";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/app/transport/jobs")({
   head: () => ({ meta: [{ title: "Jobs · AgroLink" }] }),
   component: Jobs,
 });
 
-const STATUS_TONE: Record<TransportJob["status"], string> = {
-  available: "text-emerald-600 dark:text-emerald-400",
-  accepted: "text-primary",
-  picked_up: "text-blue-600 dark:text-blue-400",
-  completed: "text-muted-foreground",
-};
-
-const STATUS_LABEL: Record<TransportJob["status"], string> = {
-  available: "Available",
-  accepted: "Accepted",
-  picked_up: "Picked up",
-  completed: "Delivered",
+const STATUS_MAP: Record<string, { label: string; tone: string }> = {
+  requested: { label: "Available", tone: "text-emerald-600 dark:text-emerald-400" },
+  driver_assigned: { label: "Accepted", tone: "text-primary" },
+  driver_enroute_pickup: { label: "En route pickup", tone: "text-primary" },
+  picked_up: { label: "Picked up", tone: "text-blue-600 dark:text-blue-400" },
+  enroute_delivery: { label: "En route", tone: "text-blue-600 dark:text-blue-400" },
+  delivered: { label: "Delivered", tone: "text-muted-foreground" },
 };
 
 function Jobs() {
-  const [jobs, setJobs] = useState(transportJobs);
-  const [filter, setFilter] = useState<"all" | TransportJob["status"]>("all");
+  const { user } = useAuth();
+  const { data: driver } = useDriverProfile(user?.id);
+  const { data: jobs = [], isLoading } = useTransportJobs(driver?.id);
+  const [filter, setFilter] = useState<"all" | "requested" | "active" | "delivered">("all");
+  const [podJob, setPodJob] = useState<DeliveryRow | null>(null);
+  const qc = useQueryClient();
 
-  const setStatus = (id: string, status: TransportJob["status"]) =>
-    setJobs((curr) => curr.map((j) => (j.id === id ? { ...j, status } : j)));
+  const refresh = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["transport-jobs", driver?.id] });
+  }, [qc, driver?.id]);
 
-  const visible = filter === "all" ? jobs : jobs.filter((j) => j.status === filter);
+  useEffect(() => {
+    const poll = () => fetch("/api/deliveries/reassign-expired").catch(() => {});
+    poll();
+    const id = setInterval(poll, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!driver?.id) return;
+    const id = setInterval(refresh, 5_000);
+    return () => clearInterval(id);
+  }, [driver?.id, refresh]);
+
+  const visible = jobs.filter((j) => {
+    if (filter === "all") return true;
+    if (filter === "requested") return j.status === "requested";
+    if (filter === "delivered") return j.status === "delivered";
+    return !["requested", "delivered", "cancelled"].includes(j.status);
+  });
+
+  const accept = async (id: string) => {
+    if (!driver?.id) return;
+    try {
+      await acceptDelivery(id, driver.id);
+      trackEvent("driver_job_accept", { delivery_id: id, source: "jobs_list" });
+      toast.success("Job accepted");
+      refresh();
+    } catch {
+      toast.error("Could not accept");
+    }
+  };
+
+  const advance = async (job: DeliveryRow) => {
+    const next: Record<string, string> = {
+      driver_assigned: "driver_enroute_pickup",
+      driver_enroute_pickup: "picked_up",
+      picked_up: "enroute_delivery",
+      enroute_delivery: "delivered",
+    };
+    const status = next[job.status];
+    if (!status) return;
+    if (status === "delivered") {
+      setPodJob(job);
+      return;
+    }
+    try {
+      await advanceDeliveryStatus(job.id, status);
+      trackEvent("driver_status_advance", { delivery_id: job.id, status });
+      refresh();
+    } catch {
+      toast.error("Could not update");
+    }
+  };
+
+  const finishWithPod = async (podPhotoUrl: string) => {
+    if (!podJob || !user?.id) return;
+    try {
+      await completeDeliveryViaApi(podJob.id, user.id, podPhotoUrl);
+      trackEvent("driver_delivery_complete", { delivery_id: podJob.id });
+      toast.success("Completed — POD saved, payouts sent");
+      setPodJob(null);
+      refresh();
+    } catch {
+      toast.error("Could not complete delivery");
+      throw new Error("complete failed");
+    }
+  };
 
   return (
-    <TransportGate>
+    <VerifiedTransportGate>
+    <>
     <AppShell role="transport">
       <PageHeader
         eyebrow="Job board"
         title="Pick a"
         italic="run"
-        sub="Accept, pick up, and earn same-day on MoMo."
+        sub="Bolt-style job list — accept, pick up, earn on MoMo."
         action={
           <div className="flex gap-2">
-            {(["all", "available", "accepted", "picked_up", "completed"] as const).map((f) => (
+            {(["all", "requested", "active", "delivered"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -51,64 +126,92 @@ function Jobs() {
                   filter === f ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
-                  {f === "all" ? "All" : STATUS_LABEL[f]}
+                {f}
               </button>
             ))}
           </div>
         }
       />
+      {isLoading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : (
       <div className="space-y-3">
-        {visible.map((j) => (
-          <div key={j.id} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+        {visible.map((j) => {
+          const st = STATUS_MAP[j.status] ?? { label: j.status, tone: "" };
+          const payout = j.delivery_fee ?? (j.estimated_distance_km ? Math.round(Number(j.estimated_distance_km) * 2.5 + 15) : null);
+          return (
+          <div key={j.id} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between shadow-sm">
             <div className="min-w-0">
-              <div className="flex items-center gap-3 text-xs uppercase tracking-widest">
-                <span className="font-mono text-primary/80">{j.id}</span>
-                <span className={STATUS_TONE[j.status]}>{STATUS_LABEL[j.status]}</span>
+              <div className="flex items-center gap-3 text-xs uppercase tracking-widest flex-wrap">
+                <span className="font-mono text-primary/80">{j.id.slice(0, 8)}</span>
+                <span className={st.tone}>{st.label}</span>
+                {j.status === "requested" && j.accept_deadline && (
+                  <JobAcceptCountdown deadline={j.accept_deadline} onExpired={refresh} compact />
+                )}
               </div>
-              <h3 className="mt-1 font-serif text-xl">{j.payload}</h3>
+              <h3 className="mt-1 font-serif text-xl">{j.pickup_address} → {j.delivery_address}</h3>
+              {j.pickup_stops && j.pickup_stops.length > 1 && (
+                <p className="mt-1 text-xs text-primary">{j.pickup_stops.length} co-op farm stops</p>
+              )}
               <div className="mt-2 inline-flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-rose-500" /> {j.from} → <span className="text-foreground">{j.to}</span></span>
-                <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3 text-amber-600" /> {j.distanceKm} km</span>
-                <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3 text-accent" /> {j.windowLabel}</span>
+                <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-rose-500" /> Produce run</span>
+                {j.estimated_distance_km != null && (
+                  <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3 text-amber-600" /> {Number(j.estimated_distance_km).toFixed(1)} km</span>
+                )}
+                <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3 text-accent" /> {new Date(j.created_at).toLocaleString()}</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="font-serif text-2xl text-primary">GHS {j.payoutGhs}</div>
-                <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Paid on MoMo</div>
+                <div className="font-serif text-2xl text-primary">{payout != null ? `GHS ${payout}` : "—"}</div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Driver payout</div>
               </div>
-              {j.status === "available" && (
-                <button onClick={() => setStatus(j.id, "accepted")} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700">
+              {j.status === "requested" && (
+                <button onClick={() => accept(j.id)} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700">
                   <Check className="h-4 w-4" /> Accept
                 </button>
               )}
-              {j.status === "accepted" && (
-                <>
-                  <button onClick={() => setStatus(j.id, "picked_up")} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90">
-                    <Package className="h-4 w-4" /> Mark picked up
-                  </button>
-                </>
-              )}
-              {j.status === "picked_up" && (
-                <button onClick={() => setStatus(j.id, "completed")} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-                  <Truck className="h-4 w-4" /> Mark delivered
+              {j.status === "driver_assigned" && (
+                <button onClick={() => advance(j)} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">
+                  <Navigation className="h-4 w-4" /> En route
                 </button>
               )}
-              {j.status === "completed" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs text-emerald-700 dark:text-emerald-300">
+              {j.status === "driver_enroute_pickup" && (
+                <button onClick={() => advance(j)} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">
+                  <Package className="h-4 w-4" /> Picked up
+                </button>
+              )}
+              {(j.status === "picked_up" || j.status === "enroute_delivery") && j.status !== "delivered" && (
+                <button onClick={() => advance(j)} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm text-white">
+                  <Truck className="h-4 w-4" /> {j.status === "enroute_delivery" ? "Photo & complete" : "Deliver"}
+                </button>
+              )}
+              {j.status === "delivered" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs text-emerald-700">
                   <Check className="h-3 w-3" /> Done
                 </span>
               )}
             </div>
           </div>
-        ))}
+        );})}
         {visible.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-            No {filter} jobs right now. Pull down to refresh.
+            No {filter} jobs right now. Stay online on the map.
           </div>
         )}
       </div>
+      )}
     </AppShell>
-    </TransportGate>
+    {user?.id && podJob && (
+      <PodCaptureSheet
+        open
+        deliveryId={podJob.id}
+        userId={user.id}
+        onClose={() => setPodJob(null)}
+        onComplete={finishWithPod}
+      />
+    )}
+    </>
+    </VerifiedTransportGate>
   );
 }

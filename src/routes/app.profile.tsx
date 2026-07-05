@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { BadgeCheck, Grid3x3, Bookmark, Heart, Settings, Share2, MapPin, LogOut, Play } from "lucide-react";
+import { BadgeCheck, Grid3x3, Bookmark, Heart, Settings, Share2, MapPin, LogOut, Play, Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
-import { listings } from "@/lib/mock-data";
+import {
+  useProfileStats, useUserListings, useUserBookmarks, useUserLikedListings, usePublicSellers,
+} from "@/hooks/use-marketplace";
+import { MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
 
 export const Route = createFileRoute("/app/profile")({
   head: () => ({ meta: [{ title: "Profile · AgroLink" }] }),
@@ -16,6 +19,14 @@ function Profile() {
   const role = roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
   const handle = (profile?.display_name ?? user?.email ?? "you").toLowerCase().replace(/[^a-z0-9]/g, "");
   const name = profile?.display_name ?? user?.email?.split("@")[0] ?? "You";
+
+  const { data: stats } = useProfileStats(user?.id);
+  const { data: posts = [], isLoading: postsLoading } = useUserListings(user?.id);
+  const { data: saved = [] } = useUserBookmarks(user?.id);
+  const { data: liked = [] } = useUserLikedListings(user?.id);
+  const { data: sellers = [] } = usePublicSellers(4);
+
+  const gridItems = tab === "posts" ? posts : tab === "saved" ? saved : liked;
 
   return (
     <AppShell role={role}>
@@ -40,7 +51,7 @@ function Profile() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex items-center gap-2">
-          <Link to="/app/settings" className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:bg-foreground/90">
+          <Link to="/app/settings" className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">
             <Settings className="h-4 w-4" /> Edit profile
           </Link>
           <button className="grid h-10 w-10 place-items-center rounded-full border border-border" aria-label="Share">
@@ -50,9 +61,9 @@ function Profile() {
       </div>
 
       <div className="mt-8 flex items-center justify-center sm:justify-start gap-10 px-4 sm:px-8 text-center">
-        <Stat n="142" label="Following" />
-        <Stat n="1.2k" label="Followers" />
-        <Stat n="4.8k" label="Likes" />
+        <Stat n={String(stats?.following ?? 0)} label="Following" />
+        <Stat n={String(stats?.followers ?? 0)} label="Followers" />
+        <Stat n={String(stats?.totalLikes ?? 0)} label="Likes" />
       </div>
 
       <p className="mt-5 px-4 sm:px-8 text-foreground/80 max-w-xl">
@@ -65,44 +76,47 @@ function Profile() {
         ))}
       </div>
 
-      {/* recommended follows pop-card */}
-      <div className="mt-8 rounded-3xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between">
-          <h3 className="font-serif text-lg">Recommended for you</h3>
-          <button className="text-xs text-muted-foreground hover:text-foreground">See all</button>
+      {sellers.length > 0 && (
+        <div className="mt-8 rounded-3xl border border-border bg-card p-5">
+          <h3 className="font-serif text-lg">Recommended sellers</h3>
+          <div className="mt-4 grid gap-3 grid-cols-2 sm:grid-cols-4">
+            {sellers.filter((s) => s.id !== user?.id).slice(0, 4).map((s) => (
+              <Link key={s.id} to="/farmers/$slug" params={{ slug: s.slug ?? s.id }} className="rounded-2xl border border-border bg-background p-3 hover:border-primary/40">
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/15 font-serif text-primary">{(s.display_name ?? "F")[0]}</span>
+                <div className="mt-3 truncate text-sm font-medium">{s.display_name}</div>
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="mt-4 grid gap-3 grid-cols-2 sm:grid-cols-4">
-          {listings.slice(0, 4).map((l) => (
-            <Link key={l.id} to="/farmers/$slug" params={{ slug: l.farmerSlug }} className="rounded-2xl border border-border bg-background p-3 hover:border-primary/40">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/15 font-serif text-primary">{l.farmer[0]}</span>
-              <div className="mt-3 truncate text-sm font-medium">{l.farmer}</div>
-              <button className="mt-2 w-full rounded-full bg-foreground py-1.5 text-xs text-background">Follow</button>
-            </Link>
-          ))}
-        </div>
-      </div>
+      )}
 
-      {/* tabs */}
       <div className="mt-10 border-b border-border">
         <div className="flex items-center justify-center gap-8 text-sm">
           {([["posts", Grid3x3, "Posts"], ["saved", Bookmark, "Saved"], ["liked", Heart, "Liked"]] as const).map(([k, Icon, label]) => (
-            <button key={k} onClick={() => setTab(k)} className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === k ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <button key={k} onClick={() => setTab(k)} className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === k ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>
               <Icon className="h-4 w-4" /> {label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-1 sm:gap-2">
-        {(tab === "posts" ? listings.slice(0, 6) : tab === "saved" ? listings.slice(2, 5) : listings.slice(1, 4)).map((l) => (
-          <Link key={l.id} to="/app/buyer/feed" className="relative aspect-[9/16] overflow-hidden rounded-md bg-muted">
-            <img src={l.image} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[10px] text-white">
-              <Play className="h-3 w-3 fill-current" /> {Math.floor(Math.random() * 6) + 1}.{Math.floor(Math.random() * 9)}k
-            </span>
-          </Link>
-        ))}
-      </div>
+      {postsLoading ? (
+        <div className="mt-8 flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : (
+        <div className="mt-5 grid grid-cols-3 gap-1 sm:gap-2">
+          {gridItems.map((l) => (
+            <Link key={l.id} to="/app/buyer/feed" className="relative aspect-[9/16] overflow-hidden rounded-md bg-muted">
+              <img src={l.image_url ?? MARKETING_FALLBACK_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+              <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[10px] text-white">
+                <Play className="h-3 w-3 fill-current" /> {l.view_count}
+              </span>
+            </Link>
+          ))}
+          {gridItems.length === 0 && (
+            <div className="col-span-3 py-16 text-center text-sm text-muted-foreground">Nothing here yet.</div>
+          )}
+        </div>
+      )}
 
       <div className="mt-10 flex justify-center">
         <button onClick={() => signOut()} className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm text-muted-foreground hover:border-destructive/40 hover:text-destructive">

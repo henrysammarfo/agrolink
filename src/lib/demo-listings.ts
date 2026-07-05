@@ -1,0 +1,242 @@
+/**
+ * Curated seed produce listings — self-hosted media only (/public/media/demo/*).
+ * Used when Supabase feed is empty (demo mode or VITE_SEED_FEED=true).
+ */
+import type { FeedListing } from "@/lib/types/marketplace";
+import { resolveMediaUrl, resolveVideoUrl } from "@/lib/media-urls";
+
+const DEMO_SELLER = "a0000001-0001-4000-8000-000000000001";
+
+/** Prefer Supabase Storage URLs in production; fall back to local /media/demo/* */
+function demoMedia(name: string): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (supabaseUrl) {
+    return `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/listing-images/demo/${name}.svg`;
+  }
+  return `/media/demo/${name}.svg`;
+}
+
+const MEDIA = {
+  tomato: demoMedia("tomato"),
+  okra: demoMedia("okra"),
+  pepper: demoMedia("pepper"),
+  garden_egg: demoMedia("garden-egg"),
+  leafy_greens: demoMedia("greens"),
+  onion: demoMedia("onion"),
+} as const;
+
+export const SEED_FEED_LISTINGS: FeedListing[] = [
+  {
+    id: "seed-listing-001",
+    seller_id: DEMO_SELLER,
+    title: "Vine-ripe Dodowa tomatoes",
+    crop_type: "tomato",
+    description: "Harvested at dawn, firm and sweet.",
+    price_per_unit: 12.5,
+    unit: "kg",
+    quantity: 120,
+    hashtags: ["tomato", "organic", "dodowa"],
+    location_name: "Dodowa",
+    lat: 5.883,
+    lng: -0.089,
+    image_url: MEDIA.tomato,
+    video_url: null,
+    status: "active",
+    view_count: 842,
+    like_count: 156,
+    comment_count: 23,
+    save_count: 41,
+    organic: true,
+    created_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+    seller_name: "Ama Mensah",
+    seller_slug: "ama-mensah-farm",
+    seller_avatar: null,
+    seller_verified: true,
+    seller_rating: 4.8,
+    ai_demand_score: 0.82,
+    feed_score: 0.91,
+    distance_km: 2.4,
+  },
+  {
+    id: "seed-listing-002",
+    seller_id: "a0000001-0001-4000-8000-000000000002",
+    title: "Afienya okra — chef grade",
+    crop_type: "okra",
+    description: "Tender pods, zero bruising.",
+    price_per_unit: 10,
+    unit: "kg",
+    quantity: 60,
+    hashtags: ["okra", "afienya"],
+    location_name: "Afienya",
+    lat: 5.712,
+    lng: 0.017,
+    image_url: MEDIA.okra,
+    video_url: null,
+    status: "active",
+    view_count: 412,
+    like_count: 89,
+    comment_count: 11,
+    save_count: 22,
+    organic: false,
+    created_at: new Date(Date.now() - 5 * 3_600_000).toISOString(),
+    seller_name: "Kofi Asante",
+    seller_slug: "kofi-asante",
+    seller_avatar: null,
+    seller_verified: true,
+    seller_rating: 4.6,
+    ai_demand_score: 0.71,
+    feed_score: 0.84,
+    distance_km: 5.1,
+  },
+  {
+    id: "seed-listing-003",
+    seller_id: "a0000001-0001-4000-8000-000000000003",
+    title: "Shito pepper blend",
+    crop_type: "pepper",
+    description: "Scotch bonnet + kpakpo shito ready.",
+    price_per_unit: 15,
+    unit: "kg",
+    quantity: 45,
+    hashtags: ["pepper", "shito", "accra"],
+    location_name: "Tema Community 25",
+    lat: 5.669,
+    lng: -0.017,
+    image_url: MEDIA.pepper,
+    video_url: null,
+    status: "active",
+    view_count: 1204,
+    like_count: 312,
+    comment_count: 47,
+    save_count: 88,
+    organic: true,
+    created_at: new Date(Date.now() - 8 * 3_600_000).toISOString(),
+    seller_name: "Esi Boateng",
+    seller_slug: "esi-boateng",
+    seller_avatar: null,
+    seller_verified: true,
+    seller_rating: 4.9,
+    ai_demand_score: 0.88,
+    feed_score: 0.93,
+    distance_km: 8.2,
+  },
+  {
+    id: "seed-listing-004",
+    seller_id: "a0000001-0001-4000-8000-000000000004",
+    title: "Garden eggs — Ada Foah",
+    crop_type: "garden_egg",
+    description: "Small batch, white & purple mix.",
+    price_per_unit: 8,
+    unit: "kg",
+    quantity: 90,
+    hashtags: ["garden_egg", "ada"],
+    location_name: "Ada Foah",
+    lat: 5.786,
+    lng: 0.633,
+    image_url: MEDIA.garden_egg,
+    video_url: null,
+    status: "active",
+    view_count: 298,
+    like_count: 67,
+    comment_count: 9,
+    save_count: 15,
+    organic: true,
+    created_at: new Date(Date.now() - 12 * 3_600_000).toISOString(),
+    seller_name: "Yaw Darko",
+    seller_slug: "yaw-darko-farms",
+    seller_avatar: null,
+    seller_verified: false,
+    seller_rating: 4.3,
+    ai_demand_score: 0.65,
+    feed_score: 0.76,
+    distance_km: 12.5,
+  },
+  {
+    id: "seed-listing-005",
+    seller_id: "a0000001-0001-4000-8000-000000000005",
+    title: "Morning kale & kontomire",
+    crop_type: "leafy_greens",
+    description: "Washed and bundled for restaurants.",
+    price_per_unit: 6.5,
+    unit: "bunch",
+    quantity: 200,
+    hashtags: ["greens", "kontomire", "accra"],
+    location_name: "Osu",
+    lat: 5.556,
+    lng: -0.182,
+    image_url: MEDIA.leafy_greens,
+    video_url: null,
+    status: "active",
+    view_count: 567,
+    like_count: 134,
+    comment_count: 18,
+    save_count: 36,
+    organic: true,
+    created_at: new Date(Date.now() - 18 * 3_600_000).toISOString(),
+    seller_name: "Abena Osei",
+    seller_slug: "abena-osei-greens",
+    seller_avatar: null,
+    seller_verified: true,
+    seller_rating: 4.7,
+    ai_demand_score: 0.79,
+    feed_score: 0.87,
+    distance_km: 1.8,
+  },
+  {
+    id: "seed-listing-006",
+    seller_id: "a0000001-0001-4000-8000-000000000006",
+    title: "Techiman onions — bulk",
+    crop_type: "onion",
+    description: "50kg sacks, corridor wholesale.",
+    price_per_unit: 9,
+    unit: "kg",
+    quantity: 500,
+    hashtags: ["onion", "wholesale"],
+    location_name: "Tema Harbour",
+    lat: 5.639,
+    lng: -0.006,
+    image_url: MEDIA.onion,
+    video_url: null,
+    status: "active",
+    view_count: 934,
+    like_count: 201,
+    comment_count: 31,
+    save_count: 52,
+    organic: false,
+    created_at: new Date(Date.now() - 24 * 3_600_000).toISOString(),
+    seller_name: "Kwame Adjei",
+    seller_slug: "kwame-adjei-produce",
+    seller_avatar: null,
+    seller_verified: true,
+    seller_rating: 4.5,
+    ai_demand_score: 0.74,
+    feed_score: 0.81,
+    distance_km: 6.7,
+  },
+];
+
+/** @deprecated use SEED_FEED_LISTINGS */
+export const DEMO_FEED_LISTINGS = SEED_FEED_LISTINGS;
+
+export function isDemoMode(): boolean {
+  return import.meta.env.VITE_DEMO_MODE === "true";
+}
+
+export function isSeedFeedEnabled(): boolean {
+  return isDemoMode() || import.meta.env.VITE_SEED_FEED === "true";
+}
+
+export function sanitizeListingMedia(listing: FeedListing): FeedListing {
+  const fallback = MEDIA[listing.crop_type as keyof typeof MEDIA] ?? "/media/demo/tomato.svg";
+  return {
+    ...listing,
+    image_url: resolveMediaUrl(listing.image_url, fallback),
+    video_url: resolveVideoUrl(listing.video_url, listing.image_url),
+  };
+}
+
+export function mergeDemoFeedIfEmpty(listings: FeedListing[]): FeedListing[] {
+  const sanitized = listings.map(sanitizeListingMedia);
+  if (sanitized.length > 0) return sanitized;
+  if (!isSeedFeedEnabled()) return sanitized;
+  return SEED_FEED_LISTINGS.map(sanitizeListingMedia);
+}

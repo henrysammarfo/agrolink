@@ -1,8 +1,17 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { ShieldCheck, AlertTriangle, CreditCard, ListChecks, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ShieldCheck,
+  AlertTriangle,
+  CreditCard,
+  ListChecks,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { AdminGate } from "@/components/app/RoleGate";
-import { adminPayments, disputes, listingReports } from "@/lib/mock-data";
+import { fetchAdminStats } from "@/lib/api/notifications";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin · AgroLink" }] }),
@@ -11,12 +20,22 @@ export const Route = createFileRoute("/app/admin")({
 
 function AdminOverview() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  if (pathname !== "/app/admin") return <Outlet />;
+  const [stats, setStats] = useState({
+    gmv: 0,
+    orderCount: 0,
+    activeListings: 0,
+    pendingReview: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const openDisputes = disputes.filter((d) => d.status === "open" || d.status === "investigating").length;
-  const heldPayments = adminPayments.filter((p) => p.status === "held").length;
-  const pendingReports = listingReports.filter((r) => r.status === "pending").length;
-  const gmv = adminPayments.filter((p) => p.status === "captured").reduce((s, p) => s + p.amountGhs, 0);
+  useEffect(() => {
+    fetchAdminStats()
+      .then(setStats)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (pathname !== "/app/admin") return <Outlet />;
 
   return (
     <AdminGate>
@@ -27,65 +46,128 @@ function AdminOverview() {
           italic="control room"
           sub="Disputes, payments, and listing reports across the platform."
         />
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="GMV today" value={`GHS ${gmv.toLocaleString()}`} sub="Captured payments" tone="emerald" />
-          <StatCard label="Open disputes" value={String(openDisputes)} sub="Needs human review" tone="rose" />
-          <StatCard label="Payments on hold" value={String(heldPayments)} sub="Auto-release in 24h" tone="amber" />
-          <StatCard label="Listing reports" value={String(pendingReports)} sub="Pending moderation" tone="accent" />
-        </div>
-
-        <section className="mt-12 grid gap-6 lg:grid-cols-3">
-          <AdminCard
-            to="/app/admin/disputes"
-            icon={AlertTriangle}
-            tone="rose"
-            title="Disputes"
-            count={openDisputes}
-            sub="Open & investigating"
-          />
-          <AdminCard
-            to="/app/admin/payments"
-            icon={CreditCard}
-            tone="emerald"
-            title="Payments"
-            count={adminPayments.length}
-            sub="Last 24h"
-          />
-          <AdminCard
-            to="/app/admin/listings"
-            icon={ListChecks}
-            tone="accent"
-            title="Listings"
-            count={pendingReports}
-            sub="Pending reports"
-          />
-        </section>
+        {loading ? (
+          <div className="grid place-items-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label="GMV"
+                value={`GHS ${stats.gmv.toLocaleString()}`}
+                sub="Paid orders"
+                tone="emerald"
+              />
+              <StatCard
+                label="Orders"
+                value={String(stats.orderCount)}
+                sub="All time"
+                tone="primary"
+              />
+              <StatCard
+                label="Active listings"
+                value={String(stats.activeListings)}
+                sub="In feed"
+                tone="amber"
+              />
+              <StatCard
+                label="Pending review"
+                value={String(stats.pendingReview)}
+                sub="Needs moderation"
+                tone="rose"
+              />
+            </div>
+            <section className="mt-12 grid gap-6 lg:grid-cols-3">
+              <AdminCard
+                to="/app/admin/listings"
+                icon={ListChecks}
+                tone="accent"
+                title="Listings"
+                count={stats.pendingReview}
+                sub="Pending moderation"
+              />
+              <AdminCard
+                to="/app/admin/payments"
+                icon={CreditCard}
+                tone="emerald"
+                title="Payments"
+                count={stats.orderCount}
+                sub="All transactions"
+              />
+              <AdminCard
+                to="/app/admin/disputes"
+                icon={AlertTriangle}
+                tone="rose"
+                title="Disputes"
+                count={0}
+                sub="Open cases"
+              />
+            </section>
+            <button
+              onClick={async () => {
+                await fetch("/api/moderate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "ingest_prices" }),
+                });
+                const pending = await supabase
+                  .from("listings")
+                  .select("id")
+                  .eq("status", "pending_review");
+                for (const l of pending.data ?? []) {
+                  await fetch("/api/moderate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "moderate", title: "review", listingId: l.id }),
+                  });
+                }
+              }}
+              className="mt-8 text-sm text-primary underline-offset-4 hover:underline"
+            >
+              Run AI price ingest + review pending listings
+            </button>
+          </>
+        )}
       </AppShell>
     </AdminGate>
   );
 }
 
-function AdminCard({ to, icon: Icon, tone, title, count, sub }: {
-  to: string; icon: typeof ShieldCheck; tone: "rose" | "emerald" | "accent"; title: string; count: number; sub: string;
+function AdminCard({
+  to,
+  icon: Icon,
+  tone,
+  title,
+  count,
+  sub,
+}: {
+  to: string;
+  icon: typeof ShieldCheck;
+  tone: "rose" | "emerald" | "accent";
+  title: string;
+  count: number;
+  sub: string;
 }) {
-  const toneClass =
-    tone === "rose" ? "bg-rose-500/15 text-rose-600"
-    : tone === "emerald" ? "bg-emerald-500/15 text-emerald-600"
-    : "bg-accent/20 text-accent";
+  const toneCls =
+    tone === "rose" ? "text-rose-500" : tone === "emerald" ? "text-emerald-600" : "text-accent";
   return (
-    <Link to={to} className="group rounded-3xl border border-border bg-card p-6 transition hover:border-primary/40">
-      <div className={`inline-grid h-11 w-11 place-items-center rounded-2xl ${toneClass}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="mt-4 flex items-end justify-between">
-        <div>
-          <div className="font-serif text-3xl text-foreground">{count}</div>
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">{sub}</div>
-        </div>
-        <span className="inline-flex items-center gap-1 text-sm text-primary group-hover:translate-x-0.5 transition-transform">
-          {title} <ArrowRight className="h-4 w-4" />
+    <Link
+      to={to}
+      className="group flex items-center justify-between rounded-3xl border border-border bg-card p-6 hover:border-primary/40 transition"
+    >
+      <div className="flex items-center gap-4">
+        <span className={`grid h-12 w-12 place-items-center rounded-2xl bg-muted ${toneCls}`}>
+          <Icon className="h-5 w-5" />
         </span>
+        <div>
+          <div className="font-serif text-xl">{title}</div>
+          <div className="text-xs text-muted-foreground">{sub}</div>
+        </div>
+      </div>
+      <div className="text-right">
+        <div className={`font-serif text-3xl ${toneCls}`}>{count}</div>
+        <ArrowRight className="mt-2 h-4 w-4 text-muted-foreground group-hover:text-foreground" />
       </div>
     </Link>
   );

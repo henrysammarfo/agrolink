@@ -1,0 +1,40 @@
+/** Hide default Riyils chrome — AgroLink overlay owns commerce UI */
+.react-riyils-viewer__close-container,
+.react-riyils-viewer__controls-row,
+.react-riyils-viewer__caption-container,
+.react-riyils-viewer__nav-container,
+.react-riyils-viewer__scroll-hint,
+.react-riyils-viewer__progress-container {
+  display: none !important;
+}
+
+.react-riyils-viewer {
+  z-index: 10 !important;
+  background: #000 !important;
+}
+
+.react-riyils-viewer__gesture-overlay {
+  pointer-events: none;
+}
+
+.react-riyils-viewer__gesture-zone {
+  pointer-events: auto;
+}
+
+.agrolink-feed-overlay {
+  z-index: 10050;
+  pointer-events: none;
+}
+
+.agrolink-feed-overlay * {
+  pointer-events: auto;
+}
+
+.agrolink-feed-overlay .pointer-events-none,
+.agrolink-feed-overlay .pointer-events-none * {
+  pointer-events: none;
+}
+
+.agrolink-feed-overlay .pointer-events-auto {
+  pointer-events: auto;
+}

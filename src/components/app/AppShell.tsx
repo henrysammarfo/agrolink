@@ -2,11 +2,13 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
-  ChevronLeft, Bell, Search, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
-  ShieldCheck, AlertTriangle, CreditCard, ListChecks,
+  ChevronLeft, Bell, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
+  ShieldCheck, AlertTriangle, CreditCard, ListChecks, ArrowLeft, Zap, Search,
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
+import { useUnreadCounts } from "@/hooks/use-marketplace";
+import { GlobalSearch, SearchTrigger } from "@/components/app/GlobalSearch";
 
 export type AppRole = AuthRole;
 
@@ -35,14 +37,30 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
     { to: "/app/admin/payments", label: "Payments", icon: CreditCard },
     { to: "/app/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { to: "/app/admin/listings", label: "Listings", icon: ListChecks },
+    { to: "/app/admin/pricing", label: "Surge", icon: Zap },
   ],
 };
 
-export function AppShell({ role, children }: { role: AppRole; children?: ReactNode }) {
+const IMMERSIVE_PATHS = ["/app/buyer/feed"];
+
+export function AppShell({
+  role,
+  children,
+  unreadInbox: unreadOverride,
+}: {
+  role: AppRole;
+  children?: ReactNode;
+  unreadInbox?: number;
+}) {
   const [collapsed, setCollapsed] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { profile, roles, signOut } = useAuth();
+  const { profile, roles, signOut, user } = useAuth();
+  const { data: unread } = useUnreadCounts(user?.id);
+  const unreadInbox =
+    unreadOverride ?? (unread ? unread.notifications + unread.messages : 0);
   const nav = NAV[role];
+  const immersive = IMMERSIVE_PATHS.some((p) => pathname === p);
 
   const mobileTabs = [
     { to: roleHome(role), icon: Home, label: "Home" },
@@ -51,6 +69,45 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
     { to: "/app/inbox", icon: Inbox, label: "Inbox" },
     { to: "/app/profile", icon: User, label: "Me" },
   ];
+
+  if (immersive) {
+    return (
+      <div className="relative h-[100dvh] w-full overflow-hidden bg-black">
+        {children ?? <Outlet />}
+        <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-white/10 bg-black/80 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0px)]">
+          {mobileTabs.map((t) => {
+            const active = pathname === t.to;
+            if (t.center) {
+              return (
+                <Link key="create" to={t.to} className="flex items-center justify-center -mt-3">
+                  <span className="grid h-12 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/30">
+                    <Plus className="h-5 w-5" />
+                  </span>
+                </Link>
+              );
+            }
+            return (
+              <Link
+                key={t.to}
+                to={t.to}
+                className={`flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${active ? "text-white" : "text-white/45"}`}
+              >
+                <t.icon className={`h-5 w-5 ${active ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}`} />
+                {t.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <Link
+          to={roleHome(role)}
+          className="fixed left-3 top-[max(env(safe-area-inset-top),12px)] z-50 grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/10"
+          aria-label="Back to home"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -134,24 +191,31 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border bg-background/85 px-5 py-3.5 backdrop-blur">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border bg-background/85 px-5 py-3.5 backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <div className="flex items-center gap-3 md:hidden">
             <BrandMark className="h-7 w-7" />
             <span className="font-serif text-lg">AgroLink</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground w-80 max-w-full">
-            <Search className="h-4 w-4" />
-            <input
-              placeholder={`Search ${role === "buyer" ? "produce, farmers" : role === "farmer" ? "orders, buyers" : role === "admin" ? "users, payments, disputes" : "jobs"}`}
-              className="w-full bg-transparent outline-none placeholder:text-muted-foreground/70 text-foreground"
-            />
-            <kbd className="rounded border border-border px-1.5 text-[10px]">⌘K</kbd>
-          </div>
+          <SearchTrigger onClick={() => setSearchOpen(true)} />
+          <GlobalSearch role={role} open={searchOpen} onOpenChange={setSearchOpen} />
 
           <div className="flex items-center gap-3">
-            <Link to="/app/inbox" className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="md:hidden grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+              aria-label="Search"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+            <Link to="/app/inbox" className="relative grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground">
               <Bell className="h-4 w-4" />
+              {unreadInbox > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-0.5 text-[9px] font-bold text-primary-foreground">
+                  {unreadInbox > 9 ? "9+" : unreadInbox}
+                </span>
+              )}
             </Link>
             {role === "farmer" && (
               <Link to="/app/create" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
