@@ -321,7 +321,7 @@ function FeedCardOverlay({
   progress: string;
   showImageOnly?: boolean;
 }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const addToCartMut = useAddToCart();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -353,7 +353,11 @@ function FeedCardOverlay({
     setLiked(next);
     setLikes((n) => Math.max(0, n + (next ? 1 : -1)));
     try {
-      await toggleLike(item.id, user.id, next);
+      await toggleLike(item.id, user.id, next, {
+        sellerId: item.seller_id,
+        listingTitle: item.title,
+        actorName: profile?.display_name ?? "Someone",
+      });
     } catch {
       setLiked(!next);
     }
@@ -393,7 +397,11 @@ function FeedCardOverlay({
     const text = commentText.trim();
     if (!text) return;
     try {
-      await addComment(item.id, user.id, text);
+      await addComment(item.id, user.id, text, {
+        sellerId: item.seller_id,
+        listingTitle: item.title,
+        actorName: profile?.display_name ?? "You",
+      });
       setComments((c) => [
         {
           id: `new-${Date.now()}`,

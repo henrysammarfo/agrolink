@@ -1,7 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedComment } from "@/lib/types/marketplace";
 
-export async function toggleLike(listingId: string, userId: string, liked: boolean) {
+export async function toggleLike(
+  listingId: string,
+  userId: string,
+  liked: boolean,
+  meta?: { sellerId?: string; listingTitle?: string; actorName?: string },
+) {
   if (liked) {
     const { error } = await supabase
       .from("listing_likes")
@@ -21,6 +26,20 @@ export async function toggleLike(listingId: string, userId: string, liked: boole
             .update({ like_count: data.like_count + 1 })
             .eq("id", listingId);
       });
+    if (meta?.sellerId) {
+      await fetch("/api/comms/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "like",
+          actorUserId: userId,
+          actorName: meta.actorName,
+          listingId,
+          listingTitle: meta.listingTitle,
+          sellerId: meta.sellerId,
+        }),
+      }).catch(() => {});
+    }
   } else {
     await supabase.from("listing_likes").delete().eq("listing_id", listingId).eq("user_id", userId);
     await supabase
@@ -66,7 +85,12 @@ export async function fetchComments(listingId: string): Promise<FeedComment[]> {
   }));
 }
 
-export async function addComment(listingId: string, userId: string, content: string) {
+export async function addComment(
+  listingId: string,
+  userId: string,
+  content: string,
+  meta?: { sellerId?: string; listingTitle?: string; actorName?: string },
+) {
   const { error } = await supabase
     .from("listing_comments")
     .insert({ listing_id: listingId, user_id: userId, content });
@@ -81,6 +105,21 @@ export async function addComment(listingId: string, userId: string, content: str
       .from("listings")
       .update({ comment_count: data.comment_count + 1 })
       .eq("id", listingId);
+
+  if (meta?.sellerId) {
+    await fetch("/api/comms/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "comment",
+        actorUserId: userId,
+        actorName: meta.actorName,
+        listingId,
+        listingTitle: meta.listingTitle,
+        sellerId: meta.sellerId,
+      }),
+    }).catch(() => {});
+  }
 }
 
 export async function toggleBookmark(listingId: string, userId: string, saved: boolean) {
@@ -124,12 +163,22 @@ export async function fetchUserBookmarked(listingId: string, userId: string): Pr
   return !!data;
 }
 
-export async function toggleFollow(followerId: string, farmerSlug: string, following: boolean) {
+export async function toggleFollow(
+  followerId: string,
+  farmerSlug: string,
+  following: boolean,
+  actorName?: string,
+) {
   if (following) {
     const { error } = await supabase
       .from("follows")
       .insert({ follower_id: followerId, farmer_slug: farmerSlug });
     if (error && !error.message.includes("duplicate")) throw error;
+    await fetch("/api/comms/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "follow", actorUserId: followerId, actorName, farmerSlug }),
+    }).catch(() => {});
   } else {
     await supabase
       .from("follows")

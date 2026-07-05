@@ -160,8 +160,9 @@ export type MessageRow = {
   id: string;
   sender_id: string;
   receiver_id: string;
+  order_id?: string | null;
   content: string;
   read: boolean;
   created_at: string;
-  sender?: { display_name: string | null };
+  sender?: { display_name: string | null; avatar_url?: string | null };
 };

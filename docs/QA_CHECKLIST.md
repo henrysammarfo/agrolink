@@ -24,6 +24,12 @@ Both must exit 0. **Last verified:** 2026-07-05 — build pass on `cursor/agroli
 - [x] Web push SW handlers + VAPID optional
 - [x] Farmer profile message/share stubs
 
+- [x] Full comms phase: notis + inbox + chat threads (2026-07-05)
+- [x] Web push VAPID path (`server/comms.ts`)
+- [x] Engagement notifications (like/comment/follow)
+- [x] Unread badge on bell
+- [x] Message farmer/driver opens chat thread
+
 ## Smoke tests
 
 ### Auth

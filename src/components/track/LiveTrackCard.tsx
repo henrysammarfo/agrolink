@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Phone, MessageCircle, Clock, Navigation } from "lucide-react";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { fetchOsrmRoute } from "@/lib/api/driver";
@@ -12,6 +12,7 @@ const STATUS_STEPS = ["confirmed", "processing", "dispatched", "delivered"] as c
 type Props = { order: OrderRow; fullscreen?: boolean };
 
 export function LiveTrackCard({ order, fullscreen }: Props) {
+  const navigate = useNavigate();
   const delivery = order.delivery;
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -47,7 +48,16 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   };
 
   const messageDriver = () => {
-    toast.info("Opening inbox…", { description: "In-app chat coming soon — use call for now." });
+    const driverUserId = delivery?.driver?.user_id;
+    if (!driverUserId) {
+      toast.info("Driver not assigned yet");
+      return;
+    }
+    navigate({
+      to: "/app/inbox/chat/$userId",
+      params: { userId: driverUserId },
+      search: { order: order.id },
+    });
   };
 
   if (!delivery) {

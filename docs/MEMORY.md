@@ -90,6 +90,20 @@ Last updated: 2026-07-05
 | P2 | Reorder from past orders | Done | `reorderFromOrder`, history table |
 | P2 | Message/Share stubs | Done | `farmers.$slug.tsx`, `LiveTrackCard.tsx` |
 
+## Full comms phase (verified 2026-07-05, build pass)
+
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Central notify + web push | Done | `server/comms.ts`, `web-push` VAPID |
+| Engagement notis (like/comment/follow) | Done | `/api/comms/notify`, wired in `engagement.ts` |
+| Order/delivery push | Done | Paystack webhook + `delivery-complete.ts` via `notifyUser` |
+| Realtime activity inbox | Done | `subscribeToNotifications`, unread badge on bell |
+| Conversation list | Done | `ConversationList.tsx`, grouped by partner |
+| Chat threads | Done | `/app/inbox/chat/$userId`, `ChatThread.tsx` |
+| Realtime messages | Done | `subscribeToMessages` Supabase channel |
+| Message farmer/driver | Done | Profile + track card → chat route |
+| VAPID key generator | Done | `npm run vapid:generate` |
+
 ## Launch path: PWA (not APK)
 
 Production mobile = **installable PWA** over HTTPS. See `docs/PWA.md`.

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, BadgeCheck, MapPin, MessageCircle, Share2, UserPlus, UserCheck, Grid3x3, Play, Loader2,
@@ -20,7 +20,8 @@ export const Route = createFileRoute("/farmers/$slug")({
 
 function FarmerProfile() {
   const { slug } = Route.useParams();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, profile: authProfile } = useAuth();
   const qc = useQueryClient();
   const farmerSlug = slug;
 
@@ -29,7 +30,7 @@ function FarmerProfile() {
     queryFn: () => fetchListingsBySlug(slug),
   });
 
-  const profile = data?.profile as {
+  const farmerProfile = data?.profile as {
     id?: string;
     display_name?: string;
     avatar_url?: string;
@@ -41,9 +42,9 @@ function FarmerProfile() {
   } | undefined;
 
   const { data: stats } = useQuery({
-    queryKey: ["farmer-stats", profile?.id, farmerSlug],
-    queryFn: () => fetchProfileStats(profile!.id!, farmerSlug),
-    enabled: !!profile?.id,
+    queryKey: ["farmer-stats", farmerProfile?.id, farmerSlug],
+    queryFn: () => fetchProfileStats(farmerProfile!.id!, farmerSlug),
+    enabled: !!farmerProfile?.id,
   });
 
   const { data: isFollowing = false } = useQuery({
@@ -55,7 +56,7 @@ function FarmerProfile() {
   const handleShare = async () => {
     const url = `${location.origin}/farmers/${slug}`;
     try {
-      if (navigator.share) await navigator.share({ title: profile?.display_name ?? "Farmer", url });
+      if (navigator.share) await navigator.share({ title: farmerProfile?.display_name ?? "Farmer", url });
       else await navigator.clipboard.writeText(url);
       toast.success("Profile link copied");
     } catch {
@@ -68,7 +69,11 @@ function FarmerProfile() {
       toast.error("Sign in to message");
       return;
     }
-    toast.info("Opening inbox", { description: "Direct messages launch from /app/inbox soon." });
+    if (!farmerProfile?.id) return;
+    navigate({
+      to: "/app/inbox/chat/$userId",
+      params: { userId: farmerProfile.id },
+    });
   };
 
   const onFollow = async () => {
@@ -77,9 +82,9 @@ function FarmerProfile() {
       return;
     }
     try {
-      await toggleFollow(user.id, farmerSlug, !isFollowing);
+      await toggleFollow(user.id, farmerSlug, !isFollowing, authProfile?.display_name ?? undefined);
       await qc.invalidateQueries({ queryKey: ["following", user.id, farmerSlug] });
-      await qc.invalidateQueries({ queryKey: ["farmer-stats", profile?.id, farmerSlug] });
+      await qc.invalidateQueries({ queryKey: ["farmer-stats", farmerProfile?.id, farmerSlug] });
       toast.success(isFollowing ? "Unfollowed" : "Following");
     } catch {
       toast.error("Could not update follow");
@@ -87,7 +92,7 @@ function FarmerProfile() {
   };
 
   const listings = data?.listings ?? [];
-  const handle = (profile?.slug ?? slug).replace(/-/g, "");
+  const handle = (farmerProfile?.slug ?? slug).replace(/-/g, "");
 
   if (isLoading) {
     return (
@@ -99,7 +104,7 @@ function FarmerProfile() {
     );
   }
 
-  if (error || !profile?.id) {
+  if (error || !farmerProfile?.id) {
     return (
       <SiteLayout>
         <div className="mx-auto max-w-3xl px-6 py-32 text-center">
@@ -120,32 +125,32 @@ function FarmerProfile() {
         </Link>
 
         <div className="relative mt-5 h-40 sm:h-56 overflow-hidden rounded-3xl bg-muted">
-          {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="h-full w-full object-cover scale-110 blur-md opacity-70" />
+          {farmerProfile.avatar_url ? (
+            <img src={farmerProfile.avatar_url} alt="" className="h-full w-full object-cover scale-110 blur-md opacity-70" />
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/10 to-background" />
         </div>
 
         <div className="-mt-16 px-4 sm:px-8 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
           <div className="relative">
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.display_name ?? ""} className="h-28 w-28 sm:h-32 sm:w-32 rounded-full object-cover ring-4 ring-background shadow-lg" />
+            {farmerProfile.avatar_url ? (
+              <img src={farmerProfile.avatar_url} alt={farmerProfile.display_name ?? ""} className="h-28 w-28 sm:h-32 sm:w-32 rounded-full object-cover ring-4 ring-background shadow-lg" />
             ) : (
               <span className="grid h-28 w-28 sm:h-32 sm:w-32 place-items-center rounded-full bg-card font-serif text-4xl ring-4 ring-background">
-                {(profile.display_name ?? "F")[0]}
+                {(farmerProfile.display_name ?? "F")[0]}
               </span>
             )}
-            {profile.verified && (
+            {farmerProfile.verified && (
               <span className="absolute bottom-1 right-1 grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
                 <BadgeCheck className="h-4 w-4" />
               </span>
             )}
           </div>
           <div className="mt-4 sm:mt-0 flex-1 text-center sm:text-left">
-            <h1 className="font-serif text-3xl sm:text-4xl text-foreground">{profile.display_name}</h1>
+            <h1 className="font-serif text-3xl sm:text-4xl text-foreground">{farmerProfile.display_name}</h1>
             <p className="text-sm text-muted-foreground">@{handle}</p>
             <p className="mt-1 inline-flex items-center justify-center sm:justify-start gap-2 text-xs text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5" /> {profile.region ?? "Greater Accra"}
+              <MapPin className="h-3.5 w-3.5" /> {farmerProfile.region ?? "Greater Accra"}
             </p>
           </div>
           <div className="mt-4 sm:mt-0 flex items-center gap-2">
@@ -179,11 +184,11 @@ function FarmerProfile() {
           <Stat n={String(stats?.followers ?? 0)} label="Followers" />
           <Stat n={String(stats?.listingCount ?? listings.length)} label="Listings" />
           <Stat n={String(stats?.totalLikes ?? 0)} label="Likes" />
-          <Stat n={profile.seller_rating != null ? `${profile.seller_rating.toFixed(1)}★` : "—"} label="Rating" />
+          <Stat n={farmerProfile.seller_rating != null ? `${farmerProfile.seller_rating.toFixed(1)}★` : "—"} label="Rating" />
         </div>
 
         <p className="mt-6 px-4 sm:px-8 text-center sm:text-left text-foreground/85 max-w-2xl">
-          {profile.bio ?? "Fresh produce from Greater Accra."}
+          {farmerProfile.bio ?? "Fresh produce from Greater Accra."}
         </p>
 
         <div className="mt-10 border-b border-border">

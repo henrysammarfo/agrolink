@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
+import { useUnreadCounts } from "@/hooks/use-marketplace";
 
 export type AppRole = AuthRole;
 
@@ -40,10 +41,21 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
 
 const IMMERSIVE_PATHS = ["/app/buyer/feed"];
 
-export function AppShell({ role, children }: { role: AppRole; children?: ReactNode }) {
+export function AppShell({
+  role,
+  children,
+  unreadInbox: unreadOverride,
+}: {
+  role: AppRole;
+  children?: ReactNode;
+  unreadInbox?: number;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { profile, roles, signOut } = useAuth();
+  const { profile, roles, signOut, user } = useAuth();
+  const { data: unread } = useUnreadCounts(user?.id);
+  const unreadInbox =
+    unreadOverride ?? (unread ? unread.notifications + unread.messages : 0);
   const nav = NAV[role];
   const immersive = IMMERSIVE_PATHS.some((p) => pathname === p);
 
@@ -192,8 +204,13 @@ export function AppShell({ role, children }: { role: AppRole; children?: ReactNo
           </div>
 
           <div className="flex items-center gap-3">
-            <Link to="/app/inbox" className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground">
+            <Link to="/app/inbox" className="relative grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground">
               <Bell className="h-4 w-4" />
+              {unreadInbox > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-0.5 text-[9px] font-bold text-primary-foreground">
+                  {unreadInbox > 9 ? "9+" : unreadInbox}
+                </span>
+              )}
             </Link>
             {role === "farmer" && (
               <Link to="/app/create" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">

@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchFeedListings, fetchSellerListings } from "@/lib/api/listings";
 import { fetchCartItems, addToCart, updateCartItemQuantity, removeCartItem, reorderFromOrder } from "@/lib/api/cart";
 import { fetchBuyerOrders, fetchSellerOrders, fetchAvailableDeliveries, fetchDriverDeliveries } from "@/lib/api/orders";
-import { fetchNotifications, fetchMessages } from "@/lib/api/notifications";
+import { fetchNotifications, fetchMessages, fetchUnreadNotificationCount } from "@/lib/api/notifications";
+import { fetchConversations, fetchUnreadMessageCount } from "@/lib/api/chat";
 import { fetchDriverProfile } from "@/lib/api/driver-onboarding";
 import { fetchPublicSellers, fetchProfileStats, fetchUserListings, fetchUserBookmarks, fetchUserLikedListings, fetchMarketingStats } from "@/lib/api/profiles";
 import { fetchUserPayouts, fetchFarmerRevenue, fetchAdminPayments, fetchDriverEarnings } from "@/lib/api/payouts";
@@ -89,6 +90,27 @@ export function useNotifications(userId?: string) {
     queryFn: () => fetchNotifications(userId!),
     enabled: !!userId,
     refetchInterval: 30_000,
+  });
+}
+
+export function useConversations(userId?: string) {
+  return useQuery({
+    queryKey: ["conversations", userId],
+    queryFn: () => fetchConversations(userId!),
+    enabled: !!userId,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useUnreadCounts(userId?: string) {
+  return useQuery({
+    queryKey: ["unread-counts", userId],
+    queryFn: async () => ({
+      notifications: await fetchUnreadNotificationCount(userId!),
+      messages: await fetchUnreadMessageCount(userId!),
+    }),
+    enabled: !!userId,
+    refetchInterval: 15_000,
   });
 }
 

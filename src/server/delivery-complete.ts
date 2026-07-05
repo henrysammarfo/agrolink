@@ -46,8 +46,8 @@ export async function completeDelivery(
   await releaseEscrow(order.id);
   const payout = await processOrderPayouts(order.id);
 
-  await supabaseAdmin.from("notifications").insert({
-    user_id: order.buyer_id,
+  const { notifyUser } = await import("@/server/comms");
+  await notifyUser(order.buyer_id, {
     type: "delivery_complete",
     title: "Delivered!",
     body: "Your produce has arrived. Farmer and driver paid via MoMo.",

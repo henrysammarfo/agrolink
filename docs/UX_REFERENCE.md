@@ -65,4 +65,18 @@ See `docs/OSS_REFERENCE.md` for full mapping.
 
 - Twi language UI
 - Capacitor APK launch (`docs/APK_BUILD.md`)
-- Full in-app chat (inbox stub only)
+- WhatsApp order updates (Settings toggle is UI-only until WATI/Hubtel wired)
+- Chat image attachments
+- Typing indicators
+
+## Comms — implemented 2026-07-05
+
+| Feature | Route / file |
+|---------|----------------|
+| Activity feed (notis) | `/app/inbox` activity tab |
+| Conversation list | `/app/inbox` messages tab |
+| Chat thread | `/app/inbox/chat/$userId` |
+| Web push send | `server/comms.ts` + `web-push` |
+| Unread badge | AppShell bell |
+| Realtime notis | `subscribeToNotifications` |
+| Realtime chat | `subscribeToMessages` |

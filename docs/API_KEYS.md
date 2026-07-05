@@ -25,6 +25,9 @@
 | `HUBTEL_CLIENT_ID` | Ghana Card verify + MoMo alternate | developers.hubtel.com |
 | `HUBTEL_CLIENT_SECRET` | Same | Same |
 | `FCM_SERVER_KEY` | Driver job push (Bolt-style) | Firebase Console → Project Settings → Cloud Messaging |
+| `VITE_VAPID_PUBLIC_KEY` | Web push (PWA) public key | `node scripts/generate-vapid-keys.mjs` |
+| `VAPID_PRIVATE_KEY` | Web push server signing | Same script (server only) |
+| `VAPID_SUBJECT` | Web push contact URI | `mailto:support@agrolink.app` |
 | `TINYFISH_API_KEY` | Market price scraping | agent.tinyfish.ai/api-keys |
 
 ## P2 — Optional

@@ -305,12 +305,12 @@ export async function handlePaystackWebhook(
     .eq("id", payment.order_id);
 
   const order = payment.order as { buyer_id: string };
-  await supabaseAdmin.from("notifications").insert({
-    user_id: order.buyer_id,
+  const { notifyUser } = await import("@/server/comms");
+  await notifyUser(order.buyer_id, {
     type: "order_confirmed",
     title: "Payment confirmed",
     body: "Your order is confirmed. A driver will be assigned shortly.",
-    link: `/app/buyer/orders`,
+    link: "/app/buyer/orders",
   });
 
   await supabaseAdmin.from("audit_log").insert({

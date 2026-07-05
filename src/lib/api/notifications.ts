@@ -12,8 +12,45 @@ export async function fetchNotifications(userId: string): Promise<NotificationRo
   return (data ?? []) as NotificationRow[];
 }
 
+export async function fetchUnreadNotificationCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("read", false);
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export async function markNotificationRead(id: string) {
   await supabase.from("notifications").update({ read: true }).eq("id", id);
+}
+
+export async function markAllNotificationsRead(userId: string) {
+  await supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false);
+}
+
+export function subscribeToNotifications(
+  userId: string,
+  onInsert: (n: NotificationRow) => void,
+) {
+  const channel = supabase
+    .channel(`notifications:${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => onInsert(payload.new as NotificationRow),
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 export async function createNotification(
@@ -26,6 +63,7 @@ export async function createNotification(
   await supabase.from("notifications").insert({ user_id: userId, type, title, body, link });
 }
 
+/** @deprecated use chat.ts sendChatMessage */
 export async function fetchMessages(userId: string): Promise<MessageRow[]> {
   const { data, error } = await supabase
     .from("messages")
@@ -35,21 +73,6 @@ export async function fetchMessages(userId: string): Promise<MessageRow[]> {
     .limit(100);
   if (error) throw error;
   return (data ?? []) as MessageRow[];
-}
-
-export async function sendMessage(
-  senderId: string,
-  receiverId: string,
-  content: string,
-  orderId?: string,
-) {
-  const { error } = await supabase.from("messages").insert({
-    sender_id: senderId,
-    receiver_id: receiverId,
-    content,
-    order_id: orderId ?? null,
-  });
-  if (error) throw error;
 }
 
 export async function updateProfile(userId: string, updates: Record<string, unknown>) {
