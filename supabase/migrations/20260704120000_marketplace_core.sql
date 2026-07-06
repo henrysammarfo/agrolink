@@ -329,19 +329,19 @@ CREATE POLICY "cart_items_via_cart" ON public.cart_items FOR ALL
 -- Order policies
 CREATE POLICY "orders_buyer_read" ON public.orders FOR SELECT
   USING (buyer_id = auth.uid()
-    OR EXISTS (SELECT 1 FROM public.order_items oi WHERE oi.order_id = id AND oi.seller_id = auth.uid())
-    OR EXISTS (SELECT 1 FROM public.deliveries d JOIN public.driver_profiles dp ON dp.id = d.driver_id WHERE d.order_id = id AND dp.user_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.order_items oi WHERE oi.order_id = orders.id AND oi.seller_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.deliveries d JOIN public.driver_profiles dp ON dp.id = d.driver_id WHERE d.order_id = orders.id AND dp.user_id = auth.uid())
     OR public.has_role(auth.uid(), 'admin'));
 CREATE POLICY "orders_buyer_insert" ON public.orders FOR INSERT WITH CHECK (buyer_id = auth.uid());
 CREATE POLICY "orders_participant_update" ON public.orders FOR UPDATE
   USING (buyer_id = auth.uid()
-    OR EXISTS (SELECT 1 FROM public.order_items oi WHERE oi.order_id = id AND oi.seller_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.order_items oi WHERE oi.order_id = orders.id AND oi.seller_id = auth.uid())
     OR public.has_role(auth.uid(), 'admin'));
 
 CREATE POLICY "order_items_read" ON public.order_items FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_id AND (
+  USING (EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_items.order_id AND (
     o.buyer_id = auth.uid()
-    OR seller_id = auth.uid()
+    OR order_items.seller_id = auth.uid()
     OR public.has_role(auth.uid(), 'admin')
   )));
 CREATE POLICY "order_items_insert" ON public.order_items FOR INSERT
@@ -356,12 +356,12 @@ CREATE POLICY "drivers_self_write" ON public.driver_profiles FOR ALL USING (user
 
 -- Delivery policies
 CREATE POLICY "deliveries_participant_read" ON public.deliveries FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_id AND o.buyer_id = auth.uid())
-    OR EXISTS (SELECT 1 FROM public.order_items oi WHERE oi.order_id = order_id AND oi.seller_id = auth.uid())
-    OR EXISTS (SELECT 1 FROM public.driver_profiles dp WHERE dp.id = driver_id AND dp.user_id = auth.uid())
+  USING (EXISTS (SELECT 1 FROM public.orders o WHERE o.id = deliveries.order_id AND o.buyer_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.order_items oi WHERE oi.order_id = deliveries.order_id AND oi.seller_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.driver_profiles dp WHERE dp.id = deliveries.driver_id AND dp.user_id = auth.uid())
     OR public.has_role(auth.uid(), 'admin'));
 CREATE POLICY "deliveries_driver_update" ON public.deliveries FOR UPDATE
-  USING (EXISTS (SELECT 1 FROM public.driver_profiles dp WHERE dp.id = driver_id AND dp.user_id = auth.uid())
+  USING (EXISTS (SELECT 1 FROM public.driver_profiles dp WHERE dp.id = deliveries.driver_id AND dp.user_id = auth.uid())
     OR public.has_role(auth.uid(), 'admin'));
 
 -- Notifications + messages

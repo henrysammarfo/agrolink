@@ -1,35 +1,46 @@
 #!/usr/bin/env node
 /**
- * Apply supabase/migrations/*.sql to remote Postgres.
- * Requires SUPABASE_DB_PASSWORD (Dashboard → Project Settings → Database).
- * Optional: SUPABASE_DB_REGION (default eu-west-1).
+ * Apply supabase/migrations/*.sql to remote Postgres via Supavisor pooler (IPv4).
+ * Set SUPABASE_DB_PASSWORD or DATABASE_URL in .env
  */
 import pg from "pg";
 import { readFile, readdir } from "node:fs/promises";
+import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, "../supabase/migrations");
+const ENV_PATH = path.join(__dirname, "../.env");
+
+if (existsSync(ENV_PATH)) {
+  for (const line of readFileSync(ENV_PATH, "utf8").split("\n")) {
+    const m = line.match(/^([A-Z_]+)=(.*)$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
 
 const ref = process.env.SUPABASE_PROJECT_ID ?? process.env.VITE_SUPABASE_PROJECT_ID ?? "mhyuzmhzockexqmnyuze";
-const password = process.env.SUPABASE_DB_PASSWORD;
 const region = process.env.SUPABASE_DB_REGION ?? "eu-west-1";
+const port = Number(process.env.SUPABASE_DB_PORT ?? 5432);
+
+let password = process.env.SUPABASE_DB_PASSWORD;
+const databaseUrl = process.env.DATABASE_URL;
+if (!password && databaseUrl) {
+  password = decodeURIComponent(databaseUrl.match(/postgres:([^@]+)@/)?.[1] ?? "");
+}
 
 if (!password) {
   console.error(
-    "Missing SUPABASE_DB_PASSWORD.\n" +
-      "Get it from: https://supabase.com/dashboard/project/" +
-      ref +
-      "/settings/database → Database password\n" +
-      "Add to .env: SUPABASE_DB_PASSWORD=your_password",
+    "Missing SUPABASE_DB_PASSWORD or DATABASE_URL in .env\n" +
+      `Dashboard: https://supabase.com/dashboard/project/${ref}/settings/database`,
   );
   process.exit(1);
 }
 
 const client = new pg.Client({
   host: `aws-0-${region}.pooler.supabase.com`,
-  port: 6543,
+  port,
   user: `postgres.${ref}`,
   password,
   database: "postgres",
@@ -59,7 +70,7 @@ async function main() {
     .filter((f) => f.endsWith(".sql"))
     .sort();
 
-  console.log(`Connecting to ${ref} (${region})…`);
+  console.log(`Connecting to ${ref} (${region}, pooler:${port})…`);
   await client.connect();
   console.log("Connected.");
 
