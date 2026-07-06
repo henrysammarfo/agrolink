@@ -25,17 +25,20 @@ export function initAnalytics() {
   }
 
   if (sentryDsn) {
-    import("@sentry/browser")
-      .then((Sentry) => {
-        Sentry.init({
-          dsn: sentryDsn,
-          environment: import.meta.env.MODE,
-          tracesSampleRate: 0.1,
-        });
-      })
-      .catch(() => {
-        /* @sentry/browser optional — install when VITE_SENTRY_DSN is set */
+    // Optional — load Sentry from CDN only when DSN is set (no npm package required)
+    const s = document.createElement("script");
+    s.src = "https://browser.sentry-cdn.com/8.45.0/bundle.min.js";
+    s.crossOrigin = "anonymous";
+    s.async = true;
+    s.onload = () => {
+      const Sentry = (window as Window & { Sentry?: { init: (o: object) => void } }).Sentry;
+      Sentry?.init({
+        dsn: sentryDsn,
+        environment: import.meta.env.MODE,
+        tracesSampleRate: 0.1,
       });
+    };
+    document.head.appendChild(s);
   }
 }
 
