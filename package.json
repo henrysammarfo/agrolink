@@ -15,6 +15,7 @@
     "seed:demo": "node scripts/seed-demo-listings.mjs",
     "upload:media": "node scripts/upload-listing-media.mjs",
     "stress:comms": "node scripts/stress-comms.mjs",
+    "db:migrate": "node scripts/apply-migrations.mjs",
     "icons:generate": "node scripts/generate-brand-icons.mjs",
     "vapid:generate": "node scripts/generate-vapid-keys.mjs",
     "screenshots": "node scripts/capture-screenshots.mjs"
@@ -100,6 +101,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
+    "pg": "^8.22.0",
     "playwright": "^1.49.1",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
