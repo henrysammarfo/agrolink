@@ -188,6 +188,59 @@ async function testVapid() {
   record("VAPID keys", !!(pub && priv), pub && priv ? "Generated and present" : "Run npm run vapid:generate");
 }
 
+async function testSentry() {
+  const dsn = process.env.VITE_SENTRY_DSN;
+  const token = process.env.SENTRY_PERSONAL_TOKEN;
+  record("Sentry DSN", !!dsn?.includes("ingest"), dsn ? "Configured (client SDK)" : "VITE_SENTRY_DSN not set");
+  if (token) {
+    const res = await fetch("https://sentry.io/api/0/organizations/", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    record("Sentry personal token", res.ok, res.ok ? "Token valid" : `HTTP ${res.status}`);
+  }
+}
+
+async function testGoogleMaps() {
+  const key = process.env.GOOGLE_MAPS_API_KEY ?? process.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!key) return record("Google Maps", false, "GOOGLE_MAPS_API_KEY not set");
+  const res = await fetch(
+    `https://maps.googleapis.com/maps/api/geocode/json?address=Accra,Ghana&key=${encodeURIComponent(key)}`,
+  );
+  const json = await res.json().catch(() => ({}));
+  record(
+    "Google Maps",
+    json.status === "OK" || json.status === "ZERO_RESULTS",
+    json.status === "OK"
+      ? "Geocoding API key valid"
+      : `${json.status ?? res.status}: ${json.error_message ?? "check API restrictions/billing"}`,
+  );
+}
+
+async function testWhatsAppSend() {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const testTo = process.env.WHATSAPP_TEST_NUMBER;
+  if (!token || !phoneId || !testTo) return;
+
+  const to = testTo.replace(/\D/g, "");
+  const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { body: "AgroLink key test — WhatsApp is connected." },
+    }),
+  });
+  const json = await res.json().catch(() => ({}));
+  record(
+    "WhatsApp send (test number)",
+    res.ok,
+    res.ok ? `Message queued to ${testTo}` : `HTTP ${res.status}: ${JSON.stringify(json.error ?? json).slice(0, 150)}`,
+  );
+}
+
 async function main() {
   console.log("AgroLink API key smoke tests\n");
   await testSupabase();
@@ -197,7 +250,10 @@ async function main() {
   await testTinyFish();
   await testPostHog();
   await testVapid();
+  await testSentry();
+  await testGoogleMaps();
   await discoverWhatsAppPhoneId();
+  await testWhatsAppSend();
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length}/${results.length} passed`);
