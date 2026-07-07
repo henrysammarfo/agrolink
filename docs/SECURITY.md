@@ -54,7 +54,7 @@ Client calls use `apiFetch()` from `src/lib/api/fetch-auth.ts` to attach the ses
 - `/api/verify/ghana-card`
 - `/api/comms/notify`
 - `/api/moderate` — auth for moderate/price_advice; admin for ingest
-- `/api/admin/pricing` — auth for GET; admin for PATCH
+- `/api/admin/pricing` — admin for GET and PATCH
 
 ### Special access
 
@@ -87,9 +87,10 @@ Set on Vercel (server):
 | `listing-videos` | `{user_id}/…` — owner upload/update/delete |
 | `chat-attachments` | `{user_id}/…` |
 | `driver-documents` | `{user_id}/…` |
-| `delivery-pod` | driver upload (see migration policies) |
+| `delivery-pod` | `{user_id}/…` — driver POD photos |
+| `driver-documents` | `{user_id}/…` — owner upload; admin read for verification |
 
-Migration: `20260707220000_storage_owner_scoped.sql`
+Migrations: `20260707220000_storage_owner_scoped.sql`, `20260707230000_storage_driver_pod_scoped.sql`
 
 ## Webhook verification
 
@@ -110,7 +111,16 @@ Verify callback signature per Hubtel docs before updating order status.
 
 ## Rate limiting
 
-In-memory per-IP limit on `/api/*` (30 req/min; 100 for webhooks). For production scale, move to Redis/Upstash.
+Per-route in-memory limits on `/api/*` (keyed by JWT prefix + IP + path):
+
+| Route tier | Limit / minute |
+|------------|----------------|
+| Webhooks | 100 |
+| Checkout, OTP | 10 |
+| Chat, moderate | 15 |
+| Default | 30 |
+
+For multi-instance production scale, move to Redis/Upstash. Vercel Cron runs `/api/deliveries/reassign-expired` every 5 minutes (`vercel.json`).
 
 ## Incident response
 

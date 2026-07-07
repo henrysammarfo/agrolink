@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireAdmin, requireAuth } from "@/server/api-auth";
+import { requireAdmin } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/admin/pricing")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const auth = await requireAuth(request);
+        const auth = await requireAdmin(request);
         if (auth instanceof Response) return auth;
 
         try {

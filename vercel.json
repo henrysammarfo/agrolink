@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/deliveries/reassign-expired",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

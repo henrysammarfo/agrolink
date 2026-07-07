@@ -2,18 +2,32 @@ import { createStart, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+import { getBearerToken } from "@/server/api-auth";
 
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimitKey(request: Request, pathname: string): string {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const token = getBearerToken(request);
+  const actor = token ? token.slice(0, 24) : "anon";
+  return `${actor}:${ip}:${pathname}`;
+}
+
+function maxRequestsFor(pathname: string): number {
+  if (pathname.includes("webhook")) return 100;
+  if (pathname.includes("checkout") || pathname.includes("/otp/")) return 10;
+  if (pathname.includes("chat") || pathname.includes("moderate")) return 15;
+  return 30;
+}
 
 const rateLimitMiddleware = createMiddleware().server(async ({ request, next }) => {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/")) return next();
 
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const key = `${ip}:${url.pathname}`;
+  const key = rateLimitKey(request, url.pathname);
   const now = Date.now();
   const windowMs = 60_000;
-  const maxRequests = url.pathname.includes("webhook") ? 100 : 30;
+  const maxRequests = maxRequestsFor(url.pathname);
 
   const entry = rateLimitStore.get(key);
   if (!entry || now > entry.resetAt) {

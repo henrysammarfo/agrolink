@@ -59,6 +59,10 @@ In **Vercel → Project → Settings → Environment Variables**, add everything
 
 **Do not** add `SUPABASE_DB_PASSWORD` to Vercel unless you run migrations from CI — migrations are run locally via `npm run db:migrate`.
 
+### Vercel Cron
+
+`vercel.json` schedules `GET /api/deliveries/reassign-expired` every 5 minutes. Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is set in project env.
+
 ## 3. After first deploy — configure external services
 
 Replace `YOUR-DOMAIN` with your Vercel URL (e.g. `agrolink.vercel.app`).
