@@ -72,15 +72,18 @@ flowchart TB
 1. User signs in via Supabase Auth (`/auth`) — email/password or Google (Lovable OAuth)
 2. JWT stored in browser; `AuthProvider` loads profile + roles from `profiles` / `user_roles`
 3. `/app/*` routes gated — unauthenticated users redirect to `/auth`
-4. Server routes use `supabaseAdmin` (service role) for trusted operations only
+4. **API routes** verify Supabase JWT via `requireAuth()` — identity comes from token, never request body
+5. Server routes use `supabaseAdmin` (service role) only where RLS cannot apply (webhooks, search index, cron)
 
 ### Data access model
 
 | Client | Key | RLS |
 |--------|-----|-----|
 | Browser | `VITE_SUPABASE_PUBLISHABLE_KEY` | ✅ enforced |
-| Server (user context) | Publishable + user JWT | ✅ enforced |
+| Server (user context) | Publishable + user JWT (`api-auth.ts`) | ✅ enforced |
 | Server (admin) | `SUPABASE_SERVICE_ROLE_KEY` | Bypasses RLS — server only |
+
+**Not multi-tenant:** one marketplace; admin role is platform-wide. User isolation is per-account via RLS + JWT.
 
 ---
 

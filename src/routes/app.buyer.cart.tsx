@@ -10,6 +10,7 @@ import { HIGH_VALUE_OTP_THRESHOLD_GHS } from "@/lib/delivery-constants";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { getCurrentPosition } from "@/lib/native-geolocation";
 import { trackEvent } from "@/lib/analytics";
+import { apiFetch } from "@/lib/api/fetch-auth";
 
 /** Default buyer drop-off — East Legon corridor */
 const DEFAULT_DELIVERY = { lat: 5.65, lng: -0.165 };
@@ -80,9 +81,8 @@ function Cart() {
     if (!first?.lat || !first?.lng) return;
     const weightKg = items.reduce((s, i) => s + Number(i.quantity), 0);
     setQuoteLoading(true);
-    fetch("/api/delivery/quote", {
+    apiFetch("/api/delivery/quote", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         pickupLat: first.lat,
         pickupLng: first.lng,
@@ -103,11 +103,9 @@ function Cart() {
     if (!user?.id) return;
     setOtpLoading(true);
     try {
-      const res = await fetch("/api/otp/send", {
+      const res = await apiFetch("/api/otp/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
           phone: profile?.phone ?? "+233551234987",
           email: user.email,
           orderTotalGhs: total,
@@ -129,10 +127,9 @@ function Cart() {
     if (!user?.id || otpCode.length < 6) return;
     setOtpLoading(true);
     try {
-      const res = await fetch("/api/otp/verify", {
+      const res = await apiFetch("/api/otp/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, code: otpCode }),
+        body: JSON.stringify({ code: otpCode }),
       });
       const data = (await res.json()) as { ok?: boolean; message?: string };
       if (!data.ok) throw new Error(data.message ?? "Invalid code");
@@ -156,11 +153,9 @@ function Cart() {
     }
     setPaying(true);
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await apiFetch("/api/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
           email: user.email,
           phone: profile?.phone ?? "+233551234987",
           momoProvider: channel,

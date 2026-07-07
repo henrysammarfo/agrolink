@@ -1,22 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { sendCheckoutOtp } from "@/server/checkout-otp";
+import { requireAuth } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/otp/send")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
+          const auth = await requireAuth(request);
+          if (auth instanceof Response) return auth;
+
           const body = (await request.json()) as {
-            userId: string;
             phone: string;
             email?: string;
             orderTotalGhs: number;
           };
-          if (!body.userId || !body.phone) {
-            return Response.json({ error: "Missing fields" }, { status: 400 });
+          if (!body.phone) {
+            return Response.json({ error: "Missing phone" }, { status: 400 });
           }
           const result = await sendCheckoutOtp({
-            userId: body.userId,
+            userId: auth.userId,
             phone: body.phone,
             email: body.email,
             orderTotalGhs: body.orderTotalGhs ?? 0,

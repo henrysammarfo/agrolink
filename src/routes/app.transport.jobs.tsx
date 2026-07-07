@@ -9,6 +9,7 @@ import { PodCaptureSheet } from "@/components/transport/PodCaptureSheet";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useTransportJobs } from "@/hooks/use-marketplace";
 import { trackEvent } from "@/lib/analytics";
+import { apiFetch } from "@/lib/api/fetch-auth";
 import { acceptDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
 import type { DeliveryRow } from "@/lib/types/marketplace";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,7 +41,7 @@ function Jobs() {
   }, [qc, driver?.id]);
 
   useEffect(() => {
-    const poll = () => fetch("/api/deliveries/reassign-expired").catch(() => {});
+    const poll = () => apiFetch("/api/deliveries/reassign-expired").catch(() => {});
     poll();
     const id = setInterval(poll, 10_000);
     return () => clearInterval(id);

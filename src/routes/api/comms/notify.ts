@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { notifyUser } from "@/server/comms";
+import { requireAuth } from "@/server/api-auth";
 
 type Body = {
   type: "like" | "comment" | "follow";
-  actorUserId: string;
   actorName?: string;
   listingId?: string;
   listingTitle?: string;
@@ -16,17 +16,21 @@ export const Route = createFileRoute("/api/comms/notify")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const auth = await requireAuth(request);
+          if (auth instanceof Response) return auth;
+
           const body = (await request.json()) as Body;
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-          if (!body.actorUserId || !body.type) {
-            return Response.json({ error: "Missing fields" }, { status: 400 });
+          if (!body.type) {
+            return Response.json({ error: "Missing type" }, { status: 400 });
           }
 
           const actor = body.actorName ?? "Someone";
+          const actorUserId = auth.userId;
 
           if (body.type === "like" && body.sellerId && body.listingId) {
-            if (body.sellerId === body.actorUserId) {
+            if (body.sellerId === actorUserId) {
               return Response.json({ ok: true, skipped: true });
             }
             await notifyUser(body.sellerId, {
@@ -38,7 +42,7 @@ export const Route = createFileRoute("/api/comms/notify")({
           }
 
           if (body.type === "comment" && body.sellerId && body.listingId) {
-            if (body.sellerId === body.actorUserId) {
+            if (body.sellerId === actorUserId) {
               return Response.json({ ok: true, skipped: true });
             }
             await notifyUser(body.sellerId, {
@@ -55,7 +59,7 @@ export const Route = createFileRoute("/api/comms/notify")({
               .select("id")
               .eq("slug", body.farmerSlug)
               .maybeSingle();
-            if (profile?.id && profile.id !== body.actorUserId) {
+            if (profile?.id && profile.id !== actorUserId) {
               await notifyUser(profile.id, {
                 type: "follow",
                 title: `${actor} started following you`,

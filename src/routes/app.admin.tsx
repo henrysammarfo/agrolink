@@ -12,6 +12,7 @@ import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { AdminGate } from "@/components/app/RoleGate";
 import { fetchAdminStats } from "@/lib/api/notifications";
 import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api/fetch-auth";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin · AgroLink" }] }),
@@ -106,9 +107,8 @@ function AdminOverview() {
             </section>
             <button
               onClick={async () => {
-                await fetch("/api/moderate", {
+                await apiFetch("/api/moderate", {
                   method: "POST",
-                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ action: "ingest_prices" }),
                 });
                 const pending = await supabase
@@ -116,9 +116,8 @@ function AdminOverview() {
                   .select("id")
                   .eq("status", "pending_review");
                 for (const l of pending.data ?? []) {
-                  await fetch("/api/moderate", {
+                  await apiFetch("/api/moderate", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ action: "moderate", title: "review", listingId: l.id }),
                   });
                 }

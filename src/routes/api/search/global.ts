@@ -1,14 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { escapeIlike, optionalAuth } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/search/global")({
   server: {
     handlers: {
       GET: async ({ request }) => {
         const url = new URL(request.url);
-        const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
-        const userId = url.searchParams.get("userId");
+        const q = escapeIlike((url.searchParams.get("q") ?? "").trim().toLowerCase());
         const role = url.searchParams.get("role") ?? "buyer";
         if (q.length < 2) return Response.json({ listings: [], farmers: [], orders: [] });
+
+        const auth = await optionalAuth(request);
 
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -26,17 +28,18 @@ export const Route = createFileRoute("/api/search/global")({
             .limit(6);
 
           const ordersP =
-            userId && role === "buyer"
+            auth && role === "buyer"
               ? supabaseAdmin
                   .from("orders")
                   .select("id, status, total_amount, created_at")
-                  .eq("buyer_id", userId)
+                  .eq("buyer_id", auth.userId)
                   .limit(20)
-              : Promise.resolve({ data: [] });
+              : Promise.resolve({ data: [], error: null });
 
           const [listings, farmers, ordersRes] = await Promise.all([listingsP, farmersP, ordersP]);
           if (listings.error) throw listings.error;
           if (farmers.error) throw farmers.error;
+
           const orders = (ordersRes.data ?? []).filter(
             (o: { id: string }) => o.id.toLowerCase().includes(q) || q.length >= 3,
           );

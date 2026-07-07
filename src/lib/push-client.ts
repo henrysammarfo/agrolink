@@ -1,4 +1,5 @@
 /** Browser push registration — Web Push via service worker (VAPID optional). */
+import { apiFetch } from "@/lib/api/fetch-auth";
 
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
 
@@ -33,10 +34,9 @@ export async function registerForPushNotifications(userId: string): Promise<bool
       ? `web-${crypto.randomUUID()}`
       : `web-${userId}-${Date.now()}`;
 
-  await fetch("/api/push/register", {
+  await apiFetch("/api/push/register", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, token, platform: "web" }),
+    body: JSON.stringify({ token, platform: "web" }),
   });
 
   return true;

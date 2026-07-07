@@ -1,9 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAdmin, requireAuth } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/admin/pricing")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        const auth = await requireAuth(request);
+        if (auth instanceof Response) return auth;
+
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { data, error } = await supabaseAdmin
@@ -30,22 +34,16 @@ export const Route = createFileRoute("/api/admin/pricing")({
         }
       },
       PATCH: async ({ request }) => {
+        const auth = await requireAdmin(request);
+        if (auth instanceof Response) return auth;
+
         const body = (await request.json()) as {
-          userId: string;
           surge_multiplier?: number;
           surge_active?: boolean;
           surge_reason?: string;
         };
-        if (!body.userId) return Response.json({ error: "Missing userId" }, { status: 400 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: role } = await supabaseAdmin
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", body.userId)
-          .eq("role", "admin")
-          .maybeSingle();
-        if (!role) return Response.json({ error: "Admin only" }, { status: 403 });
 
         const { data: cfg } = await supabaseAdmin
           .from("delivery_pricing_config")
@@ -69,7 +67,7 @@ export const Route = createFileRoute("/api/admin/pricing")({
         if (error) return Response.json({ error: error.message }, { status: 500 });
 
         await supabaseAdmin.from("audit_log").insert({
-          actor_id: body.userId,
+          actor_id: auth.userId,
           action: "surge_pricing_update",
           entity_type: "delivery_pricing_config",
           entity_id: cfg.id,

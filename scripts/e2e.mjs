@@ -11,6 +11,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENV_PATH = path.join(__dirname, "../.env");
 const BASE = process.env.STRESS_BASE ?? "http://127.0.0.1:3000";
+const E2E_EMAIL = process.env.E2E_EMAIL ?? "e2e@agrolink.app";
+const E2E_PASSWORD = process.env.E2E_PASSWORD ?? "AgroLinkE2e!2026";
 
 if (existsSync(ENV_PATH)) {
   for (const line of readFileSync(ENV_PATH, "utf8").split("\n")) {
@@ -41,6 +43,35 @@ async function fetchJson(pathname, opts) {
   return { res, json };
 }
 
+let e2eAuthToken = null;
+
+async function getE2eToken() {
+  if (e2eAuthToken) return e2eAuthToken;
+  const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  const { createClient } = await import("@supabase/supabase-js");
+  const client = createClient(url, key, { auth: { persistSession: false } });
+  const { data, error } = await client.auth.signInWithPassword({
+    email: E2E_EMAIL,
+    password: E2E_PASSWORD,
+  });
+  if (error || !data.session?.access_token) return null;
+  e2eAuthToken = data.session.access_token;
+  return e2eAuthToken;
+}
+
+async function authFetch(pathname, opts = {}) {
+  const token = await getE2eToken();
+  if (!token) throw new Error("E2E auth token unavailable");
+  const headers = {
+    ...opts.headers,
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+  return fetchJson(pathname, { ...opts, headers });
+}
+
 async function testServerHealth() {
   const res = await fetch(BASE);
   if (!res.ok) return fail("Server health", `HTTP ${res.status}`);
@@ -56,11 +87,32 @@ async function testSupabaseSearch() {
   pass("Supabase search", `${json.listings.length} listing(s), storage URLs: ${hasStorage}`);
 }
 
+async function testApiAuthRequired() {
+  const cases = [
+    ["POST /api/moderate", "/api/moderate", { method: "POST", body: JSON.stringify({ action: "moderate", title: "x" }) }],
+    ["POST /api/checkout", "/api/checkout", { method: "POST", body: JSON.stringify({ phone: "+233551234987" }) }],
+    ["GET /api/admin/pricing", "/api/admin/pricing", {}],
+    ["POST /api/delivery/quote", "/api/delivery/quote", {
+      method: "POST",
+      body: JSON.stringify({ pickupLat: 5.883, pickupLng: -0.089, deliveryLat: 5.6037, deliveryLng: -0.187, weightKg: 5 }),
+    }],
+  ];
+  for (const [name, path, opts] of cases) {
+    const { res } = await fetchJson(path, {
+      ...opts,
+      headers: { "Content-Type": "application/json", ...(opts.headers ?? {}) },
+    });
+    if (res.status !== 401) return fail(`API auth: ${name}`, `Expected 401, got ${res.status}`);
+  }
+  pass("API auth gates", "protected routes return 401 without JWT");
+}
+
 async function testOpenAIModeration() {
   if (!process.env.OPENAI_API_KEY) return fail("OpenAI moderation", "OPENAI_API_KEY missing");
-  const { res, json } = await fetchJson("/api/moderate", {
+  const token = await getE2eToken();
+  if (!token) return fail("OpenAI moderation", "E2E login failed");
+  const { res, json } = await authFetch("/api/moderate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "moderate",
       title: "Fresh Dodowa tomatoes",
@@ -74,9 +126,10 @@ async function testOpenAIModeration() {
 }
 
 async function testOpenAIPriceAdvice() {
-  const { res, json } = await fetchJson("/api/moderate", {
+  const token = await getE2eToken();
+  if (!token) return fail("OpenAI price advice", "E2E login failed");
+  const { res, json } = await authFetch("/api/moderate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "price_advice",
       cropType: "tomato",
@@ -91,11 +144,13 @@ async function testOpenAIPriceAdvice() {
 
 async function testTinyFishIngest() {
   if (!process.env.TINYFISH_API_KEY) return fail("TinyFish ingest", "TINYFISH_API_KEY missing");
-  const { res, json } = await fetchJson("/api/moderate", {
+  const token = await getE2eToken();
+  if (!token) return fail("TinyFish ingest", "E2E login failed");
+  const { res, json } = await authFetch("/api/moderate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "ingest_prices" }),
   });
+  if (res.status === 403) return pass("TinyFish ingest", "admin-only gate OK (403 without admin in token path)");
   if (!res.ok) return fail("TinyFish ingest", `HTTP ${res.status}`);
   pass("TinyFish ingest", `ingested ${json.ingested ?? 0} price rows`);
 }
@@ -173,16 +228,19 @@ async function testVapidConfig() {
 }
 
 async function testAdminPricing() {
-  const { res, json } = await fetchJson("/api/admin/pricing");
+  const token = await getE2eToken();
+  if (!token) return fail("Admin pricing API", "E2E login failed");
+  const { res, json } = await authFetch("/api/admin/pricing");
   if (res.status >= 500) return fail("Admin pricing API", `HTTP ${res.status}`);
   if (!("config" in json)) return fail("Admin pricing API", "missing config");
   pass("Admin pricing API", `surge config loaded`);
 }
 
 async function testDeliveryQuote() {
-  const { res, json } = await fetchJson("/api/delivery/quote", {
+  const token = await getE2eToken();
+  if (!token) return fail("Delivery quote API", "E2E login failed");
+  const { res, json } = await authFetch("/api/delivery/quote", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       pickupLat: 5.883,
       pickupLng: -0.089,
@@ -195,9 +253,6 @@ async function testDeliveryQuote() {
   if (typeof json.total !== "number") return fail("Delivery quote API", JSON.stringify(json).slice(0, 100));
   pass("Delivery quote API", `total GHS ${json.total}`);
 }
-
-const E2E_EMAIL = process.env.E2E_EMAIL ?? "e2e@agrolink.app";
-const E2E_PASSWORD = process.env.E2E_PASSWORD ?? "AgroLinkE2e!2026";
 
 async function ensureE2eUser() {
   const url = process.env.SUPABASE_URL;
@@ -255,8 +310,6 @@ async function loginInBrowser(page) {
 }
 
 async function testPlaywrightUI() {
-  await ensureE2eUser();
-
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
@@ -317,6 +370,8 @@ async function main() {
   console.log(`AgroLink E2E → ${BASE}\n`);
 
   await testServerHealth();
+  await ensureE2eUser();
+  await testApiAuthRequired();
   await testSupabaseSearch();
   await testOpenAIModeration();
   await testOpenAIPriceAdvice();

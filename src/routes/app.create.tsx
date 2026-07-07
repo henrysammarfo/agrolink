@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
 import { createListing, uploadListingMedia } from "@/lib/api/listings";
+import { apiFetch } from "@/lib/api/fetch-auth";
 import type { CropType } from "@/lib/types/marketplace";
 
 export const Route = createFileRoute("/app/create")({
@@ -56,9 +57,8 @@ function Create() {
     if (!price) return;
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch("/api/moderate", {
+        const res = await apiFetch("/api/moderate", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "price_advice",
             cropType: inferCrop(title),
@@ -150,9 +150,8 @@ function Create() {
         user.id,
       );
 
-      const modRes = await fetch("/api/moderate", {
+      const modRes = await apiFetch("/api/moderate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "moderate",
           title,

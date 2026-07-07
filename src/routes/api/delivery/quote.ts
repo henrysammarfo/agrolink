@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { computeDeliveryQuote } from "@/server/delivery-quote";
+import { requireAuth } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/delivery/quote")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
+          const auth = await requireAuth(request);
+          if (auth instanceof Response) return auth;
+
           const body = (await request.json()) as {
             pickupLat: number;
             pickupLng: number;

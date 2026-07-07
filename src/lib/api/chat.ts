@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { MessageRow } from "@/lib/types/marketplace";
+import { apiFetch } from "@/lib/api/fetch-auth";
 
 export type Conversation = {
   partnerId: string;
@@ -78,10 +79,16 @@ export async function sendChatMessage(opts: {
   attachmentUrl?: string;
   attachmentType?: "image" | "video";
 }) {
-  const res = await fetch("/api/chat/send", {
+  const res = await apiFetch("/api/chat/send", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(opts),
+    body: JSON.stringify({
+      receiverId: opts.receiverId,
+      content: opts.content,
+      orderId: opts.orderId,
+      senderName: opts.senderName,
+      attachmentUrl: opts.attachmentUrl,
+      attachmentType: opts.attachmentType,
+    }),
   });
   const data = (await res.json()) as { id?: string; error?: string };
   if (!res.ok) throw new Error(data.error ?? "Send failed");

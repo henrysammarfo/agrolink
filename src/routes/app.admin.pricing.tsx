@@ -6,6 +6,7 @@ import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { AdminGate } from "@/components/app/RoleGate";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
+import { apiFetch } from "@/lib/api/fetch-auth";
 
 export const Route = createFileRoute("/app/admin/pricing")({
   head: () => ({ meta: [{ title: "Surge pricing · AgroLink Admin" }] }),
@@ -33,7 +34,7 @@ function AdminPricing() {
   const [reason, setReason] = useState("Rainy season corridor demand");
 
   useEffect(() => {
-    fetch("/api/admin/pricing")
+    apiFetch("/api/admin/pricing")
       .then((r) => r.json())
       .then((d: { config: PricingConfig }) => {
         if (d.config) {
@@ -50,11 +51,9 @@ function AdminPricing() {
     if (!user?.id) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/pricing", {
+      const res = await apiFetch("/api/admin/pricing", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
           surge_multiplier: Number(mult),
           surge_active: active,
           surge_reason: reason,

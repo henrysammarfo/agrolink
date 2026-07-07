@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/command";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
+import { apiFetch } from "@/lib/api/fetch-auth";
 
 type SearchResult = {
   listings: { id: string; title: string; seller_name: string; seller_slug: string; price_per_unit: number; unit: string }[];
@@ -36,8 +37,7 @@ export function GlobalSearch({ role, open, onOpenChange }: Props) {
       setLoading(true);
       try {
         const params = new URLSearchParams({ q: query, role });
-        if (user?.id) params.set("userId", user.id);
-        const res = await fetch(`/api/search/global?${params}`);
+        const res = await apiFetch(`/api/search/global?${params}`);
         const data = (await res.json()) as SearchResult;
         setResults(data);
         trackEvent("search", { query, role, results: data.listings.length + data.farmers.length });

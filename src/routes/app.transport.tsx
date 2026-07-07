@@ -11,6 +11,7 @@ import { CorridorMap } from "@/components/map/CorridorMap";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useDriverEarnings } from "@/hooks/use-marketplace";
 import { trackEvent } from "@/lib/analytics";
+import { apiFetch } from "@/lib/api/fetch-auth";
 import {
   fetchAvailableDeliveries, fetchDriverDeliveries, acceptDelivery, advanceDeliveryStatus,
   completeDeliveryViaApi,
@@ -61,7 +62,7 @@ function TransportOverview() {
     if (!user?.id || !isIndex) return;
     loadJobs();
     const interval = setInterval(loadJobs, 15_000);
-    const reassign = setInterval(() => fetch("/api/deliveries/reassign-expired").catch(() => {}), 10_000);
+    const reassign = setInterval(() => apiFetch("/api/deliveries/reassign-expired").catch(() => {}), 10_000);
     return () => {
       clearInterval(interval);
       clearInterval(reassign);

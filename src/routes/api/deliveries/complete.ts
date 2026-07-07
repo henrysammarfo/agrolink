@@ -1,20 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { completeDelivery } from "@/server/delivery-complete";
+import { requireAuth } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/deliveries/complete")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
+          const auth = await requireAuth(request);
+          if (auth instanceof Response) return auth;
+
           const body = (await request.json()) as {
             deliveryId: string;
-            userId: string;
             podPhotoUrl?: string;
           };
-          if (!body.deliveryId || !body.userId) {
-            return Response.json({ error: "Missing fields" }, { status: 400 });
+          if (!body.deliveryId) {
+            return Response.json({ error: "Missing deliveryId" }, { status: 400 });
           }
-          const result = await completeDelivery(body.deliveryId, body.userId, body.podPhotoUrl);
+          const result = await completeDelivery(body.deliveryId, auth.userId, body.podPhotoUrl);
           return Response.json(result);
         } catch (error) {
           return Response.json(

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { OrderRow, DeliveryRow } from "@/lib/types/marketplace";
+import { apiFetch } from "@/lib/api/fetch-auth";
 
 export async function fetchBuyerOrders(buyerId: string): Promise<OrderRow[]> {
   const { data, error } = await supabase
@@ -130,13 +131,12 @@ export async function subscribeToDelivery(
 
 export async function completeDeliveryViaApi(
   deliveryId: string,
-  userId: string,
+  _userId: string,
   podPhotoUrl?: string,
 ) {
-  const res = await fetch("/api/deliveries/complete", {
+  const res = await apiFetch("/api/deliveries/complete", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ deliveryId, userId, podPhotoUrl }),
+    body: JSON.stringify({ deliveryId, podPhotoUrl }),
   });
   const data = (await res.json()) as { error?: string; message?: string };
   if (!res.ok) throw new Error(data.error ?? "Complete failed");

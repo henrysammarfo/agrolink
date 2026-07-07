@@ -1,18 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuth } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/settings/notifications")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const url = new URL(request.url);
-        const userId = url.searchParams.get("userId");
-        if (!userId) return Response.json({ error: "Missing userId" }, { status: 400 });
+        const auth = await requireAuth(request);
+        if (auth instanceof Response) return auth;
+
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { data } = await supabaseAdmin
             .from("profiles")
             .select("whatsapp_enabled, push_enabled, marketing_enabled")
-            .eq("id", userId)
+            .eq("id", auth.userId)
             .maybeSingle();
           return Response.json({
             whatsapp: data?.whatsapp_enabled ?? true,
@@ -24,13 +25,15 @@ export const Route = createFileRoute("/api/settings/notifications")({
         }
       },
       POST: async ({ request }) => {
+        const auth = await requireAuth(request);
+        if (auth instanceof Response) return auth;
+
         const body = (await request.json()) as {
-          userId: string;
           whatsapp?: boolean;
           push?: boolean;
           marketing?: boolean;
         };
-        if (!body.userId) return Response.json({ error: "Missing userId" }, { status: 400 });
+
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const updates: Record<string, boolean> = {};
@@ -40,7 +43,7 @@ export const Route = createFileRoute("/api/settings/notifications")({
           const { error } = await supabaseAdmin
             .from("profiles")
             .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq("id", body.userId);
+            .eq("id", auth.userId);
           if (error) return Response.json({ error: error.message }, { status: 500 });
           return Response.json({ ok: true });
         } catch {

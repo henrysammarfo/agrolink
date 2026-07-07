@@ -4,6 +4,7 @@ import {
   fetchPriceAdvice,
   ingestMarketPricesFromTinyFish,
 } from "@/server/ai";
+import { requireAdmin, requireAuth, userHasRole } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/moderate")({
   server: {
@@ -21,6 +22,16 @@ export const Route = createFileRoute("/api/moderate")({
             listingId?: string;
           };
 
+          if (body.action === "ingest_prices") {
+            const auth = await requireAdmin(request);
+            if (auth instanceof Response) return auth;
+            const count = await ingestMarketPricesFromTinyFish();
+            return Response.json({ ingested: count });
+          }
+
+          const auth = await requireAuth(request);
+          if (auth instanceof Response) return auth;
+
           if (body.action === "price_advice") {
             const result = await fetchPriceAdvice(
               body.cropType ?? "tomato",
@@ -30,9 +41,20 @@ export const Route = createFileRoute("/api/moderate")({
             return Response.json(result);
           }
 
-          if (body.action === "ingest_prices") {
-            const count = await ingestMarketPricesFromTinyFish();
-            return Response.json({ ingested: count });
+          if (body.listingId) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data: listing } = await supabaseAdmin
+              .from("listings")
+              .select("seller_id")
+              .eq("id", body.listingId)
+              .maybeSingle();
+            if (!listing) {
+              return Response.json({ error: "Listing not found" }, { status: 404 });
+            }
+            const isAdmin = await userHasRole(auth.userId, "admin");
+            if (listing.seller_id !== auth.userId && !isAdmin) {
+              return Response.json({ error: "Forbidden" }, { status: 403 });
+            }
           }
 
           const result = await moderateListingContent({

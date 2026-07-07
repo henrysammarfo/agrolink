@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { sendChatMessageServer } from "@/server/comms";
+import { requireAuth } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/chat/send")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
+          const auth = await requireAuth(request);
+          if (auth instanceof Response) return auth;
+
           const body = (await request.json()) as {
-            senderId: string;
             receiverId: string;
             content: string;
             orderId?: string;
@@ -16,18 +19,18 @@ export const Route = createFileRoute("/api/chat/send")({
             attachmentType?: "image" | "video";
           };
 
-          if (!body.senderId || !body.receiverId) {
-            return Response.json({ error: "Missing fields" }, { status: 400 });
+          if (!body.receiverId) {
+            return Response.json({ error: "Missing receiverId" }, { status: 400 });
           }
           if (!body.content?.trim() && !body.attachmentUrl) {
             return Response.json({ error: "Empty message" }, { status: 400 });
           }
-          if (body.senderId === body.receiverId) {
+          if (auth.userId === body.receiverId) {
             return Response.json({ error: "Cannot message yourself" }, { status: 400 });
           }
 
           const id = await sendChatMessageServer({
-            senderId: body.senderId,
+            senderId: auth.userId,
             receiverId: body.receiverId,
             content: body.content?.trim() ?? "",
             orderId: body.orderId,

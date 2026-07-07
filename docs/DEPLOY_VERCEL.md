@@ -46,6 +46,7 @@ In **Vercel → Project → Settings → Environment Variables**, add everything
 | `TINYFISH_API_KEY` | Market prices |
 | `GOOGLE_MAPS_API_KEY` | Optional maps |
 | `VITE_GOOGLE_MAPS_API_KEY` | Same key for client if used |
+| `CRON_SECRET` | Random secret for `/api/deliveries/reassign-expired` cron (Bearer token) |
 
 ### Deploy-specific
 

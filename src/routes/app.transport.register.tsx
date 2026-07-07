@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { TransportGate } from "@/components/app/RoleGate";
 import { useAuth } from "@/lib/auth";
+import { apiFetch } from "@/lib/api/fetch-auth";
 import { useDriverProfile } from "@/hooks/use-marketplace";
 import {
   upsertDriverRegistration,
@@ -60,13 +61,11 @@ function DriverRegister() {
     setSubmitting(true);
     try {
       if (form.ghana_card_id) {
-        const verifyRes = await fetch("/api/verify/ghana-card", {
+        const verifyRes = await apiFetch("/api/verify/ghana-card", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ghanaCardId: form.ghana_card_id,
             fullName: user.email?.split("@")[0],
-            userId: user.id,
           }),
         });
         const verify = (await verifyRes.json()) as { verified: boolean; message: string };

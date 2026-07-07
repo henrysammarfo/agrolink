@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api/fetch-auth";
 import type { FeedComment } from "@/lib/types/marketplace";
 
 export async function toggleLike(
@@ -27,12 +28,10 @@ export async function toggleLike(
             .eq("id", listingId);
       });
     if (meta?.sellerId) {
-      await fetch("/api/comms/notify", {
+      await apiFetch("/api/comms/notify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "like",
-          actorUserId: userId,
           actorName: meta.actorName,
           listingId,
           listingTitle: meta.listingTitle,
@@ -107,12 +106,10 @@ export async function addComment(
       .eq("id", listingId);
 
   if (meta?.sellerId) {
-    await fetch("/api/comms/notify", {
+    await apiFetch("/api/comms/notify", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "comment",
-        actorUserId: userId,
         actorName: meta.actorName,
         listingId,
         listingTitle: meta.listingTitle,
@@ -174,10 +171,9 @@ export async function toggleFollow(
       .from("follows")
       .insert({ follower_id: followerId, farmer_slug: farmerSlug });
     if (error && !error.message.includes("duplicate")) throw error;
-    await fetch("/api/comms/notify", {
+    await apiFetch("/api/comms/notify", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "follow", actorUserId: followerId, actorName, farmerSlug }),
+      body: JSON.stringify({ type: "follow", actorName, farmerSlug }),
     }).catch(() => {});
   } else {
     await supabase
