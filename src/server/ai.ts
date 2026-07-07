@@ -145,7 +145,7 @@ export async function ingestMarketPricesFromTinyFish(): Promise<number> {
       method: "POST",
       headers: { "X-API-Key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
-        url: "https://en.wikipedia.org/wiki/Agbogbloshie",
+        urls: ["https://en.wikipedia.org/wiki/Agbogbloshie"],
         format: "markdown",
       }),
     });
