@@ -7,7 +7,7 @@ npm run lint
 npm run build
 ```
 
-Both must exit 0. **Last verified:** 2026-07-05 — build + stress:comms on `cursor/agrolink-production-live-cc54`.
+Both must exit 0. **Last verified:** 2026-07-07 — build + stress:comms + test:e2e (22/22) on `main`.
 
 ## P0–P2 parity (2026-07-05)
 
@@ -75,14 +75,20 @@ Both must exit 0. **Last verified:** 2026-07-05 — build + stress:comms on `cur
 - [ ] Admin dashboard shows real GMV from payments table
 - [ ] Flagged listings visible in admin listings
 
-## Stress tests
+## Stress & E2E tests
 
 ```bash
-npm run build
-npm run stress:comms   # against preview on :3000
+npm run dev -- --host 127.0.0.1 --port 3000   # terminal 1
+npm run stress:comms   # 7 API checks
+npm run test:e2e       # 22 Playwright + integration checks
+npm run test:keys      # external API smoke tests
 ```
 
 - [x] Search API burst (10 concurrent) — `stress-comms.mjs`
+- [x] Full E2E with Supabase login — `e2e.mjs` (22/22)
+- [x] OpenAI moderation + price advice via `/api/moderate`
+- [x] TinyFish price ingest
+- [x] Live feed from Supabase Storage URLs
 - [ ] Feed with 100+ listings: scroll remains smooth
 - [ ] 10 concurrent webhook deliveries: no duplicate orders (idempotency)
 - [ ] 20 driver location updates/sec: Realtime channel stable

@@ -1,6 +1,6 @@
 # AgroLink Memory — Source of Truth
 
-Last updated: 2026-07-05
+Last updated: 2026-07-07
 
 ## Stack (actual, not build guide)
 
@@ -8,8 +8,10 @@ Last updated: 2026-07-05
 - **Backend:** Supabase (Postgres, Auth, Storage, Realtime)
 - **Server:** TanStack Start server functions + Nitro API routes (`/api/checkout`, `/api/delivery/quote`, `/api/webhooks/paystack`)
 - **Maps:** Leaflet + OpenStreetMap + OSRM (free routing)
-- **Payments:** Paystack primary (MoMo), Hubtel secondary
+- **Payments:** Paystack primary (MoMo)
+- **Comms:** Resend email + Meta WhatsApp Cloud API (free tier)
 - **AI:** OpenAI (moderation + pricing), TinyFish (market data)
+- **Deploy:** Vercel (Nitro `vercel` preset) — see `docs/DEPLOY_VERCEL.md`
 
 ## Phase status
 
@@ -118,6 +120,18 @@ Last updated: 2026-07-05
 Migration: `20260705120000_comms_media_search.sql`
 
 Stress tests: `npm run stress:comms`
+
+## Live Supabase + keys (2026-07-07)
+
+| Item | Status |
+|------|--------|
+| Supabase project | `mhyuzmhzockexqmnyuze` (eu-west-1) |
+| Migrations | 14 applied via `npm run db:migrate` |
+| Demo seed | 3 farmers + 3 listings + storage URLs |
+| `service_role` grants | Migration `20260706153000` |
+| API keys configured | OpenAI, Paystack, Resend, WhatsApp, PostHog, Sentry, Google Maps, TinyFish, VAPID |
+| E2E tests | `npm run test:e2e` — 22/22 passed |
+| Deploy target | Vercel — `docs/DEPLOY_VERCEL.md`, root `README.md` |
 
 ## Launch path: PWA (not APK)
 

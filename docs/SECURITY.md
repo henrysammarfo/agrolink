@@ -27,7 +27,7 @@
 ### Paystack
 
 Verify `x-paystack-signature` header using HMAC SHA512 with webhook secret.
-Implemented in `src/server/paystack-webhook.ts`.
+Implemented in `src/server/paystack.ts` (`verifyPaystackSignature`).
 
 ### Hubtel (when enabled)
 
