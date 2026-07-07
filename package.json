@@ -19,6 +19,7 @@
     "icons:generate": "node scripts/generate-brand-icons.mjs",
     "vapid:generate": "node scripts/generate-vapid-keys.mjs",
     "test:keys": "node scripts/test-api-keys.mjs",
+    "test:e2e": "node scripts/e2e.mjs",
     "screenshots": "node scripts/capture-screenshots.mjs"
   },
   "dependencies": {

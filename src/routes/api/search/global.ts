@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/search/global")({
           const listingsP = supabaseAdmin
             .from("feed_rank")
             .select("id, title, seller_name, price_per_unit, unit, image_url, seller_slug")
-            .or(`title.ilike.%${q}%,location_name.ilike.%${q}%,crop_type.ilike.%${q}%`)
+            .or(`title.ilike.%${q}%,location_name.ilike.%${q}%`)
             .limit(8);
 
           const farmersP = supabaseAdmin
@@ -35,6 +35,8 @@ export const Route = createFileRoute("/api/search/global")({
               : Promise.resolve({ data: [] });
 
           const [listings, farmers, ordersRes] = await Promise.all([listingsP, farmersP, ordersP]);
+          if (listings.error) throw listings.error;
+          if (farmers.error) throw farmers.error;
           const orders = (ordersRes.data ?? []).filter(
             (o: { id: string }) => o.id.toLowerCase().includes(q) || q.length >= 3,
           );
