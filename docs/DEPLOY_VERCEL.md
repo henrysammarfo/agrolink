@@ -59,18 +59,32 @@ In **Vercel → Project → Settings → Environment Variables**, add everything
 
 **Do not** add `SUPABASE_DB_PASSWORD` to Vercel unless you run migrations from CI — migrations are run locally via `npm run db:migrate`.
 
-### Vercel Cron
+### Scheduled jobs (delivery reassign)
 
-`vercel.json` schedules `GET /api/deliveries/reassign-expired` **once daily at 03:00 UTC** — compatible with **Hobby** (max one run per day).
+Vercel **Hobby** cron is limited to **once per day**, so frequent reassign runs on **GitHub Actions** instead.
 
-| Plan | Cron limit | This project |
-|------|------------|--------------|
-| **Hobby** | Once per day | `0 3 * * *` (daily backup sweep) |
-| **Pro+** | Once per minute | Change to `*/5 * * * *` for 5‑minute reassign |
+**GitHub → repo → Settings → Secrets and variables → Actions** — add:
 
-**Real-time reassign** when drivers are online: the transport app polls `/api/deliveries/reassign-expired` every 10s (JWT auth) — no cron needed for active sessions.
+| Secret | Value |
+|--------|-------|
+| `SITE_URL` | `https://YOUR-PROJECT.vercel.app` |
+| `CRON_SECRET` | Same as Vercel `CRON_SECRET` |
 
-Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is set in project env.
+Workflow: `.github/workflows/reassign-deliveries.yml` — runs every **5 minutes** and calls:
+
+`POST /api/deliveries/reassign-expired` with `Authorization: Bearer $CRON_SECRET`
+
+Manual run: **Actions → Reassign expired deliveries → Run workflow**.
+
+**Also active:** transport drivers poll the same endpoint every **10s** while the transport app is open (JWT).
+
+**Alternatives** if you prefer not to use GitHub Actions:
+
+| Service | Notes |
+|---------|--------|
+| [cron-job.org](https://cron-job.org) | Free HTTP cron, hit your URL + Bearer header |
+| Supabase `pg_cron` + `pg_net` | DB-native schedule (needs extension enabled) |
+| Vercel Pro | Change `vercel.json` cron to `*/5 * * * *` |
 
 ## 3. After first deploy — configure external services
 

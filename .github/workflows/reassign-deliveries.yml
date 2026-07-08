@@ -1,0 +1,34 @@
+# Reassign expired delivery jobs every 5 minutes.
+# Use this instead of Vercel Cron on Hobby (max once/day).
+#
+# Required repo secrets (Settings → Secrets → Actions):
+#   SITE_URL     — e.g. https://your-app.vercel.app
+#   CRON_SECRET  — same value as Vercel env CRON_SECRET
+
+name: Reassign expired deliveries
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  reassign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call reassign endpoint
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Add SITE_URL and CRON_SECRET to GitHub repo secrets (Settings → Secrets → Actions)"
+            exit 1
+          fi
+          base="${SITE_URL%/}"
+          echo "POST ${base}/api/deliveries/reassign-expired"
+          curl -sfS -X POST "${base}/api/deliveries/reassign-expired" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json"
+          echo "OK"
