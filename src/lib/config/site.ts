@@ -1,8 +1,8 @@
 import produceHero from "@/assets/produce-hero.jpg";
 
-/** Primary hero loop — CloudFront CDN */
+/** Primary hero loop — CloudFront (Atelier template asset) */
 export const HERO_VIDEO_URL =
-  "https://d3j41sg3clw3sa.cloudfront.net/agrolink/produce-corridor-hero.mp4";
+  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260622_204103_f607742e-09da-4cf5-bb06-4e67b0a531de.mp4";
 
 /** Fallback if CDN is unavailable */
 export const HERO_VIDEO_FALLBACK_URL =

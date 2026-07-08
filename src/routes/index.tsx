@@ -36,7 +36,7 @@ function Index() {
 
 function Hero() {
   return (
-    <section className="relative min-h-svh w-full overflow-hidden">
+    <section className="relative h-screen w-full overflow-hidden">
       <div
         className="absolute inset-0 h-full w-full bg-cover bg-center"
         style={{ backgroundImage: `url(${MARKETING_FALLBACK_IMAGE})` }}
@@ -56,19 +56,23 @@ function Hero() {
         <source src={HERO_VIDEO_URL} type="video/mp4" />
         <source src={HERO_VIDEO_FALLBACK_URL} type="video/mp4" />
       </video>
-      <div className="pointer-events-none absolute inset-0 z-[2] bg-black/30" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-3/5 bg-gradient-to-t from-background via-background/55 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-40 bg-gradient-to-b from-black/55 via-black/20 to-transparent md:h-48" />
+      {/* Light scrim — keep video visible; fade only at bottom for next section */}
+      <div className="pointer-events-none absolute inset-0 z-[2] bg-black/20" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-32 bg-gradient-to-b from-black/45 to-transparent md:h-36" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-28 bg-gradient-to-t from-background/95 via-background/40 to-transparent md:h-32" />
 
-      <div className="relative z-10 flex min-h-svh flex-col pt-[5.25rem] md:pt-[5.75rem] lg:pt-24">
-        <div className="flex flex-1 flex-col items-center justify-center px-6 pb-10 text-center md:px-10 md:pb-14">
+      <div className="relative z-10 flex h-full flex-col">
+        {/* Spacer for fixed SiteHeader */}
+        <div className="shrink-0 h-[4.75rem] md:h-[5.25rem]" aria-hidden />
+
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-start overflow-y-auto px-6 pt-4 text-center sm:pt-6 md:pt-8 lg:pt-10">
           <span className="cinema-fade inline-flex max-w-[min(100%,28rem)] items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-1.5 text-xs font-light text-white/90 backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
             <span className="truncate">Greater Accra · Agbogbloshie → Tema corridor</span>
           </span>
 
           <h1
-            className="cinema-fade mt-5 max-w-4xl font-serif text-4xl leading-[1.05] text-white text-balance drop-shadow-sm sm:mt-6 sm:text-5xl md:text-6xl lg:text-[4.25rem]"
+            className="cinema-fade mt-4 max-w-5xl font-serif text-3xl leading-[1.1] text-white text-balance sm:text-4xl md:mt-5 md:text-5xl lg:text-6xl xl:text-7xl"
             style={{ animationDelay: "0.1s" }}
           >
             FRESH PRODUCE <span className="italic font-serif">for</span> BOLD
@@ -79,7 +83,7 @@ function Hero() {
           </h1>
 
           <p
-            className="cinema-fade mt-5 max-w-lg text-sm font-light leading-relaxed text-white/85 md:mt-6 md:text-base"
+            className="cinema-fade mt-4 max-w-md text-sm font-light leading-relaxed text-white/70 md:mt-5 md:text-base"
             style={{ animationDelay: "0.25s" }}
           >
             A TikTok-style marketplace that links smallholder farmers to
@@ -90,7 +94,7 @@ function Hero() {
           </p>
 
           <div
-            className="cinema-fade mt-7 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:gap-4"
+            className="cinema-fade mt-5 flex flex-col items-center gap-4 md:mt-6 sm:flex-row"
             style={{ animationDelay: "0.4s" }}
           >
             <Link
@@ -102,7 +106,7 @@ function Hero() {
             </Link>
             <Link
               to="/how-it-works"
-              className="inline-flex items-center gap-2 rounded-full border border-white/45 px-7 py-3 text-sm font-medium text-white transition-colors hover:border-white/70 hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-white/40 px-7 py-3 text-sm font-medium text-white transition-colors hover:border-white/60 hover:bg-white/10"
             >
               <Play className="h-4 w-4" />
               How it works
@@ -110,7 +114,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="relative z-10 hidden items-end justify-between px-12 pb-8 text-xs font-light text-white/60 md:flex lg:px-16 lg:pb-10">
+        <div className="relative z-10 hidden shrink-0 items-center justify-between px-12 pb-8 text-xs font-light text-white/70 md:flex lg:px-16 lg:pb-10">
           <span>(01) — Scroll to explore</span>
           <span>Built in Accra · Powered by farmers</span>
         </div>
