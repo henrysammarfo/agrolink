@@ -160,7 +160,15 @@ function Create() {
           listingId: listing.id,
         }),
       });
-      const mod = (await modRes.json()) as { passed: boolean; reason?: string };
+      const modBody = (await modRes.json().catch(() => ({}))) as {
+        passed?: boolean;
+        reason?: string;
+        error?: string;
+      };
+      if (!modRes.ok) {
+        throw new Error(modBody.error ?? `Moderation failed (${modRes.status})`);
+      }
+      const mod = { passed: modBody.passed === true, reason: modBody.reason };
 
       if (!mod.passed) {
         toast.error("Listing rejected", {
@@ -173,9 +181,13 @@ function Create() {
       toast.success("Listing posted!", { description: `${title} is now live in the feed.` });
       navigate({ to: "/app/farmer/listings" });
     } catch (error) {
-      toast.error("Could not post", {
-        description: error instanceof Error ? error.message : "Try again.",
-      });
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error && "message" in error
+            ? String((error as { message: unknown }).message)
+            : "Try again.";
+      toast.error("Could not post", { description: message });
     } finally {
       setPosting(false);
     }

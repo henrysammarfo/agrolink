@@ -139,9 +139,34 @@ export async function uploadListingMedia(
   type: "image" | "video",
 ): Promise<string> {
   const bucket = type === "video" ? "listing-videos" : "listing-images";
-  const ext = file.name.split(".").pop() ?? (type === "video" ? "mp4" : "jpg");
+  const rawExt = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const ext =
+    type === "video"
+      ? rawExt || "mp4"
+      : ["jpg", "jpeg", "png", "webp", "heic", "heif"].includes(rawExt)
+        ? rawExt === "jpeg"
+          ? "jpg"
+          : rawExt
+        : "jpg";
   const path = `${userId}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+  const contentType =
+    type === "video"
+      ? file.type || "video/mp4"
+      : file.type && file.type !== "application/octet-stream"
+        ? file.type
+        : ext === "png"
+          ? "image/png"
+          : ext === "webp"
+            ? "image/webp"
+            : ext === "heic"
+              ? "image/heic"
+              : ext === "heif"
+                ? "image/heif"
+                : "image/jpeg";
+  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+    upsert: false,
+    contentType,
+  });
   if (error) throw error;
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
