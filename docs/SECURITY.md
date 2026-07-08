@@ -120,7 +120,7 @@ Per-route in-memory limits on `/api/*` (keyed by JWT prefix + IP + path):
 | Chat, moderate | 15 |
 | Default | 30 |
 
-For multi-instance production scale, move to Redis/Upstash. Vercel Cron runs `/api/deliveries/reassign-expired` every 5 minutes (`vercel.json`).
+For multi-instance production scale, move to Redis/Upstash. Vercel Cron runs `/api/deliveries/reassign-expired` once daily on Hobby (`0 3 * * *`); transport clients poll every 10s when drivers are active.
 
 ## Incident response
 

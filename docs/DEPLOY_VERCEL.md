@@ -61,7 +61,16 @@ In **Vercel → Project → Settings → Environment Variables**, add everything
 
 ### Vercel Cron
 
-`vercel.json` schedules `GET /api/deliveries/reassign-expired` every 5 minutes. Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is set in project env.
+`vercel.json` schedules `GET /api/deliveries/reassign-expired` **once daily at 03:00 UTC** — compatible with **Hobby** (max one run per day).
+
+| Plan | Cron limit | This project |
+|------|------------|--------------|
+| **Hobby** | Once per day | `0 3 * * *` (daily backup sweep) |
+| **Pro+** | Once per minute | Change to `*/5 * * * *` for 5‑minute reassign |
+
+**Real-time reassign** when drivers are online: the transport app polls `/api/deliveries/reassign-expired` every 10s (JWT auth) — no cron needed for active sessions.
+
+Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is set in project env.
 
 ## 3. After first deploy — configure external services
 
