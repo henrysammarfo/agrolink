@@ -36,11 +36,15 @@ export async function fetchProfileBySlug(slug: string): Promise<PublicProfile | 
 }
 
 export async function fetchProfileStats(userId: string, slug?: string) {
-  const farmerKey = slug ?? userId;
-  const [listings, followers, following] = await Promise.all([
+  const farmerKey = (slug ?? userId).trim().toLowerCase();
+  const [listings, followers, following, completedOrders] = await Promise.all([
     supabase.from("listings").select("id, like_count, view_count").eq("seller_id", userId).eq("status", "active"),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("farmer_slug", farmerKey),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
+    supabase
+      .from("order_items")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_id", userId),
   ]);
 
   const items = listings.data ?? [];
@@ -50,6 +54,7 @@ export async function fetchProfileStats(userId: string, slug?: string) {
     totalViews: items.reduce((s, l) => s + (l.view_count ?? 0), 0),
     followers: followers.count ?? 0,
     following: following.count ?? 0,
+    completedTrades: completedOrders.count ?? 0,
   };
 }
 

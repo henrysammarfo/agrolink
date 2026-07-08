@@ -15,6 +15,7 @@ import { LocationPicker, type MapLocation } from "@/components/map/LocationPicke
 import { useAuth } from "@/lib/auth";
 import { createListing, uploadListingMedia } from "@/lib/api/listings";
 import { apiFetch } from "@/lib/api/fetch-auth";
+import { unitsForCrop } from "@/lib/crop-units";
 import type { CropType } from "@/lib/types/marketplace";
 
 export const Route = createFileRoute("/app/create")({
@@ -42,6 +43,7 @@ function Create() {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [qty, setQty] = useState("");
+  const [unit, setUnit] = useState("kg");
   const [caption, setCaption] = useState("");
   const [tags, setTags] = useState("");
   const [location, setLocation] = useState<MapLocation>(GHANA_LOCATIONS[0]);
@@ -51,6 +53,15 @@ function Create() {
   const [priceAdvice, setPriceAdvice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+
+  const cropType = inferCrop(title) as CropType;
+  const unitOptions = unitsForCrop(cropType);
+
+  useEffect(() => {
+    if (!unitOptions.some((u) => u.value === unit)) {
+      setUnit(unitOptions[0]?.value ?? "kg");
+    }
+  }, [cropType, unit, unitOptions]);
 
   useEffect(() => {
     if (!price) return;
@@ -132,10 +143,10 @@ function Create() {
       const listing = await createListing(
         {
           title,
-          crop_type: inferCrop(title) as CropType,
+          crop_type: cropType,
           description: caption || undefined,
           price_per_unit: Number(price),
-          unit: "kg",
+          unit,
           quantity: Number(qty),
           hashtags: hashtagList,
           location_name: location.name,
@@ -295,7 +306,7 @@ function Create() {
             />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Price per kg (GHS)">
+            <Field label={`Price per ${unit} (GHS)`}>
               <input
                 type="number"
                 min="0"
@@ -307,7 +318,7 @@ function Create() {
                 className={inp}
               />
             </Field>
-            <Field label="How many kg?">
+            <Field label={`How many ${unit}?`}>
               <input
                 type="number"
                 min="1"
@@ -319,6 +330,23 @@ function Create() {
               />
             </Field>
           </div>
+          <Field label="How do you measure this?">
+            <select
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              className={inp}
+            >
+              {unitOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                  {opt.hint ? ` — ${opt.hint}` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Market women often sell by heap, bunch, or tuber — pick what buyers will understand.
+            </p>
+          </Field>
           <Field label="Caption (optional)">
             <textarea
               value={caption}

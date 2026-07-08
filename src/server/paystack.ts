@@ -87,6 +87,7 @@ export async function processCheckout(params: {
   deliveryAddress?: string;
   deliveryLat?: number;
   deliveryLng?: number;
+  fulfillmentMode?: "platform_delivery" | "farm_pickup" | "own_driver";
   otpVerified?: boolean;
 }): Promise<{ orderId: string; paymentReference: string; displayText?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -103,6 +104,23 @@ export async function processCheckout(params: {
     .select("*, listing:listings(*)")
     .eq("cart_id", cart.id);
   if (!items?.length) throw new Error("Cart is empty");
+
+  for (const it of items) {
+    const listing = it.listing as { id: string; quantity: number; status: string; title: string; unit: string };
+    if (listing.status !== "active") {
+      throw new Error(`${listing.title ?? "An item"} is no longer available.`);
+    }
+    if (Number(listing.quantity) < Number(it.quantity)) {
+      throw new Error(
+        Number(listing.quantity) <= 0
+          ? `${listing.title ?? "An item"} is sold out.`
+          : `Only ${listing.quantity} ${listing.unit} left for ${listing.title ?? "an item"}.`,
+      );
+    }
+  }
+
+  const fulfillmentMode = params.fulfillmentMode ?? "platform_delivery";
+  const needsDelivery = fulfillmentMode === "platform_delivery";
 
   const subtotal = items.reduce((s, it) => {
     const listing = it.listing as { price_per_unit: number };
@@ -121,8 +139,8 @@ export async function processCheckout(params: {
   });
   const firstListing = listings[0];
   const weightKg = items.reduce((s, it) => s + Number(it.quantity), 0);
-  const deliveryLat = params.deliveryLat ?? firstListing.lat + 0.05;
-  const deliveryLng = params.deliveryLng ?? firstListing.lng + 0.05;
+  const deliveryLat = needsDelivery ? (params.deliveryLat ?? firstListing.lat + 0.05) : firstListing.lat;
+  const deliveryLng = needsDelivery ? (params.deliveryLng ?? firstListing.lng + 0.05) : firstListing.lng;
 
   const pickupStops = [
     ...new Map(
@@ -133,21 +151,36 @@ export async function processCheckout(params: {
     ).values(),
   ];
 
-  const { computeDeliveryQuote } = await import("@/server/delivery-quote");
-  const quote = await computeDeliveryQuote({
-    pickupLat: firstListing.lat,
-    pickupLng: firstListing.lng,
-    deliveryLat,
-    deliveryLng,
-    weightKg,
-    vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
-    pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
-  });
+  let deliveryFee = 0;
+  let quote = {
+    total: 0,
+    distanceKm: 0,
+    breakdown: [] as string[],
+    baseFare: 0,
+    peakMultiplier: 1,
+    vehicleMultiplier: 1,
+    pricingConfig: { platform_fee_pct: 0.06 },
+    orderedStops: pickupStops,
+  };
 
-  const deliveryFee = quote.total;
+  if (needsDelivery) {
+    const { computeDeliveryQuote } = await import("@/server/delivery-quote");
+    quote = await computeDeliveryQuote({
+      pickupLat: firstListing.lat,
+      pickupLng: firstListing.lng,
+      deliveryLat,
+      deliveryLng,
+      weightKg,
+      vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
+      pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
+    });
+    deliveryFee = quote.total;
+  }
+
   const platformFee = Math.round(subtotal * quote.pricingConfig.platform_fee_pct * 100) / 100;
   const total = subtotal + deliveryFee + platformFee;
   const feeBreakdown = {
+    fulfillmentMode,
     distanceKm: quote.distanceKm,
     breakdown: quote.breakdown,
     baseFare: quote.baseFare,
@@ -184,9 +217,10 @@ export async function processCheckout(params: {
       platform_fee: platformFee,
       total_amount: total,
       delivery_fee_breakdown: feeBreakdown,
-      delivery_address: params.deliveryAddress ?? null,
+      delivery_address: needsDelivery ? (params.deliveryAddress ?? null) : `Pickup: ${firstListing.location_name}`,
       delivery_lat: deliveryLat,
       delivery_lng: deliveryLng,
+      notes: fulfillmentMode,
       escrow_status: escrowSplit ? "held" : "pending",
       escrow_amount: escrowSplit?.farmerShareGhs ?? null,
       otp_verified_at: params.otpVerified ? new Date().toISOString() : null,
@@ -208,25 +242,40 @@ export async function processCheckout(params: {
   });
   await supabaseAdmin.from("order_items").insert(orderItems);
 
-  const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
-  await supabaseAdmin.from("deliveries").insert({
-    order_id: order.id,
-    pickup_lat: firstListing.lat,
-    pickup_lng: firstListing.lng,
-    pickup_address:
-      pickupStops.length > 1
-        ? `${pickupStops.length} farms · ${firstListing.location_name}`
-        : firstListing.location_name,
-    delivery_lat: deliveryLat,
-    delivery_lng: deliveryLng,
-    delivery_address: params.deliveryAddress ?? "Buyer address",
-    estimated_distance_km: quote.distanceKm,
-    delivery_fee: deliveryFee,
-    fee_breakdown: feeBreakdown,
-    pickup_stops: quote.orderedStops ?? pickupStops,
-    accept_deadline: acceptDeadlineFromNow(),
-    status: "requested",
-  });
+  for (const it of items) {
+    const listing = it.listing as { id: string; quantity: number };
+    const remaining = Math.max(0, Number(listing.quantity) - Number(it.quantity));
+    await supabaseAdmin
+      .from("listings")
+      .update({
+        quantity: remaining,
+        status: remaining <= 0 ? "sold_out" : "active",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", listing.id);
+  }
+
+  if (needsDelivery) {
+    const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
+    await supabaseAdmin.from("deliveries").insert({
+      order_id: order.id,
+      pickup_lat: firstListing.lat,
+      pickup_lng: firstListing.lng,
+      pickup_address:
+        pickupStops.length > 1
+          ? `${pickupStops.length} farms · ${firstListing.location_name}`
+          : firstListing.location_name,
+      delivery_lat: deliveryLat,
+      delivery_lng: deliveryLng,
+      delivery_address: params.deliveryAddress ?? "Buyer address",
+      estimated_distance_km: quote.distanceKm,
+      delivery_fee: deliveryFee,
+      fee_breakdown: feeBreakdown,
+      pickup_stops: quote.orderedStops ?? pickupStops,
+      accept_deadline: acceptDeadlineFromNow(),
+      status: "requested",
+    });
+  }
 
   await supabaseAdmin.from("payments").insert({
     order_id: order.id,
@@ -304,12 +353,15 @@ export async function handlePaystackWebhook(
     .update({ status: "confirmed", payment_status: "paid", updated_at: new Date().toISOString() })
     .eq("id", payment.order_id);
 
-  const order = payment.order as { buyer_id: string };
+  const order = payment.order as { buyer_id: string; notes?: string | null };
   const { notifyUser } = await import("@/server/comms");
+  const isPickup = order.notes === "farm_pickup" || order.notes === "own_driver";
   await notifyUser(order.buyer_id, {
     type: "order_confirmed",
     title: "Payment confirmed",
-    body: "Your order is confirmed. A driver will be assigned shortly.",
+    body: isPickup
+      ? "Your order is confirmed. Pickup details are in your orders."
+      : "Your order is confirmed. A driver will be assigned shortly.",
     link: "/app/buyer/orders",
   });
 

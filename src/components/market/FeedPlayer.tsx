@@ -1,13 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { VerticalFeed, type VerticalFeedRef, type VideoItem } from "react-vertical-feed";
-import {
-  PlaybackControllerProvider,
-  RiyilsObserverProvider,
-  RiyilsViewer,
-} from "react-riyils";
-import "react-riyils/dist/index.css";
 import "@/styles/riyils-overrides.css";
 import {
   Heart,
@@ -120,109 +113,6 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
     );
   }
 
-  if (fullscreen) {
-    const riyilsVideos = filteredListings
-      .filter((l) => !!l.video_url)
-      .map((l) => ({
-        id: l.id,
-        videoUrl: l.video_url!,
-        thumbnailUrl: l.image_url ?? undefined,
-      }));
-
-    const activeListing = filteredListings[active];
-
-    return (
-      <div className={wrapperClass}>
-        {riyilsVideos.length > 0 ? (
-          <PlaybackControllerProvider>
-            <RiyilsObserverProvider logLevel="warn">
-              <RiyilsViewer
-                videos={riyilsVideos}
-                initialIndex={Math.min(initialIndex, riyilsVideos.length - 1)}
-                onClose={() => {}}
-                onVideoChange={(idx) => {
-                  const vid = riyilsVideos[idx];
-                  const listingIdx = filteredListings.findIndex((l) => l.id === vid?.id);
-                  if (listingIdx >= 0) setActive(listingIdx);
-                }}
-                progressBarColor="transparent"
-                controls={[]}
-              />
-            </RiyilsObserverProvider>
-          </PlaybackControllerProvider>
-        ) : activeListing ? (
-          <img
-            src={activeListing.image_url ?? "/media/demo/tomato.svg"}
-            alt={activeListing.title}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : null}
-
-        {typeof document !== "undefined" &&
-          activeListing &&
-          createPortal(
-            <div className="agrolink-feed-overlay fixed inset-0">
-              <CategoryChips active={category} onChange={setCategory} />
-              <FeedCardOverlay
-                item={activeListing}
-                isActive
-                muted={muted}
-                onToggleMute={() => setMuted((m) => !m)}
-                onOpenGrid={() => setShowGrid(true)}
-                progress={`${active + 1} / ${filteredListings.length}`}
-                showImageOnly={!activeListing.video_url}
-              />
-            </div>,
-            document.body,
-          )}
-
-        {showGrid && (
-          <div className="fixed inset-0 z-[10060] bg-background/95 backdrop-blur-xl">
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <h3 className="font-sans text-xl font-semibold">Browse all</h3>
-              <button
-                onClick={() => setShowGrid(false)}
-                className="grid h-10 w-10 place-items-center rounded-full hover:bg-secondary"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div
-              className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4"
-              style={{ maxHeight: "calc(100% - 60px)" }}
-            >
-              {filteredListings.map((l, i) => (
-                <button
-                  key={l.id}
-                  onClick={() => {
-                    setShowGrid(false);
-                    setActive(i);
-                  }}
-                  className="relative aspect-[9/16] overflow-hidden rounded-2xl"
-                >
-                  <img
-                    src={l.image_url ?? "/placeholder-produce.jpg"}
-                    alt={l.title}
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="scrim-bottom-dark" />
-                  <div className="absolute inset-x-0 bottom-0 p-2 text-left">
-                    <div className="font-sans text-sm font-medium text-white">{l.title}</div>
-                    <div className="text-[10px] text-white/70">
-                      GHS {l.price_per_unit}/{l.unit}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className={wrapperClass}>
       <VerticalFeed
@@ -277,7 +167,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
             className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4"
             style={{ maxHeight: "calc(100% - 60px)" }}
           >
-            {rankedListings.map((l, i) => (
+            {filteredListings.map((l, i) => (
               <button
                 key={l.id}
                 onClick={() => {
@@ -336,7 +226,7 @@ function FeedCardOverlay({
   const [panel, setPanel] = useState<"comments" | "share" | null>(null);
   const [showLikeBurst, setShowLikeBurst] = useState(false);
   const lastTap = useRef(0);
-  const sellerSlug = item.seller_slug;
+  const sellerSlug = item.seller_slug?.trim().toLowerCase() || null;
   const sellerHandle = (sellerSlug ?? item.seller_name ?? "seller").replace(/-/g, "");
   const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
   const isDemoListing = isSeedListingId(item.id);
@@ -455,6 +345,10 @@ function FeedCardOverlay({
   };
 
   const handleAddToCart = async () => {
+    if (soldOut) {
+      toast.error("This produce is sold out");
+      return;
+    }
     if (!user?.id) {
       toast.error("Sign in to add to cart");
       return;
@@ -496,6 +390,18 @@ function FeedCardOverlay({
     }
   };
 
+  const openSellerProfile = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!sellerSlug) {
+      toast.error("Seller profile unavailable");
+      return;
+    }
+    void navigate({ to: "/farmers/$slug", params: { slug: sellerSlug } });
+  };
+
+  const soldOut = Number(item.quantity) <= 0 || item.status === "sold_out";
+
   return (
     <div className="feed-pass-through absolute inset-0">
       <div
@@ -536,13 +442,13 @@ function FeedCardOverlay({
         </button>
       </div>
 
-      <div className="feed-touch-target absolute bottom-[calc(8.5rem+env(safe-area-inset-bottom))] right-2 z-20 flex flex-col items-center gap-4 sm:right-3 sm:gap-5 md:bottom-[calc(9rem+env(safe-area-inset-bottom))]">
+      <div className="feed-touch-target absolute bottom-[calc(10.5rem+env(safe-area-inset-bottom))] right-[4.25rem] z-20 flex flex-col items-center gap-4 sm:right-[4.75rem] sm:gap-5 md:bottom-[calc(11rem+env(safe-area-inset-bottom))]">
         {sellerSlug ? (
-          <Link
-            to="/farmers/$slug"
-            params={{ slug: sellerSlug }}
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={openSellerProfile}
             className="feed-touch-target relative"
+            aria-label={`View ${item.seller_name ?? "seller"} profile`}
           >
             <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white sm:h-12 sm:w-12">
               {item.seller_avatar ? (
@@ -551,7 +457,7 @@ function FeedCardOverlay({
                 (item.seller_name?.[0] ?? "?")
               )}
             </span>
-          </Link>
+          </button>
         ) : (
           <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white sm:h-12 sm:w-12">
             {item.seller_name?.[0] ?? "?"}
@@ -581,15 +487,14 @@ function FeedCardOverlay({
 
       <div className="feed-touch-target absolute inset-x-0 bottom-0 z-20 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pr-[4.25rem] text-white sm:px-5 sm:pr-24 md:p-6 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
         {sellerSlug ? (
-          <Link
-            to="/farmers/$slug"
-            params={{ slug: sellerSlug }}
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={openSellerProfile}
             className="feed-touch-target inline-flex items-center gap-1.5 text-sm font-medium text-white hover:underline"
           >
             @{sellerHandle}{" "}
             {item.seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
-          </Link>
+          </button>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white">
             @{sellerHandle}{" "}
@@ -600,8 +505,7 @@ function FeedCardOverlay({
           {item.title}
         </h2>
         <p className="mt-1 line-clamp-2 max-w-[85%] text-xs text-white/85 sm:max-w-[80%] sm:text-sm">
-          {item.location_name} · {item.quantity}
-          {item.unit} available · {hoursAgo}h ago
+          {item.location_name} · {soldOut ? "Sold out" : `${item.quantity}${item.unit} available`} · {hoursAgo}h ago
           {item.distance_km != null && ` · ${item.distance_km.toFixed(1)} km`}
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row sm:items-center sm:gap-3">
@@ -611,10 +515,10 @@ function FeedCardOverlay({
           </div>
           <button
             onClick={handleAddToCart}
-            disabled={addToCartMut.isPending}
+            disabled={addToCartMut.isPending || soldOut}
             className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60 sm:flex-1"
           >
-            <ShoppingBasket className="h-4 w-4" /> Add to cart
+            <ShoppingBasket className="h-4 w-4" /> {soldOut ? "Sold out" : "Add to cart"}
           </button>
         </div>
         {isDemoListing && (

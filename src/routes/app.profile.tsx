@@ -32,9 +32,7 @@ function Profile() {
     <AppShell role={role}>
       <PageHeader eyebrow="Profile" title="Your" italic="profile" />
 
-      <div className="relative h-32 sm:h-44 overflow-hidden rounded-3xl bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
-
-      <div className="-mt-12 px-4 sm:px-8 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
+      <div className="px-4 sm:px-8 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
         <div className="relative">
           <span className="grid h-24 w-24 sm:h-28 sm:w-28 place-items-center rounded-full bg-card font-serif text-4xl text-primary ring-4 ring-background shadow">
             {name[0].toUpperCase()}
@@ -72,7 +70,7 @@ function Profile() {
       <div className="mt-8 flex items-center justify-center sm:justify-start gap-10 px-4 sm:px-8 text-center">
         <Stat n={String(stats?.following ?? 0)} label="Following" />
         <Stat n={String(stats?.followers ?? 0)} label="Followers" />
-        <Stat n={String(stats?.totalLikes ?? 0)} label="Likes" />
+        <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />
       </div>
 
       <p className="mt-5 px-4 sm:px-8 text-foreground/80 max-w-xl">

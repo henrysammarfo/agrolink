@@ -12,6 +12,7 @@ import { getCurrentPosition } from "@/lib/native-geolocation";
 import { trackEvent } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
+import { FULFILLMENT_OPTIONS } from "@/lib/fulfillment";
 import { reverseGeocode } from "@/lib/api/maps";
 
 /** Default buyer drop-off — East Legon corridor */
@@ -45,6 +46,7 @@ function Cart() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
   const [deliveryLocation, setDeliveryLocation] = useState<MapLocation>(DEFAULT_DELIVERY);
+  const [fulfillmentMode, setFulfillmentMode] = useState<FulfillmentMode>("platform_delivery");
   const [orderId, setOrderId] = useState<string | null>(null);
 
   const [deliveryQuote, setDeliveryQuote] = useState<{
@@ -60,7 +62,8 @@ function Cart() {
     (s, i) => s + Number(i.listing?.price_per_unit ?? 0) * Number(i.quantity),
     0,
   );
-  const delivery = deliveryQuote?.total ?? 0;
+  const needsDelivery = fulfillmentMode === "platform_delivery";
+  const delivery = needsDelivery ? (deliveryQuote?.total ?? 0) : 0;
   const platformFee = Math.round(subtotal * 0.06 * 100) / 100;
   const total = subtotal + delivery + platformFee;
   const needsOtp = total >= HIGH_VALUE_OTP_THRESHOLD_GHS;
@@ -86,8 +89,8 @@ function Cart() {
   }, []);
 
   useEffect(() => {
-    if (!items.length) {
-      setDeliveryQuote(null);
+    if (!items.length || !needsDelivery) {
+      if (!needsDelivery) setDeliveryQuote(null);
       return;
     }
     const first = items[0].listing;
@@ -110,7 +113,7 @@ function Cart() {
       .then((q) => setDeliveryQuote(q))
       .catch(() => setDeliveryQuote(null))
       .finally(() => setQuoteLoading(false));
-  }, [items, pickupStops, deliveryLocation]);
+  }, [items, pickupStops, deliveryLocation, needsDelivery]);
 
   async function sendOtp() {
     if (!user?.id) return;
@@ -164,6 +167,10 @@ function Cart() {
       toast.error(`Verify your phone for orders over GHS ${HIGH_VALUE_OTP_THRESHOLD_GHS}`);
       return;
     }
+    if (needsDelivery && !deliveryQuote) {
+      toast.error("Set a delivery address to get a driver quote");
+      return;
+    }
     setPaying(true);
     try {
       const res = await apiFetch("/api/checkout", {
@@ -172,9 +179,10 @@ function Cart() {
           email: user.email,
           phone: profile?.phone ?? "+233551234987",
           momoProvider: channel,
-          deliveryAddress: deliveryLocation.name,
-          deliveryLat: deliveryLocation.lat,
-          deliveryLng: deliveryLocation.lng,
+          deliveryAddress: needsDelivery ? deliveryLocation.name : undefined,
+          deliveryLat: needsDelivery ? deliveryLocation.lat : undefined,
+          deliveryLng: needsDelivery ? deliveryLocation.lng : undefined,
+          fulfillmentMode,
           otpVerified: needsOtp ? otpVerified : undefined,
         }),
       });
@@ -298,16 +306,57 @@ function Cart() {
         <aside className="rounded-3xl border border-border bg-card p-6">
           <h2 className="font-serif text-2xl">Summary</h2>
 
-          <div className="mt-5">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Deliver to</p>
-            <div className="mt-2">
-              <LocationPicker
-                value={deliveryLocation}
-                onChange={setDeliveryLocation}
-                placeholder="Delivery address in Ghana"
-              />
-            </div>
+          <div className="mt-5 space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Fulfillment</p>
+            {FULFILLMENT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setFulfillmentMode(opt.value)}
+                className={`w-full rounded-2xl border p-4 text-left transition ${
+                  fulfillmentMode === opt.value
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/30"
+                }`}
+              >
+                <div className="text-sm font-medium">{opt.label}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{opt.description}</div>
+              </button>
+            ))}
           </div>
+
+          {pickupStops.length > 0 && (
+            <div className="mt-5 rounded-2xl border border-border bg-background p-4 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">Pickup from farm(s)</p>
+              <ul className="mt-2 space-y-1">
+                {pickupStops.map((stop) => (
+                  <li key={`${stop.lat},${stop.lng}`}>• {stop.label ?? "Farm location"}</li>
+                ))}
+              </ul>
+              {pickupStops.length > 1 && needsDelivery && (
+                <p className="mt-2 text-primary">One driver can collect from all farms on a batch route.</p>
+              )}
+            </div>
+          )}
+
+          {needsDelivery ? (
+            <div className="mt-5">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Deliver to</p>
+              <div className="mt-2">
+                <LocationPicker
+                  value={deliveryLocation}
+                  onChange={setDeliveryLocation}
+                  placeholder="Delivery address in Ghana"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-dashed border-border p-4 text-xs text-muted-foreground">
+              {fulfillmentMode === "farm_pickup"
+                ? "You'll collect at the farmer's location after payment. No AgroLink driver fee."
+                : "Your driver collects at the farm. Share pickup details with them after payment."}
+            </div>
+          )}
 
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex justify-between">
@@ -316,11 +365,17 @@ function Cart() {
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground inline-flex items-center gap-1">
-                Delivery {quoteLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                Delivery {needsDelivery && quoteLoading && <Loader2 className="h-3 w-3 animate-spin" />}
               </dt>
-              <dd>{deliveryQuote ? `GHS ${delivery.toFixed(2)}` : "—"}</dd>
+              <dd>
+                {!needsDelivery
+                  ? "GHS 0.00"
+                  : deliveryQuote
+                    ? `GHS ${delivery.toFixed(2)}`
+                    : "—"}
+              </dd>
             </div>
-            {deliveryQuote?.breakdown && (
+            {needsDelivery && deliveryQuote?.breakdown && (
               <div className="rounded-xl border border-border bg-background p-3 text-[11px] text-muted-foreground space-y-1">
                 <div className="inline-flex items-center gap-1 font-medium text-foreground"><Info className="h-3 w-3" /> Pricing factors</div>
                 {deliveryQuote.breakdown.map((line) => (

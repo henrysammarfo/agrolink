@@ -118,30 +118,35 @@ export async function toggleFollow(
   following: boolean,
   actorName?: string,
 ) {
+  const slug = farmerSlug.trim().toLowerCase();
+  if (!slug) throw new Error("Invalid farmer profile");
+
   if (following) {
     const { error } = await supabase
       .from("follows")
-      .insert({ follower_id: followerId, farmer_slug: farmerSlug });
+      .insert({ follower_id: followerId, farmer_slug: slug });
     if (error && !error.message.includes("duplicate")) throw error;
     await apiFetch("/api/comms/notify", {
       method: "POST",
-      body: JSON.stringify({ type: "follow", actorName, farmerSlug }),
+      body: JSON.stringify({ type: "follow", actorName, farmerSlug: slug }),
     }).catch(() => {});
   } else {
-    await supabase
+    const { error } = await supabase
       .from("follows")
       .delete()
       .eq("follower_id", followerId)
-      .eq("farmer_slug", farmerSlug);
+      .eq("farmer_slug", slug);
+    if (error) throw error;
   }
 }
 
 export async function fetchIsFollowing(followerId: string, farmerSlug: string): Promise<boolean> {
+  const slug = farmerSlug.trim().toLowerCase();
   const { data } = await supabase
     .from("follows")
     .select("id")
     .eq("follower_id", followerId)
-    .eq("farmer_slug", farmerSlug)
+    .eq("farmer_slug", slug)
     .maybeSingle();
   return !!data;
 }

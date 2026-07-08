@@ -17,6 +17,7 @@ export const Route = createFileRoute("/api/checkout")({
             deliveryAddress?: string;
             deliveryLat?: number;
             deliveryLng?: number;
+            fulfillmentMode?: "platform_delivery" | "farm_pickup" | "own_driver";
             otpVerified?: boolean;
           };
 
@@ -38,6 +39,7 @@ export const Route = createFileRoute("/api/checkout")({
             deliveryAddress: body.deliveryAddress,
             deliveryLat: body.deliveryLat,
             deliveryLng: body.deliveryLng,
+            fulfillmentMode: body.fulfillmentMode ?? "platform_delivery",
             otpVerified: body.otpVerified,
           });
 

@@ -23,7 +23,7 @@ function FarmerProfile() {
   const navigate = useNavigate();
   const { user, profile: authProfile } = useAuth();
   const qc = useQueryClient();
-  const farmerSlug = slug;
+  const farmerSlug = slug.trim().toLowerCase();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["farmer-profile", slug],
@@ -86,8 +86,8 @@ function FarmerProfile() {
       await qc.invalidateQueries({ queryKey: ["following", user.id, farmerSlug] });
       await qc.invalidateQueries({ queryKey: ["farmer-stats", farmerProfile?.id, farmerSlug] });
       toast.success(isFollowing ? "Unfollowed" : "Following");
-    } catch {
-      toast.error("Could not update follow");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update follow");
     }
   };
 
@@ -131,14 +131,7 @@ function FarmerProfile() {
           )}
         </div>
 
-        <div className="relative mt-5 h-40 sm:h-56 overflow-hidden rounded-3xl bg-muted">
-          {farmerProfile.avatar_url ? (
-            <img src={farmerProfile.avatar_url} alt="" className="h-full w-full object-cover scale-110 blur-md opacity-70" />
-          ) : null}
-          <div className="scrim-page-bottom" />
-        </div>
-
-        <div className="-mt-16 px-4 sm:px-8 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
+        <div className="mt-5 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6 px-4 sm:px-8">
           <div className="relative">
             {farmerProfile.avatar_url ? (
               <img src={farmerProfile.avatar_url} alt={farmerProfile.display_name ?? ""} className="h-28 w-28 sm:h-32 sm:w-32 rounded-full object-cover ring-4 ring-background shadow-lg" />
@@ -190,7 +183,7 @@ function FarmerProfile() {
         <div className="mt-8 px-4 sm:px-8 flex items-center justify-center sm:justify-start gap-10 text-center">
           <Stat n={String(stats?.followers ?? 0)} label="Followers" />
           <Stat n={String(stats?.listingCount ?? listings.length)} label="Listings" />
-          <Stat n={String(stats?.totalLikes ?? 0)} label="Likes" />
+          <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />
           <Stat n={farmerProfile.seller_rating != null ? `${farmerProfile.seller_rating.toFixed(1)}★` : "—"} label="Rating" />
         </div>
 

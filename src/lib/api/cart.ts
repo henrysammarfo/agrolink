@@ -82,6 +82,27 @@ export async function fetchCartItems(userId: string): Promise<CartItemRow[]> {
   });
 }
 
+async function assertListingStock(listingId: string, requestedQty: number) {
+  const { data: listing, error } = await supabase
+    .from("listings")
+    .select("quantity, status, title, unit")
+    .eq("id", listingId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!listing || listing.status !== "active") {
+    throw new Error("This listing is no longer available.");
+  }
+  if (Number(listing.quantity) < requestedQty) {
+    const left = Number(listing.quantity);
+    throw new Error(
+      left <= 0
+        ? `${listing.title ?? "This item"} is sold out.`
+        : `Only ${left} ${listing.unit} left for ${listing.title ?? "this item"}.`,
+    );
+  }
+  return listing;
+}
+
 export async function addToCart(userId: string, listingId: string, quantity = 1) {
   if (!isValidUserId(userId)) {
     throw new Error("Sign in with a real account to add items to your cart.");
@@ -94,10 +115,13 @@ export async function addToCart(userId: string, listingId: string, quantity = 1)
     .eq("listing_id", listingId)
     .maybeSingle();
 
+  const nextQty = (existing?.quantity ?? 0) + quantity;
+  await assertListingStock(listingId, nextQty);
+
   if (existing) {
     const { error } = await supabase
       .from("cart_items")
-      .update({ quantity: existing.quantity + quantity })
+      .update({ quantity: nextQty })
       .eq("id", existing.id);
     if (error) throw error;
   } else {
@@ -114,6 +138,15 @@ export async function updateCartItemQuantity(userId: string, itemId: string, qua
     await supabase.from("cart_items").delete().eq("id", itemId).eq("cart_id", cartId);
     return;
   }
+  const { data: item } = await supabase
+    .from("cart_items")
+    .select("listing_id")
+    .eq("id", itemId)
+    .eq("cart_id", cartId)
+    .maybeSingle();
+  if (!item?.listing_id) throw new Error("Cart item not found");
+  await assertListingStock(item.listing_id, quantity);
+
   const { error } = await supabase
     .from("cart_items")
     .update({ quantity })
