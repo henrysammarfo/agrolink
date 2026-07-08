@@ -44,6 +44,7 @@ import { Route as AppBuyerCartRouteImport } from './routes/app.buyer.cart'
 import { Route as AppAdminPricingRouteImport } from './routes/app.admin.pricing'
 import { Route as AppAdminPaymentsRouteImport } from './routes/app.admin.payments'
 import { Route as AppAdminListingsRouteImport } from './routes/app.admin.listings'
+import { Route as AppAdminDriversRouteImport } from './routes/app.admin.drivers'
 import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
 import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks/paystack'
 import { Route as ApiVerifyGhanaCardRouteImport } from './routes/api/verify/ghana-card'
@@ -62,6 +63,7 @@ import { Route as ApiCommsNotifyRouteImport } from './routes/api/comms/notify'
 import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
 import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
+import { Route as ApiAdminDriversRouteImport } from './routes/api/admin/drivers'
 import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.$userId'
 import { Route as AppBuyerOrdersOrderIdTrackRouteImport } from './routes/app.buyer.orders.$orderId.track'
 
@@ -240,6 +242,11 @@ const AppAdminListingsRoute = AppAdminListingsRouteImport.update({
   path: '/listings',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminDriversRoute = AppAdminDriversRouteImport.update({
+  id: '/drivers',
+  path: '/drivers',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminDisputesRoute = AppAdminDisputesRouteImport.update({
   id: '/disputes',
   path: '/disputes',
@@ -332,6 +339,11 @@ const ApiAdminPricingRoute = ApiAdminPricingRouteImport.update({
   path: '/api/admin/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDriversRoute = ApiAdminDriversRouteImport.update({
+  id: '/api/admin/drivers',
+  path: '/api/admin/drivers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppInboxChatUserIdRoute = AppInboxChatUserIdRouteImport.update({
   id: '/chat/$userId',
   path: '/chat/$userId',
@@ -368,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/admin/drivers': typeof ApiAdminDriversRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
@@ -386,6 +399,7 @@ export interface FileRoutesByFullPath {
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
+  '/app/admin/drivers': typeof AppAdminDriversRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/admin/pricing': typeof AppAdminPricingRoute
@@ -424,6 +438,7 @@ export interface FileRoutesByTo {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app': typeof AppIndexRoute
+  '/api/admin/drivers': typeof ApiAdminDriversRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
@@ -442,6 +457,7 @@ export interface FileRoutesByTo {
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
+  '/app/admin/drivers': typeof AppAdminDriversRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/admin/pricing': typeof AppAdminPricingRoute
@@ -482,6 +498,7 @@ export interface FileRoutesById {
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
+  '/api/admin/drivers': typeof ApiAdminDriversRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
@@ -500,6 +517,7 @@ export interface FileRoutesById {
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
+  '/app/admin/drivers': typeof AppAdminDriversRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/admin/pricing': typeof AppAdminPricingRoute
@@ -541,6 +559,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/admin/drivers'
     | '/api/admin/pricing'
     | '/api/chat/request'
     | '/api/chat/send'
@@ -559,6 +578,7 @@ export interface FileRouteTypes {
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
+    | '/app/admin/drivers'
     | '/app/admin/listings'
     | '/app/admin/payments'
     | '/app/admin/pricing'
@@ -597,6 +617,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app'
+    | '/api/admin/drivers'
     | '/api/admin/pricing'
     | '/api/chat/request'
     | '/api/chat/send'
@@ -615,6 +636,7 @@ export interface FileRouteTypes {
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
+    | '/app/admin/drivers'
     | '/app/admin/listings'
     | '/app/admin/payments'
     | '/app/admin/pricing'
@@ -654,6 +676,7 @@ export interface FileRouteTypes {
     | '/app/transport'
     | '/farmers/$slug'
     | '/app/'
+    | '/api/admin/drivers'
     | '/api/admin/pricing'
     | '/api/chat/request'
     | '/api/chat/send'
@@ -672,6 +695,7 @@ export interface FileRouteTypes {
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
+    | '/app/admin/drivers'
     | '/app/admin/listings'
     | '/app/admin/payments'
     | '/app/admin/pricing'
@@ -702,6 +726,7 @@ export interface RootRouteChildren {
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiMapsRoute: typeof ApiMapsRoute
   ApiModerateRoute: typeof ApiModerateRoute
+  ApiAdminDriversRoute: typeof ApiAdminDriversRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiChatRequestRoute: typeof ApiChatRequestRoute
   ApiChatSendRoute: typeof ApiChatSendRoute
@@ -968,6 +993,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminListingsRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/app/admin/drivers': {
+      id: '/app/admin/drivers'
+      path: '/drivers'
+      fullPath: '/app/admin/drivers'
+      preLoaderRoute: typeof AppAdminDriversRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/app/admin/disputes': {
       id: '/app/admin/disputes'
       path: '/disputes'
@@ -1094,6 +1126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminPricingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/drivers': {
+      id: '/api/admin/drivers'
+      path: '/api/admin/drivers'
+      fullPath: '/api/admin/drivers'
+      preLoaderRoute: typeof ApiAdminDriversRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/inbox/chat/$userId': {
       id: '/app/inbox/chat/$userId'
       path: '/chat/$userId'
@@ -1113,6 +1152,7 @@ declare module '@tanstack/react-router' {
 
 interface AppAdminRouteChildren {
   AppAdminDisputesRoute: typeof AppAdminDisputesRoute
+  AppAdminDriversRoute: typeof AppAdminDriversRoute
   AppAdminListingsRoute: typeof AppAdminListingsRoute
   AppAdminPaymentsRoute: typeof AppAdminPaymentsRoute
   AppAdminPricingRoute: typeof AppAdminPricingRoute
@@ -1120,6 +1160,7 @@ interface AppAdminRouteChildren {
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminDisputesRoute: AppAdminDisputesRoute,
+  AppAdminDriversRoute: AppAdminDriversRoute,
   AppAdminListingsRoute: AppAdminListingsRoute,
   AppAdminPaymentsRoute: AppAdminPaymentsRoute,
   AppAdminPricingRoute: AppAdminPricingRoute,
@@ -1262,6 +1303,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiMapsRoute: ApiMapsRoute,
   ApiModerateRoute: ApiModerateRoute,
+  ApiAdminDriversRoute: ApiAdminDriversRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiChatRequestRoute: ApiChatRequestRoute,
   ApiChatSendRoute: ApiChatSendRoute,

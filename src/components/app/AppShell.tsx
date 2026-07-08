@@ -37,6 +37,7 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
     { to: "/app/admin/payments", label: "Payments", icon: CreditCard },
     { to: "/app/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { to: "/app/admin/listings", label: "Listings", icon: ListChecks },
+    { to: "/app/admin/drivers", label: "Drivers", icon: Truck },
     { to: "/app/admin/pricing", label: "Surge", icon: Zap },
   ],
 };

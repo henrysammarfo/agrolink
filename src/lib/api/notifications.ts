@@ -84,11 +84,15 @@ export async function updateProfile(userId: string, updates: Record<string, unkn
 }
 
 export async function fetchAdminStats() {
-  const [orders, payments, listings, disputes] = await Promise.all([
+  const [orders, payments, listings, disputes, pendingDrivers] = await Promise.all([
     supabase.from("orders").select("total_amount, status"),
     supabase.from("payments").select("amount, status").eq("status", "paid"),
     supabase.from("listings").select("id, status"),
     supabase.from("listings").select("id").eq("status", "pending_review"),
+    supabase
+      .from("driver_profiles")
+      .select("id")
+      .in("verification_status", ["pending", "submitted", "under_review"]),
   ]);
 
   const gmv = (payments.data ?? []).reduce((s, p) => s + Number(p.amount), 0);
@@ -96,7 +100,13 @@ export async function fetchAdminStats() {
   const activeListings = (listings.data ?? []).filter((l) => l.status === "active").length;
   const pendingReview = disputes.data?.length ?? 0;
 
-  return { gmv, orderCount, activeListings, pendingReview };
+  return {
+    gmv,
+    orderCount,
+    activeListings,
+    pendingReview,
+    pendingDrivers: pendingDrivers.data?.length ?? 0,
+  };
 }
 
 export async function submitContactForm(name: string, email: string, message: string) {
