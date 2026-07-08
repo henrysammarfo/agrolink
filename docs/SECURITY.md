@@ -120,7 +120,7 @@ Per-route in-memory limits on `/api/*` (keyed by JWT prefix + IP + path):
 | Chat, moderate | 15 |
 | Default | 30 |
 
-For multi-instance production scale, move to Redis/Upstash. Delivery reassign runs via **GitHub Actions** every 5 min (`.github/workflows/reassign-deliveries.yml`); transport clients also poll every 10s when drivers are active.
+For multi-instance production scale, move to Redis/Upstash. Delivery reassign: **Supabase pg_cron** every 5 min (see `npm run cron:configure`) or external cron (cron-job.org); transport clients poll every 10s when drivers are active.
 
 ## Incident response
 

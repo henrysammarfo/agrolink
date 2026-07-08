@@ -61,30 +61,30 @@ In **Vercel → Project → Settings → Environment Variables**, add everything
 
 ### Scheduled jobs (delivery reassign)
 
-Vercel **Hobby** cron is limited to **once per day**, so frequent reassign runs on **GitHub Actions** instead.
+GitHub Actions billing may block workflows — **do not rely on GitHub cron**.
 
-**GitHub → repo → Settings → Secrets and variables → Actions** — add:
+Use **Supabase pg_cron** (runs inside your database, every 5 min):
 
-| Secret | Value |
-|--------|-------|
-| `SITE_URL` | `https://YOUR-PROJECT.vercel.app` |
-| `CRON_SECRET` | Same as Vercel `CRON_SECRET` |
+```bash
+# 1. Apply migration (once)
+npm run db:migrate
 
-Workflow: `.github/workflows/reassign-deliveries.yml` — runs every **5 minutes** and calls:
+# 2. After Vercel deploy — set your live URL + secret
+SITE_URL=https://YOUR-PROJECT.vercel.app CRON_SECRET=your-secret npm run cron:configure
+```
 
-`POST /api/deliveries/reassign-expired` with `Authorization: Bearer $CRON_SECRET`
+This stores config in `internal_cron_config` and pg_cron POSTs to  
+`/api/deliveries/reassign-expired` with `Authorization: Bearer $CRON_SECRET`.
 
-Manual run: **Actions → Reassign expired deliveries → Run workflow**.
+**Free fallback (no Supabase cron):** [cron-job.org](https://cron-job.org)
 
-**Also active:** transport drivers poll the same endpoint every **10s** while the transport app is open (JWT).
+1. Create free account → **Create cronjob**
+2. URL: `https://YOUR-PROJECT.vercel.app/api/deliveries/reassign-expired`
+3. Method: **POST**
+4. Header: `Authorization: Bearer YOUR_CRON_SECRET`
+5. Schedule: every **5 minutes**
 
-**Alternatives** if you prefer not to use GitHub Actions:
-
-| Service | Notes |
-|---------|--------|
-| [cron-job.org](https://cron-job.org) | Free HTTP cron, hit your URL + Bearer header |
-| Supabase `pg_cron` + `pg_net` | DB-native schedule (needs extension enabled) |
-| Vercel Pro | Change `vercel.json` cron to `*/5 * * * *` |
+**Always on:** transport drivers poll the same endpoint every **10s** while the app is open.
 
 ## 3. After first deploy — configure external services
 

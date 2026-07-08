@@ -16,6 +16,7 @@
     "upload:media": "node scripts/upload-listing-media.mjs",
     "stress:comms": "node scripts/stress-comms.mjs",
     "db:migrate": "node scripts/apply-migrations.mjs",
+    "cron:configure": "node scripts/configure-cron.mjs",
     "icons:generate": "node scripts/generate-brand-icons.mjs",
     "vapid:generate": "node scripts/generate-vapid-keys.mjs",
     "test:keys": "node scripts/test-api-keys.mjs",
