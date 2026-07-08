@@ -69,7 +69,7 @@ flowchart TB
 
 ### Auth flow
 
-1. User signs in via Supabase Auth (`/auth`) — email/password or Google (Lovable OAuth)
+1. User signs in via Supabase Auth (`/auth`) — email/password or Google OAuth (native Supabase)
 2. JWT stored in browser; `AuthProvider` loads profile + roles from `profiles` / `user_roles`
 3. `/app/*` routes gated — unauthenticated users redirect to `/auth`
 4. **API routes** verify Supabase JWT via `requireAuth()` — identity comes from token, never request body

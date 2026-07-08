@@ -106,11 +106,17 @@ Replace `YOUR-DOMAIN` with your Vercel URL (e.g. `agrolink.vercel.app`).
 - **Test Webhook URL:** `https://YOUR-DOMAIN/api/webhooks/paystack`
 - Copy webhook secret → `PAYSTACK_WEBHOOK_SECRET` in Vercel → redeploy
 
-### Google OAuth (if using Lovable/Google sign-in)
+### Google OAuth (Supabase — required for “Continue with Google”)
 
-Add authorized redirect URI in Google Cloud Console:
+1. [Supabase Dashboard → Authentication → Providers → Google](https://supabase.com/dashboard/project/mhyuzmhzockexqmnyuze/auth/providers) — enable Google and paste Client ID + Secret from [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+2. In Google Cloud, add **Authorized redirect URI**:
+   - `https://mhyuzmhzockexqmnyuze.supabase.co/auth/v1/callback`
+3. In Supabase **URL Configuration**, add redirect URLs:
+   - `https://YOUR-DOMAIN/**`
+   - `https://YOUR-DOMAIN/auth`
+4. Set `VITE_SITE_URL` and `SITE_URL` to your live domain on Vercel.
 
-- `https://YOUR-DOMAIN`
+Email sign-up: if **Confirm email** is enabled in Supabase, users must click the link before first sign-in.
 
 ### Resend (production email)
 

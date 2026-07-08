@@ -4,8 +4,9 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/Logo";
 import produceHero from "@/assets/produce-hero.jpg";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+import { authRedirectUrl, postAuthRedirectUrl } from "@/lib/auth-redirect";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -24,6 +25,7 @@ function Auth() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user, hasRole } = useAuth();
   const demoMode = import.meta.env.VITE_DEMO_MODE === "true";
@@ -40,28 +42,104 @@ function Auth() {
     navigate({ to: dest });
   }, [user, hasRole, navigate]);
 
+  /** Complete Supabase Google OAuth when redirected back with ?code= */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("error_description") ?? params.get("error");
+    if (oauthError) {
+      setErr(decodeURIComponent(oauthError.replace(/\+/g, " ")));
+      window.history.replaceState({}, "", "/auth");
+      return;
+    }
+
+    const code = params.get("code");
+    if (!code) return;
+
+    let cancelled = false;
+    (async () => {
+      setBusy(true);
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (cancelled) return;
+      setBusy(false);
+      if (error) {
+        setErr(error.message);
+      } else {
+        window.history.replaceState({}, "", "/auth");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function friendlyAuthError(message: string): string {
+    const m = message.toLowerCase();
+    if (m.includes("invalid login credentials")) {
+      return "Wrong email or password. If you just signed up, confirm your email first.";
+    }
+    if (m.includes("email not confirmed")) {
+      return "Please confirm your email — check your inbox (and spam) for the AgroLink link.";
+    }
+    if (m.includes("rate limit")) {
+      return "Too many attempts. Wait a minute and try again.";
+    }
+    if (m.includes("invalid") && m.includes("email")) {
+      return "That email address was rejected. Try another address (e.g. Gmail).";
+    }
+    if (m.includes("password") && m.includes("least")) {
+      return "Password must be at least 8 characters.";
+    }
+    return message;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    setPendingEmail(null);
+
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail.includes("@")) {
+      setErr("Enter a valid email address.");
+      return;
+    }
+    if (password.length < 8) {
+      setErr("Password must be at least 8 characters.");
+      return;
+    }
+
     setBusy(true);
     try {
       if (mode === "signup") {
-        const redirect = `${window.location.origin}/app`;
-        const { error } = await supabase.auth.signUp({
-          email,
+        const { data, error } = await supabase.auth.signUp({
+          email: trimmedEmail,
           password,
           options: {
-            emailRedirectTo: redirect,
-            data: { display_name: name },
+            emailRedirectTo: postAuthRedirectUrl(),
+            data: { display_name: name.trim() || trimmedEmail.split("@")[0] },
           },
         });
         if (error) throw error;
+
+        if (!data.session) {
+          setPendingEmail(trimmedEmail);
+          toast.success("Check your email to confirm your account.");
+          setMode("signin");
+          return;
+        }
+        toast.success("Account created — welcome to AgroLink!");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password,
+        });
         if (error) throw error;
       }
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : "Something went wrong");
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      setErr(friendlyAuthError(msg));
     } finally {
       setBusy(false);
     }
@@ -69,10 +147,24 @@ function Auth() {
 
   async function google() {
     setErr(null);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) setErr(result.error.message);
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: authRedirectUrl("/auth"),
+          queryParams: { prompt: "select_account" },
+        },
+      });
+      if (error) throw error;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Google sign-in failed";
+      setErr(
+        friendlyAuthError(msg) +
+          " Ensure Google provider is enabled in Supabase and this site URL is in redirect allowlist.",
+      );
+      setBusy(false);
+    }
   }
 
   return (
@@ -109,10 +201,19 @@ function Auth() {
           <button
             type="button"
             onClick={google}
-            className="mt-8 inline-flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary transition"
+            disabled={busy}
+            className="mt-8 inline-flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary transition disabled:opacity-60"
           >
-            <GoogleIcon /> Continue with Google
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
+            Continue with Google
           </button>
+
+          {pendingEmail && (
+            <p className="mt-4 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+              We sent a confirmation link to <strong>{pendingEmail}</strong>. Open it, then sign in
+              below.
+            </p>
+          )}
 
           {demoMode && (
             <>
