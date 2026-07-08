@@ -36,7 +36,7 @@ function Index() {
 
 function Hero() {
   return (
-    <section className="relative h-screen w-full overflow-hidden">
+    <section className="relative min-h-svh w-full overflow-hidden">
       <div
         className="absolute inset-0 h-full w-full bg-cover bg-center"
         style={{ backgroundImage: `url(${MARKETING_FALLBACK_IMAGE})` }}
@@ -56,17 +56,21 @@ function Hero() {
         <source src={HERO_VIDEO_URL} type="video/mp4" />
         <source src={HERO_VIDEO_FALLBACK_URL} type="video/mp4" />
       </video>
-      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/40 to-transparent" />
-      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-background/40 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 z-[2] bg-black/30" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-3/5 bg-gradient-to-t from-background via-background/55 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-40 bg-gradient-to-b from-black/55 via-black/20 to-transparent md:h-48" />
 
-      <div className="relative z-10 flex h-full flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-          <span className="cinema-fade inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-foreground/5 px-4 py-1.5 text-xs font-light text-foreground/80 backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            Greater Accra · Agbogbloshie → Tema corridor
+      <div className="relative z-10 flex min-h-svh flex-col pt-[5.25rem] md:pt-[5.75rem] lg:pt-24">
+        <div className="flex flex-1 flex-col items-center justify-center px-6 pb-10 text-center md:px-10 md:pb-14">
+          <span className="cinema-fade inline-flex max-w-[min(100%,28rem)] items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-1.5 text-xs font-light text-white/90 backdrop-blur-sm">
+            <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <span className="truncate">Greater Accra · Agbogbloshie → Tema corridor</span>
           </span>
 
-          <h1 className="cinema-fade mt-6 max-w-5xl font-serif text-foreground text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[1.02] text-balance" style={{ animationDelay: "0.1s" }}>
+          <h1
+            className="cinema-fade mt-5 max-w-4xl font-serif text-4xl leading-[1.05] text-white text-balance drop-shadow-sm sm:mt-6 sm:text-5xl md:text-6xl lg:text-[4.25rem]"
+            style={{ animationDelay: "0.1s" }}
+          >
             FRESH PRODUCE <span className="italic font-serif">for</span> BOLD
             <br />
             KITCHENS, <span className="italic font-serif">from</span> FARM
@@ -74,23 +78,31 @@ function Hero() {
             <span className="italic font-serif">to</span> TABLE
           </h1>
 
-          <p className="cinema-fade mt-6 max-w-md text-sm md:text-base font-light text-foreground/75 leading-relaxed" style={{ animationDelay: "0.25s" }}>
+          <p
+            className="cinema-fade mt-5 max-w-lg text-sm font-light leading-relaxed text-white/85 md:mt-6 md:text-base"
+            style={{ animationDelay: "0.25s" }}
+          >
             A TikTok-style marketplace that links smallholder farmers to
-            <span className="hidden sm:inline"><br /></span>{" "}
+            <span className="hidden sm:inline">
+              <br />
+            </span>{" "}
             Accra's chefs, shops and households — with delivery built in.
           </p>
 
-          <div className="cinema-fade mt-8 flex flex-col sm:flex-row items-center gap-4" style={{ animationDelay: "0.4s" }}>
+          <div
+            className="cinema-fade mt-7 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:gap-4"
+            style={{ animationDelay: "0.4s" }}
+          >
             <Link
               to="/market"
-              className="group inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-3 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+              className="group inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-medium text-black transition-colors hover:bg-white/90"
             >
               Browse the market
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
             </Link>
             <Link
               to="/how-it-works"
-              className="inline-flex items-center gap-2 rounded-full border border-foreground/40 px-7 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/10 hover:border-foreground/60"
+              className="inline-flex items-center gap-2 rounded-full border border-white/45 px-7 py-3 text-sm font-medium text-white transition-colors hover:border-white/70 hover:bg-white/10"
             >
               <Play className="h-4 w-4" />
               How it works
@@ -98,7 +110,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="relative z-10 hidden md:flex items-end justify-between px-12 lg:px-16 pb-10 text-xs font-light text-foreground/60">
+        <div className="relative z-10 hidden items-end justify-between px-12 pb-8 text-xs font-light text-white/60 md:flex lg:px-16 lg:pb-10">
           <span>(01) — Scroll to explore</span>
           <span>Built in Accra · Powered by farmers</span>
         </div>

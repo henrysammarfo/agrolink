@@ -28,21 +28,32 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
     };
   }, [open]);
 
-  const bg = overlay && !scrolled ? "bg-transparent" : "bg-background/70 backdrop-blur-xl border-b border-border";
+  const heroNav = overlay && !scrolled;
+  const bg = heroNav
+    ? "bg-gradient-to-b from-black/50 via-black/20 to-transparent"
+    : "bg-background/70 backdrop-blur-xl border-b border-border";
+
+  const navLink = heroNav
+    ? "text-white/80 hover:text-white"
+    : "text-foreground/75 hover:text-foreground";
+  const signIn = heroNav
+    ? "bg-white text-black hover:bg-white/90"
+    : "bg-foreground text-background hover:bg-foreground/90";
+  const menuBar = heroNav ? "bg-white" : "bg-foreground";
 
   return (
     <>
       <header className={`fixed inset-x-0 top-0 z-40 transition-colors duration-500 ${bg}`}>
         <div className="flex items-center justify-between px-6 md:px-12 lg:px-16 py-5 md:py-6">
           <div className="flex items-center gap-10">
-            <BrandLogo size="md" />
+            <BrandLogo size="md" className={heroNav ? "[&_span]:text-white" : ""} />
             <nav className="hidden md:flex items-center gap-7">
               {NAV.map((n) => (
                 <Link
                   key={n.to}
                   to={n.to}
-                  className="text-foreground/75 hover:text-foreground text-sm font-light transition-colors duration-200"
-                  activeProps={{ className: "text-foreground" }}
+                  className={`${navLink} text-sm font-light transition-colors duration-200`}
+                  activeProps={{ className: heroNav ? "text-white" : "text-foreground" }}
                 >
                   {n.label}
                 </Link>
@@ -53,13 +64,13 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
           <div className="flex items-center gap-4">
             <Link
               to="/contact"
-              className="hidden md:inline text-foreground/75 hover:text-foreground text-sm font-light transition-colors"
+              className={`hidden md:inline ${navLink} text-sm font-light transition-colors`}
             >
               Reach Out
             </Link>
             <Link
               to="/auth"
-              className="hidden md:inline-flex items-center rounded-full bg-foreground text-background px-5 py-2 text-sm font-medium hover:bg-foreground/90 transition-colors"
+              className={`hidden md:inline-flex items-center rounded-full px-5 py-2 text-sm font-medium transition-colors ${signIn}`}
             >
               Sign in
             </Link>
@@ -70,8 +81,8 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
               onClick={() => setOpen(true)}
               className="md:hidden relative h-10 w-10 flex flex-col items-center justify-center gap-1.5"
             >
-              <span className="block h-0.5 w-6 rounded-full bg-foreground transition-transform duration-500 [transition-timing-function:cubic-bezier(0.76,0,0.24,1)]" />
-              <span className="block h-0.5 w-4 rounded-full bg-foreground transition-opacity duration-500" />
+              <span className={`block h-0.5 w-6 rounded-full transition-transform duration-500 [transition-timing-function:cubic-bezier(0.76,0,0.24,1)] ${menuBar}`} />
+              <span className={`block h-0.5 w-4 rounded-full transition-opacity duration-500 ${menuBar}`} />
             </button>
           </div>
         </div>
