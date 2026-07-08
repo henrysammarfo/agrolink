@@ -88,16 +88,21 @@ export async function fetchDriverDeliveries(driverProfileId: string): Promise<De
 }
 
 export async function acceptDelivery(deliveryId: string, driverProfileId: string) {
-  const { error } = await supabase
-    .from("deliveries")
-    .update({
-      driver_id: driverProfileId,
-      status: "driver_assigned",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", deliveryId)
-    .eq("status", "requested");
-  if (error) throw error;
+  const res = await apiFetch("/api/deliveries/accept", {
+    method: "POST",
+    body: JSON.stringify({ deliveryId, driverProfileId }),
+  });
+  const data = (await res.json()) as { ok?: boolean; error?: string };
+  if (!res.ok) throw new Error(data.error ?? "Could not accept job");
+}
+
+export async function declineDelivery(deliveryId: string, driverProfileId: string) {
+  const res = await apiFetch("/api/deliveries/decline", {
+    method: "POST",
+    body: JSON.stringify({ deliveryId, driverProfileId }),
+  });
+  const data = (await res.json()) as { ok?: boolean; error?: string };
+  if (!res.ok) throw new Error(data.error ?? "Could not decline job");
 }
 
 export async function advanceDeliveryStatus(

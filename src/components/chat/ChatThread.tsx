@@ -18,9 +18,11 @@ type Props = {
   partnerName: string;
   senderName: string;
   orderId?: string;
+  deliveryId?: string;
+  tripMode?: boolean;
 };
 
-export function ChatThread({ userId, partnerId, partnerName, senderName, orderId }: Props) {
+export function ChatThread({ userId, partnerId, partnerName, senderName, orderId, deliveryId, tripMode }: Props) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -74,15 +76,23 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
     setMessages((m) => [...m, optimistic]);
     setText("");
     try {
-      await sendChatMessage({
+      const result = await sendChatMessage({
         senderId: userId,
         receiverId: partnerId,
         content,
         orderId,
+        deliveryId,
         senderName,
         attachmentUrl: opts.attachmentUrl,
         attachmentType: opts.attachmentType,
       });
+      if (result === "pending") {
+        setMessages((m) => m.filter((x) => x.id !== optimistic.id));
+        toast.success("Message request sent", {
+          description: "They'll see it after they accept.",
+        });
+        return;
+      }
       trackEvent("chat_message_sent", {
         has_attachment: !!opts.attachmentUrl,
         attachment_type: opts.attachmentType ?? null,

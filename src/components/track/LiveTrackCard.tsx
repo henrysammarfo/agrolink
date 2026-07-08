@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Phone, MessageCircle, Clock, Navigation } from "lucide-react";
+import { Phone, MessageCircle, Clock, Navigation, ChevronUp, ChevronDown } from "lucide-react";
 import { CorridorMap } from "@/components/map/CorridorMap";
+import { ChatThread } from "@/components/chat/ChatThread";
 import { fetchOsrmRoute } from "@/lib/api/driver";
 import { subscribeToDelivery, subscribeToDriverLocation } from "@/lib/api/orders";
+import { useAuth } from "@/lib/auth";
 import type { OrderRow } from "@/lib/types/marketplace";
 import { toast } from "sonner";
 
@@ -13,10 +15,12 @@ type Props = { order: OrderRow; fullscreen?: boolean };
 
 export function LiveTrackCard({ order, fullscreen }: Props) {
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const delivery = order.delivery;
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [etaMin, setEtaMin] = useState<number | null>(null);
+  const [tripChatOpen, setTripChatOpen] = useState(false);
 
   useEffect(() => {
     if (!delivery) return;
@@ -128,6 +132,31 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
               <MessageCircle className="h-4 w-4" />
             </button>
           </div>
+          {delivery.driver?.user_id && user?.id && (
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <button
+                type="button"
+                onClick={() => setTripChatOpen((o) => !o)}
+                className="flex w-full items-center justify-between text-xs text-white/80"
+              >
+                <span>In-trip chat with your driver</span>
+                {tripChatOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </button>
+              {tripChatOpen && (
+                <div className="mt-3 max-h-[40vh] overflow-hidden rounded-2xl bg-background text-foreground">
+                  <ChatThread
+                    userId={user.id}
+                    partnerId={delivery.driver.user_id}
+                    partnerName={delivery.driver.profile?.display_name ?? "Driver"}
+                    senderName={profile?.display_name ?? "You"}
+                    orderId={order.id}
+                    deliveryId={delivery.id}
+                    tripMode
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="p-5 md:p-6">

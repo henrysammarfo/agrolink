@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { BadgeCheck, Grid3x3, Bookmark, Heart, Settings, Share2, MapPin, LogOut, Play, Loader2 } from "lucide-react";
+import { BadgeCheck, Grid3x3, Bookmark, Heart, Settings, Share2, MapPin, LogOut, Play, Loader2, Eye } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
 import {
@@ -34,9 +34,13 @@ function Profile() {
 
       <div className="px-4 sm:px-8 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
         <div className="relative">
-          <span className="grid h-24 w-24 sm:h-28 sm:w-28 place-items-center rounded-full bg-card font-serif text-4xl text-primary ring-4 ring-background shadow">
-            {name[0].toUpperCase()}
-          </span>
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-background shadow" />
+          ) : (
+            <span className="grid h-24 w-24 sm:h-28 sm:w-28 place-items-center rounded-full bg-card font-serif text-4xl text-primary ring-4 ring-background shadow">
+              {name[0].toUpperCase()}
+            </span>
+          )}
           <span className="absolute bottom-1 right-1 grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
             <BadgeCheck className="h-4 w-4" />
           </span>
@@ -60,6 +64,9 @@ function Profile() {
           )}
           <Link to="/app/settings" className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">
             <Settings className="h-4 w-4" /> Edit profile
+          </Link>
+          <Link to="/app/profile/views" className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium hover:bg-secondary">
+            <Eye className="h-4 w-4" /> Views
           </Link>
           <button className="grid h-10 w-10 place-items-center rounded-full border border-border" aria-label="Share">
             <Share2 className="h-4 w-4" />

@@ -111,6 +111,21 @@ export async function fetchUserLikedListings(userId: string): Promise<FeedListin
   return (data ?? []) as FeedListing[];
 }
 
+export async function fetchPublicBookmarks(userId: string) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("public_bookmarks")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!profile?.public_bookmarks) return [];
+
+  const { data: marks } = await supabase.from("bookmarks").select("listing_id").eq("user_id", userId);
+  const ids = (marks ?? []).map((m) => m.listing_id);
+  if (!ids.length) return [];
+  const { data } = await supabase.from("feed_rank").select("*").in("id", ids);
+  return (data ?? []) as FeedListing[];
+}
+
 export async function fetchMarketingStats() {
   const [listings, orders, profiles] = await Promise.all([
     supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active"),

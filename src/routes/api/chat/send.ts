@@ -14,6 +14,7 @@ export const Route = createFileRoute("/api/chat/send")({
             receiverId: string;
             content: string;
             orderId?: string;
+            deliveryId?: string;
             senderName?: string;
             attachmentUrl?: string;
             attachmentType?: "image" | "video";
@@ -34,10 +35,15 @@ export const Route = createFileRoute("/api/chat/send")({
             receiverId: body.receiverId,
             content: body.content?.trim() ?? "",
             orderId: body.orderId,
+            deliveryId: body.deliveryId,
             senderName: body.senderName,
             attachmentUrl: body.attachmentUrl,
             attachmentType: body.attachmentType,
           });
+
+          if (id === "request_pending") {
+            return Response.json({ ok: true, pending: true });
+          }
 
           return Response.json({ ok: true, id });
         } catch (error) {

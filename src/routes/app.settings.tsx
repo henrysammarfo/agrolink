@@ -5,9 +5,11 @@ import { Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { useAuth, type AppRole } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { registerForPushNotifications } from "@/lib/push-client";
 import { fetchNotificationPrefs, saveNotificationPrefs } from "@/lib/api/settings";
 import { updateProfile } from "@/lib/api/notifications";
+import { AvatarCropUpload } from "@/components/profile/AvatarCropUpload";
 import { trackEvent } from "@/lib/analytics";
 
 export const Route = createFileRoute("/app/settings")({
@@ -24,6 +26,9 @@ function Settings() {
   const [phone, setPhone] = useState("");
   const [region, setRegion] = useState("");
   const [bio, setBio] = useState("");
+  const [publicBookmarks, setPublicBookmarks] = useState(false);
+  const [profileViewNotifs, setProfileViewNotifs] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const { theme, setTheme } = useTheme();
   const { roles, addRole, profile, user, refresh } = useAuth();
@@ -34,7 +39,23 @@ function Settings() {
     setPhone(profile?.phone ?? "");
     setRegion(profile?.region ?? "Greater Accra");
     setBio(profile?.bio ?? "");
-  }, [profile?.display_name, profile?.phone, profile?.region, profile?.bio]);
+    setAvatarUrl(profile?.avatar_url ?? null);
+  }, [profile?.display_name, profile?.phone, profile?.region, profile?.bio, profile?.avatar_url]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from("profiles")
+      .select("public_bookmarks, profile_view_notifications")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setPublicBookmarks(!!data.public_bookmarks);
+          setProfileViewNotifs(data.profile_view_notifications !== false);
+        }
+      });
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -90,6 +111,8 @@ function Settings() {
         phone: phone.trim() || null,
         region: region.trim() || null,
         bio: bio.trim() || null,
+        public_bookmarks: publicBookmarks,
+        profile_view_notifications: profileViewNotifs,
       });
       await refresh();
       trackEvent("profile_updated");
@@ -116,6 +139,16 @@ function Settings() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Profile">
+          {user?.id && (
+            <AvatarCropUpload
+              userId={user.id}
+              currentUrl={avatarUrl}
+              onUploaded={(url) => {
+                setAvatarUrl(url);
+                void refresh();
+              }}
+            />
+          )}
           <FieldRow label="Full name" value={displayName} onChange={setDisplayName} />
           <FieldRow label="Phone" value={phone} onChange={setPhone} placeholder="+233" />
           <FieldRow label="Email" value={user?.email ?? ""} onChange={() => {}} disabled hint="Email is managed by your sign-in provider." />
@@ -139,6 +172,20 @@ function Settings() {
             {savingProfile && <Loader2 className="h-4 w-4 animate-spin" />}
             Save profile
           </button>
+          <div className="space-y-3 pt-2 border-t border-border">
+            <Toggle
+              label="Public bookmarks"
+              desc="Let others see produce you've saved on your public profile."
+              value={publicBookmarks}
+              onChange={setPublicBookmarks}
+            />
+            <Toggle
+              label="Profile view alerts"
+              desc="Get notified when someone views your farmer profile."
+              value={profileViewNotifs}
+              onChange={setProfileViewNotifs}
+            />
+          </div>
         </Card>
 
         <Card title="Workspaces">

@@ -257,6 +257,9 @@ export async function processCheckout(params: {
 
   if (needsDelivery) {
     const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
+    const { radiusForOfferRound } = await import("@/lib/vehicle-types");
+    const vehicleType =
+      weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : weightKg > 15 ? "motorcycle" : "bicycle";
     await supabaseAdmin.from("deliveries").insert({
       order_id: order.id,
       pickup_lat: firstListing.lat,
@@ -273,6 +276,10 @@ export async function processCheckout(params: {
       fee_breakdown: feeBreakdown,
       pickup_stops: quote.orderedStops ?? pickupStops,
       accept_deadline: acceptDeadlineFromNow(),
+      required_vehicle_type: vehicleType,
+      search_radius_km: radiusForOfferRound(1),
+      offer_round: 1,
+      declined_driver_ids: [],
       status: "requested",
     });
   }

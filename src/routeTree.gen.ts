@@ -34,6 +34,7 @@ import { Route as ApiMapsRouteImport } from './routes/api/maps'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as AppTransportRegisterRouteImport } from './routes/app.transport.register'
 import { Route as AppTransportJobsRouteImport } from './routes/app.transport.jobs'
+import { Route as AppProfileViewsRouteImport } from './routes/app.profile.views'
 import { Route as AppFarmerPayoutsRouteImport } from './routes/app.farmer.payouts'
 import { Route as AppFarmerOrdersRouteImport } from './routes/app.farmer.orders'
 import { Route as AppFarmerListingsRouteImport } from './routes/app.farmer.listings'
@@ -49,13 +50,17 @@ import { Route as ApiVerifyGhanaCardRouteImport } from './routes/api/verify/ghan
 import { Route as ApiSettingsNotificationsRouteImport } from './routes/api/settings/notifications'
 import { Route as ApiSearchGlobalRouteImport } from './routes/api/search/global'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
+import { Route as ApiProfileViewRouteImport } from './routes/api/profile/view'
 import { Route as ApiOtpVerifyRouteImport } from './routes/api/otp/verify'
 import { Route as ApiOtpSendRouteImport } from './routes/api/otp/send'
 import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
 import { Route as ApiDeliveriesReassignExpiredRouteImport } from './routes/api/deliveries/reassign-expired'
+import { Route as ApiDeliveriesDeclineRouteImport } from './routes/api/deliveries/decline'
 import { Route as ApiDeliveriesCompleteRouteImport } from './routes/api/deliveries/complete'
+import { Route as ApiDeliveriesAcceptRouteImport } from './routes/api/deliveries/accept'
 import { Route as ApiCommsNotifyRouteImport } from './routes/api/comms/notify'
 import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
+import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.$userId'
 import { Route as AppBuyerOrdersOrderIdTrackRouteImport } from './routes/app.buyer.orders.$orderId.track'
@@ -185,6 +190,11 @@ const AppTransportJobsRoute = AppTransportJobsRouteImport.update({
   path: '/jobs',
   getParentRoute: () => AppTransportRoute,
 } as any)
+const AppProfileViewsRoute = AppProfileViewsRouteImport.update({
+  id: '/views',
+  path: '/views',
+  getParentRoute: () => AppProfileRoute,
+} as any)
 const AppFarmerPayoutsRoute = AppFarmerPayoutsRouteImport.update({
   id: '/payouts',
   path: '/payouts',
@@ -261,6 +271,11 @@ const ApiPushRegisterRoute = ApiPushRegisterRouteImport.update({
   path: '/api/push/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProfileViewRoute = ApiProfileViewRouteImport.update({
+  id: '/api/profile/view',
+  path: '/api/profile/view',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOtpVerifyRoute = ApiOtpVerifyRouteImport.update({
   id: '/api/otp/verify',
   path: '/api/otp/verify',
@@ -282,9 +297,19 @@ const ApiDeliveriesReassignExpiredRoute =
     path: '/api/deliveries/reassign-expired',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiDeliveriesDeclineRoute = ApiDeliveriesDeclineRouteImport.update({
+  id: '/api/deliveries/decline',
+  path: '/api/deliveries/decline',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDeliveriesCompleteRoute = ApiDeliveriesCompleteRouteImport.update({
   id: '/api/deliveries/complete',
   path: '/api/deliveries/complete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeliveriesAcceptRoute = ApiDeliveriesAcceptRouteImport.update({
+  id: '/api/deliveries/accept',
+  path: '/api/deliveries/accept',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCommsNotifyRoute = ApiCommsNotifyRouteImport.update({
@@ -295,6 +320,11 @@ const ApiCommsNotifyRoute = ApiCommsNotifyRouteImport.update({
 const ApiChatSendRoute = ApiChatSendRouteImport.update({
   id: '/api/chat/send',
   path: '/api/chat/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRequestRoute = ApiChatRequestRouteImport.update({
+  id: '/api/chat/request',
+  path: '/api/chat/request',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAdminPricingRoute = ApiAdminPricingRouteImport.update({
@@ -333,19 +363,23 @@ export interface FileRoutesByFullPath {
   '/app/create': typeof AppCreateRoute
   '/app/farmer': typeof AppFarmerRouteWithChildren
   '/app/inbox': typeof AppInboxRouteWithChildren
-  '/app/profile': typeof AppProfileRoute
+  '/app/profile': typeof AppProfileRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
+  '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
+  '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
+  '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/search/global': typeof ApiSearchGlobalRoute
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
@@ -361,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
@@ -384,19 +419,23 @@ export interface FileRoutesByTo {
   '/app/create': typeof AppCreateRoute
   '/app/farmer': typeof AppFarmerRouteWithChildren
   '/app/inbox': typeof AppInboxRouteWithChildren
-  '/app/profile': typeof AppProfileRoute
+  '/app/profile': typeof AppProfileRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app': typeof AppIndexRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
+  '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
+  '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
+  '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/search/global': typeof ApiSearchGlobalRoute
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
@@ -412,6 +451,7 @@ export interface FileRoutesByTo {
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
@@ -437,19 +477,23 @@ export interface FileRoutesById {
   '/app/create': typeof AppCreateRoute
   '/app/farmer': typeof AppFarmerRouteWithChildren
   '/app/inbox': typeof AppInboxRouteWithChildren
-  '/app/profile': typeof AppProfileRoute
+  '/app/profile': typeof AppProfileRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
   '/farmers/$slug': typeof FarmersSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
+  '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
+  '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
+  '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/search/global': typeof ApiSearchGlobalRoute
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
@@ -465,6 +509,7 @@ export interface FileRoutesById {
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
@@ -497,13 +542,17 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/admin/pricing'
+    | '/api/chat/request'
     | '/api/chat/send'
     | '/api/comms/notify'
+    | '/api/deliveries/accept'
     | '/api/deliveries/complete'
+    | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/quote'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/profile/view'
     | '/api/push/register'
     | '/api/search/global'
     | '/api/settings/notifications'
@@ -519,6 +568,7 @@ export interface FileRouteTypes {
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
+    | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
     | '/app/inbox/chat/$userId'
@@ -548,13 +598,17 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app'
     | '/api/admin/pricing'
+    | '/api/chat/request'
     | '/api/chat/send'
     | '/api/comms/notify'
+    | '/api/deliveries/accept'
     | '/api/deliveries/complete'
+    | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/quote'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/profile/view'
     | '/api/push/register'
     | '/api/search/global'
     | '/api/settings/notifications'
@@ -570,6 +624,7 @@ export interface FileRouteTypes {
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
+    | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
     | '/app/inbox/chat/$userId'
@@ -600,13 +655,17 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/admin/pricing'
+    | '/api/chat/request'
     | '/api/chat/send'
     | '/api/comms/notify'
+    | '/api/deliveries/accept'
     | '/api/deliveries/complete'
+    | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/quote'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/profile/view'
     | '/api/push/register'
     | '/api/search/global'
     | '/api/settings/notifications'
@@ -622,6 +681,7 @@ export interface FileRouteTypes {
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
+    | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
     | '/app/inbox/chat/$userId'
@@ -643,13 +703,17 @@ export interface RootRouteChildren {
   ApiMapsRoute: typeof ApiMapsRoute
   ApiModerateRoute: typeof ApiModerateRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
+  ApiChatRequestRoute: typeof ApiChatRequestRoute
   ApiChatSendRoute: typeof ApiChatSendRoute
   ApiCommsNotifyRoute: typeof ApiCommsNotifyRoute
+  ApiDeliveriesAcceptRoute: typeof ApiDeliveriesAcceptRoute
   ApiDeliveriesCompleteRoute: typeof ApiDeliveriesCompleteRoute
+  ApiDeliveriesDeclineRoute: typeof ApiDeliveriesDeclineRoute
   ApiDeliveriesReassignExpiredRoute: typeof ApiDeliveriesReassignExpiredRoute
   ApiDeliveryQuoteRoute: typeof ApiDeliveryQuoteRoute
   ApiOtpSendRoute: typeof ApiOtpSendRoute
   ApiOtpVerifyRoute: typeof ApiOtpVerifyRoute
+  ApiProfileViewRoute: typeof ApiProfileViewRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiSearchGlobalRoute: typeof ApiSearchGlobalRoute
   ApiSettingsNotificationsRoute: typeof ApiSettingsNotificationsRoute
@@ -834,6 +898,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransportJobsRouteImport
       parentRoute: typeof AppTransportRoute
     }
+    '/app/profile/views': {
+      id: '/app/profile/views'
+      path: '/views'
+      fullPath: '/app/profile/views'
+      preLoaderRoute: typeof AppProfileViewsRouteImport
+      parentRoute: typeof AppProfileRoute
+    }
     '/app/farmer/payouts': {
       id: '/app/farmer/payouts'
       path: '/payouts'
@@ -939,6 +1010,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPushRegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/profile/view': {
+      id: '/api/profile/view'
+      path: '/api/profile/view'
+      fullPath: '/api/profile/view'
+      preLoaderRoute: typeof ApiProfileViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/otp/verify': {
       id: '/api/otp/verify'
       path: '/api/otp/verify'
@@ -967,11 +1045,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDeliveriesReassignExpiredRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/deliveries/decline': {
+      id: '/api/deliveries/decline'
+      path: '/api/deliveries/decline'
+      fullPath: '/api/deliveries/decline'
+      preLoaderRoute: typeof ApiDeliveriesDeclineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/deliveries/complete': {
       id: '/api/deliveries/complete'
       path: '/api/deliveries/complete'
       fullPath: '/api/deliveries/complete'
       preLoaderRoute: typeof ApiDeliveriesCompleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/deliveries/accept': {
+      id: '/api/deliveries/accept'
+      path: '/api/deliveries/accept'
+      fullPath: '/api/deliveries/accept'
+      preLoaderRoute: typeof ApiDeliveriesAcceptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/comms/notify': {
@@ -986,6 +1078,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat/send'
       fullPath: '/api/chat/send'
       preLoaderRoute: typeof ApiChatSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat/request': {
+      id: '/api/chat/request'
+      path: '/api/chat/request'
+      fullPath: '/api/chat/request'
+      preLoaderRoute: typeof ApiChatRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/pricing': {
@@ -1086,6 +1185,18 @@ const AppInboxRouteWithChildren = AppInboxRoute._addFileChildren(
   AppInboxRouteChildren,
 )
 
+interface AppProfileRouteChildren {
+  AppProfileViewsRoute: typeof AppProfileViewsRoute
+}
+
+const AppProfileRouteChildren: AppProfileRouteChildren = {
+  AppProfileViewsRoute: AppProfileViewsRoute,
+}
+
+const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(
+  AppProfileRouteChildren,
+)
+
 interface AppTransportRouteChildren {
   AppTransportJobsRoute: typeof AppTransportJobsRoute
   AppTransportRegisterRoute: typeof AppTransportRegisterRoute
@@ -1106,7 +1217,7 @@ interface AppRouteChildren {
   AppCreateRoute: typeof AppCreateRoute
   AppFarmerRoute: typeof AppFarmerRouteWithChildren
   AppInboxRoute: typeof AppInboxRouteWithChildren
-  AppProfileRoute: typeof AppProfileRoute
+  AppProfileRoute: typeof AppProfileRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRoute
   AppTransportRoute: typeof AppTransportRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
@@ -1118,7 +1229,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCreateRoute: AppCreateRoute,
   AppFarmerRoute: AppFarmerRouteWithChildren,
   AppInboxRoute: AppInboxRouteWithChildren,
-  AppProfileRoute: AppProfileRoute,
+  AppProfileRoute: AppProfileRouteWithChildren,
   AppSettingsRoute: AppSettingsRoute,
   AppTransportRoute: AppTransportRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
@@ -1152,13 +1263,17 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMapsRoute: ApiMapsRoute,
   ApiModerateRoute: ApiModerateRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,
+  ApiChatRequestRoute: ApiChatRequestRoute,
   ApiChatSendRoute: ApiChatSendRoute,
   ApiCommsNotifyRoute: ApiCommsNotifyRoute,
+  ApiDeliveriesAcceptRoute: ApiDeliveriesAcceptRoute,
   ApiDeliveriesCompleteRoute: ApiDeliveriesCompleteRoute,
+  ApiDeliveriesDeclineRoute: ApiDeliveriesDeclineRoute,
   ApiDeliveriesReassignExpiredRoute: ApiDeliveriesReassignExpiredRoute,
   ApiDeliveryQuoteRoute: ApiDeliveryQuoteRoute,
   ApiOtpSendRoute: ApiOtpSendRoute,
   ApiOtpVerifyRoute: ApiOtpVerifyRoute,
+  ApiProfileViewRoute: ApiProfileViewRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiSearchGlobalRoute: ApiSearchGlobalRoute,
   ApiSettingsNotificationsRoute: ApiSettingsNotificationsRoute,

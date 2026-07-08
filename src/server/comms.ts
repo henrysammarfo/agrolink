@@ -143,33 +143,17 @@ export async function notifyDriversOfNewJob(
   pickupAddress: string,
   feeGhs: number,
 ) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: drivers } = await supabaseAdmin
-    .from("driver_profiles")
-    .select("user_id")
-    .eq("verification_status", "approved")
-    .eq("available", true);
-
-  const title = "New delivery job";
-  const body = `${pickupAddress} · GHS ${feeGhs.toFixed(0)} payout — tap to accept`;
-  const link = "/app/transport/jobs";
-
-  for (const d of drivers ?? []) {
-    await notifyUser(d.user_id, {
-      type: "delivery_job",
-      title,
-      body,
-      link,
-      whatsappExtras: { pickup: pickupAddress, fee: String(feeGhs.toFixed(0)) },
+  const { notifyEligibleDriversForDelivery } = await import("@/server/driver-matching");
+  const count = await notifyEligibleDriversForDelivery(deliveryId);
+  if (count === 0) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("audit_log").insert({
+      action: "driver_job_no_match",
+      entity_type: "delivery",
+      entity_id: deliveryId,
+      metadata: { pickup: pickupAddress, fee: feeGhs },
     });
   }
-
-  await supabaseAdmin.from("audit_log").insert({
-    action: "driver_job_broadcast",
-    entity_type: "delivery",
-    entity_id: deliveryId,
-    metadata: { driver_count: drivers?.length ?? 0, fee: feeGhs },
-  });
 }
 
 export async function sendChatMessageServer(opts: {
@@ -177,13 +161,46 @@ export async function sendChatMessageServer(opts: {
   receiverId: string;
   content: string;
   orderId?: string;
+  deliveryId?: string;
   senderName?: string;
   attachmentUrl?: string;
   attachmentType?: "image" | "video";
 }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const {
+    canSendDirectMessage,
+    createMessageRequest,
+    hasActiveDeliveryChat,
+  } = await import("@/server/message-permissions");
+
   const text = opts.content.trim() || (opts.attachmentUrl ? "📷 Photo" : "");
   if (!text && !opts.attachmentUrl) throw new Error("Empty message");
+
+  const permission = await canSendDirectMessage(opts.senderId, opts.receiverId, {
+    orderId: opts.orderId,
+    deliveryId: opts.deliveryId,
+  });
+
+  if (!permission.allowed) {
+    if (permission.needsRequest) {
+      await createMessageRequest(opts.senderId, opts.receiverId, text);
+      return "request_pending";
+    }
+    throw new Error(permission.reason ?? "Cannot send message");
+  }
+
+  let resolvedDeliveryId = opts.deliveryId ?? null;
+  if (!resolvedDeliveryId && opts.orderId) {
+    const trip = await hasActiveDeliveryChat(opts.senderId, opts.receiverId, opts.orderId);
+    if (trip) {
+      const { data: d } = await supabaseAdmin
+        .from("deliveries")
+        .select("id")
+        .eq("order_id", opts.orderId)
+        .maybeSingle();
+      resolvedDeliveryId = d?.id ?? null;
+    }
+  }
 
   const { data: msg, error } = await supabaseAdmin
     .from("messages")
@@ -192,6 +209,7 @@ export async function sendChatMessageServer(opts: {
       receiver_id: opts.receiverId,
       content: text,
       order_id: opts.orderId ?? null,
+      delivery_id: resolvedDeliveryId,
       attachment_url: opts.attachmentUrl ?? null,
       attachment_type: opts.attachmentType ?? null,
     })
@@ -201,11 +219,12 @@ export async function sendChatMessageServer(opts: {
   if (error) throw error;
 
   const preview = opts.attachmentUrl ? "Sent a photo" : text.slice(0, 80);
+  const tripSuffix = resolvedDeliveryId ? `&delivery=${resolvedDeliveryId}` : "";
   await notifyUser(opts.receiverId, {
     type: "message",
     title: opts.senderName ? `Message from ${opts.senderName}` : "New message",
     body: preview,
-    link: `/app/inbox/chat/${opts.senderId}${opts.orderId ? `?order=${opts.orderId}` : ""}`,
+    link: `/app/inbox/chat/${opts.senderId}${opts.orderId ? `?order=${opts.orderId}` : ""}${tripSuffix}`,
     whatsappExtras: { preview },
   });
 

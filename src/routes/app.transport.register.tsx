@@ -166,7 +166,9 @@ function DriverRegister() {
                     value={form.vehicle_type}
                     onChange={(v) => setForm((f) => ({ ...f, vehicle_type: v }))}
                     options={[
+                      ["bicycle", "Bicycle"],
                       ["motorcycle", "Motorcycle / okada"],
+                      ["car", "Car / salon"],
                       ["pickup", "Pickup / minivan"],
                       ["truck", "Truck / cold van"],
                     ]}

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Heart, MessageCircle, Truck, Wallet, Bell, Loader2 } from "lucide-react";
+import { Heart, MessageCircle, Truck, Wallet, Bell, Loader2, UserPlus, Check, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { ConversationList } from "@/components/chat/ConversationList";
@@ -16,6 +16,8 @@ import {
   subscribeToNotifications,
 } from "@/lib/api/notifications";
 import { showLocalNotification } from "@/lib/push-client";
+import { fetchMessageRequests, respondToMessageRequest } from "@/lib/api/message-requests";
+import { useQuery } from "@tanstack/react-query";
 
 const ICON_MAP: Record<string, typeof Heart> = {
   like: Heart,
@@ -26,13 +28,21 @@ const ICON_MAP: Record<string, typeof Heart> = {
   delivery_complete: Truck,
   message: MessageCircle,
   follow: Heart,
+  message_request: UserPlus,
+  message_request_accepted: Check,
+  profile_view: Bell,
   payout: Wallet,
   default: Bell,
 };
 
 export const Route = createFileRoute("/app/inbox")({
   validateSearch: (s: Record<string, unknown>) => ({
-    tab: s.tab === "messages" ? ("messages" as const) : ("activity" as const),
+    tab:
+      s.tab === "messages"
+        ? ("messages" as const)
+        : s.tab === "requests"
+          ? ("requests" as const)
+          : ("activity" as const),
   }),
   head: () => ({ meta: [{ title: "Inbox · AgroLink" }] }),
   component: Inbox,
@@ -43,10 +53,15 @@ function Inbox() {
   const { tab: initialTab } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"activity" | "messages">(initialTab);
+  const [tab, setTab] = useState<"activity" | "messages" | "requests">(initialTab);
 
   const { data: notifications = [], isLoading: nLoading } = useNotifications(user?.id);
   const { data: conversations = [], isLoading: cLoading } = useConversations(user?.id);
+  const { data: requests = [], isLoading: rLoading, refetch: refetchRequests } = useQuery({
+    queryKey: ["message-requests", user?.id],
+    queryFn: () => fetchMessageRequests(user!.id),
+    enabled: !!user?.id,
+  });
   const { data: unread } = useUnreadCounts(user?.id);
 
   useEffect(() => {
@@ -60,6 +75,7 @@ function Inbox() {
 
   const unreadNotis = unread?.notifications ?? notifications.filter((n) => !n.read).length;
   const unreadMsgs = unread?.messages ?? conversations.reduce((s, c) => s + c.unread, 0);
+  const pendingRequests = requests.length;
 
   return (
     <AppShell role="buyer" unreadInbox={(unreadNotis ?? 0) + (unreadMsgs ?? 0)}>
@@ -82,7 +98,7 @@ function Inbox() {
 
       <div className="border-b border-border">
         <div className="flex gap-8">
-          {(["activity", "messages"] as const).map((k) => (
+          {(["activity", "messages", "requests"] as const).map((k) => (
             <button
               key={k}
               onClick={() => {
@@ -95,7 +111,7 @@ function Inbox() {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {k === "activity" ? "Activity" : "Messages"}
+              {k === "activity" ? "Activity" : k === "messages" ? "Messages" : "Requests"}
               {k === "activity" && unreadNotis > 0 && (
                 <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
                   {unreadNotis}
@@ -104,6 +120,11 @@ function Inbox() {
               {k === "messages" && unreadMsgs > 0 && (
                 <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
                   {unreadMsgs}
+                </span>
+              )}
+              {k === "requests" && pendingRequests > 0 && (
+                <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
+                  {pendingRequests}
                 </span>
               )}
             </button>
@@ -163,6 +184,62 @@ function Inbox() {
               })}
               {notifications.length === 0 && (
                 <li className="p-10 text-center text-muted-foreground">No notifications yet.</li>
+              )}
+            </ul>
+          )
+        ) : tab === "requests" ? (
+          rLoading ? (
+            <div className="grid place-items-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            <ul className="divide-y divide-border rounded-3xl border border-border bg-card overflow-hidden">
+              {requests.map((r) => {
+                const requester = r.requester as {
+                  display_name?: string | null;
+                  avatar_url?: string | null;
+                } | null;
+                return (
+                  <li key={r.requester_id} className="px-5 py-4">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-muted text-primary font-semibold">
+                        {(requester?.display_name ?? "?")[0]}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium">{requester?.display_name ?? "User"}</div>
+                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{r.preview}</p>
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            onClick={async () => {
+                              await respondToMessageRequest("accept", r.requester_id);
+                              await refetchRequests();
+                              qc.invalidateQueries({ queryKey: ["conversations", user?.id] });
+                              navigate({
+                                to: "/app/inbox/chat/$userId",
+                                params: { userId: r.requester_id },
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs text-primary-foreground"
+                          >
+                            <Check className="h-3 w-3" /> Accept
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await respondToMessageRequest("decline", r.requester_id);
+                              refetchRequests();
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs"
+                          >
+                            <X className="h-3 w-3" /> Decline
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+              {requests.length === 0 && (
+                <li className="p-10 text-center text-muted-foreground">No pending requests.</li>
               )}
             </ul>
           )

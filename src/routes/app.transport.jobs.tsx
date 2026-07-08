@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useTransportJobs } from "@/hooks/use-marketplace";
 import { trackEvent } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api/fetch-auth";
-import { acceptDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
+import { acceptDelivery, declineDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
 import type { DeliveryRow } from "@/lib/types/marketplace";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -168,9 +168,26 @@ function Jobs() {
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Driver payout</div>
               </div>
               {j.status === "requested" && (
-                <button onClick={() => accept(j.id)} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700">
-                  <Check className="h-4 w-4" /> Accept
-                </button>
+                <>
+                  <button onClick={() => accept(j.id)} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700">
+                    <Check className="h-4 w-4" /> Accept
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!driver?.id) return;
+                      try {
+                        await declineDelivery(j.id, driver.id);
+                        toast.message("Declined");
+                        refresh();
+                      } catch {
+                        toast.error("Could not decline");
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-2 text-sm"
+                  >
+                    Decline
+                  </button>
+                </>
               )}
               {j.status === "driver_assigned" && (
                 <button onClick={() => advance(j)} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">

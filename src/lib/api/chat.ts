@@ -75,23 +75,26 @@ export async function sendChatMessage(opts: {
   receiverId: string;
   content: string;
   orderId?: string;
+  deliveryId?: string;
   senderName?: string;
   attachmentUrl?: string;
   attachmentType?: "image" | "video";
-}) {
+}): Promise<string | "pending"> {
   const res = await apiFetch("/api/chat/send", {
     method: "POST",
     body: JSON.stringify({
       receiverId: opts.receiverId,
       content: opts.content,
       orderId: opts.orderId,
+      deliveryId: opts.deliveryId,
       senderName: opts.senderName,
       attachmentUrl: opts.attachmentUrl,
       attachmentType: opts.attachmentType,
     }),
   });
-  const data = (await res.json()) as { id?: string; error?: string };
+  const data = (await res.json()) as { id?: string; pending?: boolean; error?: string };
   if (!res.ok) throw new Error(data.error ?? "Send failed");
+  if (data.pending) return "pending";
   return data.id!;
 }
 

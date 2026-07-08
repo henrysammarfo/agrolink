@@ -1,13 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import {
-  ArrowLeft, BadgeCheck, MapPin, MessageCircle, Share2, UserPlus, UserCheck, Grid3x3, Play, Loader2,
+  ArrowLeft, BadgeCheck, MapPin, MessageCircle, Share2, UserPlus, UserCheck, Grid3x3, Play, Loader2, Bookmark,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { fetchListingsBySlug } from "@/lib/api/listings";
-import { fetchProfileStats } from "@/lib/api/profiles";
+import { fetchProfileStats, fetchPublicBookmarks } from "@/lib/api/profiles";
 import { toggleFollow, fetchIsFollowing } from "@/lib/api/engagement";
+import { trackProfileView } from "@/lib/api/profile-views";
 import { useAuth } from "@/lib/auth";
 import { MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
 
@@ -24,6 +26,7 @@ function FarmerProfile() {
   const { user, profile: authProfile } = useAuth();
   const qc = useQueryClient();
   const farmerSlug = slug.trim().toLowerCase();
+  const [tab, setTab] = useState<"posts" | "bookmarks">("posts");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["farmer-profile", slug],
@@ -52,6 +55,17 @@ function FarmerProfile() {
     queryFn: () => fetchIsFollowing(user!.id, farmerSlug),
     enabled: !!user?.id,
   });
+
+  const { data: publicBookmarks = [] } = useQuery({
+    queryKey: ["public-bookmarks", farmerProfile?.id],
+    queryFn: () => fetchPublicBookmarks(farmerProfile!.id!),
+    enabled: !!farmerProfile?.id,
+  });
+
+  useEffect(() => {
+    if (!farmerProfile?.id || !user?.id || user.id === farmerProfile.id) return;
+    void trackProfileView(farmerProfile.id);
+  }, [farmerProfile?.id, user?.id]);
 
   const handleShare = async () => {
     const url = `${location.origin}/farmers/${slug}`;
@@ -193,15 +207,27 @@ function FarmerProfile() {
 
         <div className="mt-10 border-b border-border">
           <div className="flex items-center justify-center gap-8 text-sm">
-            <button className="flex items-center gap-2 border-b-2 border-foreground px-2 pb-3 text-foreground">
+            <button
+              type="button"
+              onClick={() => setTab("posts")}
+              className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === "posts" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}
+            >
               <Grid3x3 className="h-4 w-4" /> Posts
             </button>
+            {publicBookmarks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setTab("bookmarks")}
+                className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === "bookmarks" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}
+              >
+                <Bookmark className="h-4 w-4" /> Saved
+              </button>
+            )}
           </div>
         </div>
 
-        {/* RiyilsExplore-style grid — 3-col vertical tiles */}
         <div className="mt-5 grid grid-cols-3 gap-0.5 sm:gap-1">
-          {listings.map((l) => (
+          {(tab === "posts" ? listings : publicBookmarks).map((l) => (
             <Link
               key={l.id}
               to="/app/buyer/feed"
@@ -223,8 +249,10 @@ function FarmerProfile() {
               </span>
             </Link>
           ))}
-          {listings.length === 0 && (
-            <div className="col-span-3 py-20 text-center text-sm text-muted-foreground">No posts yet.</div>
+          {(tab === "posts" ? listings : publicBookmarks).length === 0 && (
+            <div className="col-span-3 py-20 text-center text-sm text-muted-foreground">
+              {tab === "posts" ? "No posts yet." : "No public saves yet."}
+            </div>
           )}
         </div>
       </div>
