@@ -7,6 +7,7 @@ import {
   ListChecks,
   ArrowRight,
   Loader2,
+  Truck,
 } from "lucide-react";
 import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
 import { AdminGate } from "@/components/app/RoleGate";
@@ -26,6 +27,7 @@ function AdminOverview() {
     orderCount: 0,
     activeListings: 0,
     pendingReview: 0,
+    pendingDrivers: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +47,7 @@ function AdminOverview() {
           eyebrow="Operations"
           title="Admin"
           italic="control room"
-          sub="Disputes, payments, and listing reports across the platform."
+          sub="Disputes, payments, driver applications, and listing reports across the platform."
         />
         {loading ? (
           <div className="grid place-items-center py-16">
@@ -103,6 +105,14 @@ function AdminOverview() {
                 title="Disputes"
                 count={0}
                 sub="Open cases"
+              />
+              <AdminCard
+                to="/app/admin/drivers"
+                icon={Truck}
+                tone="emerald"
+                title="Drivers"
+                count={stats.pendingDrivers}
+                sub="Pending verification"
               />
             </section>
             <button
