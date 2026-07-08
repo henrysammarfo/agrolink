@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Play, Leaf, Truck, Sparkles, BadgeCheck, MapPin, ShoppingBasket, Tractor, Wallet, Loader2 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { HERO_VIDEO_URL, MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
+import { HERO_VIDEO_URL, HERO_VIDEO_FALLBACK_URL, MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
 import { TESTIMONIALS, formatGmv } from "@/lib/config/marketing";
 import { useFeedTeaser, useMarketingStats, usePublicSellers } from "@/hooks/use-marketplace";
 import produceHero from "@/assets/produce-hero.jpg";
@@ -54,6 +54,7 @@ function Hero() {
         }}
       >
         <source src={HERO_VIDEO_URL} type="video/mp4" />
+        <source src={HERO_VIDEO_FALLBACK_URL} type="video/mp4" />
       </video>
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/40 to-transparent" />
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-background/40 to-transparent" />
