@@ -79,14 +79,14 @@ function Auth() {
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       <div className="relative hidden lg:block">
         <img src={produceHero} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-br from-background/40 via-background/20 to-background/70" />
+        <div className="scrim-auth-panel" />
         <div className="relative flex h-full flex-col justify-between p-12">
-          <BrandLogo size="md" />
+          <BrandLogo size="md" className="drop-shadow-md" />
           <div>
-            <p className="font-serif text-5xl text-foreground leading-tight">
+            <p className="font-serif text-5xl text-white leading-tight drop-shadow-md">
               "I post in the morning, my tomatoes are sold by noon."
             </p>
-            <p className="mt-6 text-sm text-muted-foreground">Kwame Asare — Farmer, Dodowa</p>
+            <p className="mt-6 text-sm text-white/80 drop-shadow">Kwame Asare — Farmer, Dodowa</p>
           </div>
         </div>
       </div>

@@ -30,8 +30,7 @@ function About() {
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0">
           <img src={corridor} alt="Accra farmland corridor" className="h-full w-full object-cover" />
-          {/* much lighter wash — keep the photo legible */}
-          <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/15 to-background/85" />
+          <div className="scrim-page-bottom" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 py-32 md:px-12 md:py-44">
           <span className="text-xs uppercase tracking-widest text-foreground/80">About</span>

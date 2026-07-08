@@ -207,7 +207,8 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
                     loading="lazy"
                     className="absolute inset-0 h-full w-full object-cover"
                   />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-left">
+                  <div className="scrim-bottom-dark" />
+                  <div className="absolute inset-x-0 bottom-0 p-2 text-left">
                     <div className="font-sans text-sm font-medium text-white">{l.title}</div>
                     <div className="text-[10px] text-white/70">
                       GHS {l.price_per_unit}/{l.unit}
@@ -291,7 +292,8 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
                   loading="lazy"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-left">
+                <div className="scrim-bottom-dark" />
+                <div className="absolute inset-x-0 bottom-0 p-2 text-left">
                   <div className="font-serif text-sm text-white">{l.title}</div>
                   <div className="text-[10px] text-white/70">
                     GHS {l.price_per_unit}/{l.unit}
@@ -464,8 +466,8 @@ function FeedCardOverlay({
           <Heart className="h-24 w-24 text-rose-500 fill-rose-500 animate-ping opacity-90" />
         </div>
       )}
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+      <div className="scrim-top-dark" />
+      <div className="scrim-bottom-dark" />
 
       <div className="pointer-events-auto absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
         <button

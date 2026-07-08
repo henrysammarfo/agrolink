@@ -56,10 +56,9 @@ function Hero() {
         <source src={HERO_VIDEO_URL} type="video/mp4" />
         <source src={HERO_VIDEO_FALLBACK_URL} type="video/mp4" />
       </video>
-      {/* Light scrim — keep video visible; fade only at bottom for next section */}
-      <div className="pointer-events-none absolute inset-0 z-[2] bg-black/20" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-32 bg-gradient-to-b from-black/45 to-transparent md:h-36" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-28 bg-gradient-to-t from-background/95 via-background/40 to-transparent md:h-32" />
+      <div className="pointer-events-none absolute inset-0 z-[2] bg-black/15" />
+      <div className="scrim-top-dark z-[2]" />
+      <div className="scrim-hero-bottom z-[2]" />
 
       <div className="relative z-10 flex h-full flex-col">
         {/* Spacer for fixed SiteHeader */}
@@ -186,7 +185,7 @@ function LiveFeedTeaser() {
                   className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/10 to-transparent" />
+              <div className="scrim-bottom" />
               <div className="absolute inset-x-0 bottom-0 p-5">
                 <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-foreground/70">
                   <MapPin className="h-3 w-3" />
@@ -355,7 +354,7 @@ function ClosingCTA() {
     <section className="relative overflow-hidden">
       <div className="absolute inset-0">
         <img src={produceHero} alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-background/10 to-background/10" />
+        <div className="scrim-bottom" />
       </div>
       <div className="relative mx-auto max-w-3xl px-6 py-32 md:py-40 text-center">
         <div className="mx-auto inline-block rounded-3xl bg-background/70 px-8 py-10 backdrop-blur-md">

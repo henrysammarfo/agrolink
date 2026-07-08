@@ -226,7 +226,7 @@ function Create() {
             />
           ) : null}
           {mediaPreview && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/20" />
+            <div className="scrim-bottom-dark" />
           )}
           <div className="relative z-10">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 text-primary">

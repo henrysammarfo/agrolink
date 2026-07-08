@@ -128,7 +128,7 @@ function FarmerProfile() {
           {farmerProfile.avatar_url ? (
             <img src={farmerProfile.avatar_url} alt="" className="h-full w-full object-cover scale-110 blur-md opacity-70" />
           ) : null}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/10 to-background" />
+          <div className="scrim-page-bottom" />
         </div>
 
         <div className="-mt-16 px-4 sm:px-8 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
