@@ -37,13 +37,21 @@ function Index() {
 function Hero() {
   return (
     <section className="relative h-screen w-full overflow-hidden">
+      <div
+        className="absolute inset-0 h-full w-full bg-cover bg-center"
+        style={{ backgroundImage: `url(${MARKETING_FALLBACK_IMAGE})` }}
+        aria-hidden
+      />
       <video
         autoPlay
         muted
         loop
         playsInline
         poster={produceHero}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 z-[1] h-full w-full object-cover"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
       >
         <source src={HERO_VIDEO_URL} type="video/mp4" />
       </video>

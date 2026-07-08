@@ -1,8 +1,8 @@
 import produceHero from "@/assets/produce-hero.jpg";
 
-/** CDN-hosted hero loop for marketing page */
+/** Hero loop for marketing page — hosted on Supabase (listing-videos/marketing/) */
 export const HERO_VIDEO_URL =
-  "https://d3j41sg3clw3sa.cloudfront.net/agrolink/produce-corridor-hero.mp4";
+  "https://mhyuzmhzockexqmnyuze.supabase.co/storage/v1/object/public/listing-videos/marketing/produce-corridor-hero.mp4";
 
 export const MARKETING_FALLBACK_IMAGE = produceHero;
 
