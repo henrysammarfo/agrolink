@@ -1,3 +1,5 @@
+import { fetchDrivingDistanceKm, fetchGoogleDirections, getGoogleMapsApiKey } from "@/server/google-maps";
+
 export type LatLng = { lat: number; lng: number; label?: string };
 
 function haversineKm(from: LatLng, to: LatLng): number {
@@ -21,7 +23,6 @@ export function orderPickupStops(stops: LatLng[], start?: LatLng): LatLng[] {
   if (!start && ordered.length === 0) {
     ordered.push(current);
   } else if (start) {
-    // find nearest to start
     let bestIdx = 0;
     let bestDist = Infinity;
     remaining.forEach((s, i) => {
@@ -50,37 +51,49 @@ export function orderPickupStops(stops: LatLng[], start?: LatLng): LatLng[] {
   return ordered;
 }
 
-async function osrmSegmentKm(from: LatLng, to: LatLng): Promise<number | null> {
-  try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`;
-    const res = await fetch(url);
-    const json = (await res.json()) as { routes?: { distance: number }[] };
-    const route = json.routes?.[0];
-    if (!route) return null;
-    return route.distance / 1000;
-  } catch {
-    return null;
-  }
-}
-
-/** Sum OSRM segment distances through ordered pickup stops then to delivery */
+/** Sum driving distances through ordered pickup stops then to delivery */
 export async function computeMultiStopDistanceKm(
   pickups: LatLng[],
   delivery: LatLng,
-): Promise<{ distanceKm: number; orderedStops: LatLng[] }> {
+): Promise<{
+  distanceKm: number;
+  orderedStops: LatLng[];
+  routingSource: "google" | "osrm" | "haversine";
+}> {
   const orderedStops = orderPickupStops(pickups);
+
+  if (getGoogleMapsApiKey() && orderedStops.length > 0) {
+    try {
+      const route = await fetchGoogleDirections(
+        orderedStops[0],
+        delivery,
+        orderedStops.length > 1 ? orderedStops.slice(1) : undefined,
+      );
+      if (route) {
+        return { distanceKm: route.distance_km, orderedStops, routingSource: "google" };
+      }
+    } catch (err) {
+      console.warn("[BatchRouting] Google Directions failed:", err);
+    }
+  }
+
   let total = 0;
+  let source: "google" | "osrm" | "haversine" = "haversine";
   let prev: LatLng | null = null;
   for (const stop of orderedStops) {
     if (prev) {
-      const seg = (await osrmSegmentKm(prev, stop)) ?? haversineKm(prev, stop);
-      total += seg;
+      const seg = await fetchDrivingDistanceKm(prev, stop);
+      total += seg.distanceKm;
+      if (seg.source === "google") source = "google";
+      else if (seg.source === "osrm" && source !== "google") source = "osrm";
     }
     prev = stop;
   }
   if (prev) {
-    const last = (await osrmSegmentKm(prev, delivery)) ?? haversineKm(prev, delivery);
-    total += last;
+    const last = await fetchDrivingDistanceKm(prev, delivery);
+    total += last.distanceKm;
+    if (last.source === "google") source = "google";
+    else if (last.source === "osrm" && source !== "google") source = "osrm";
   }
-  return { distanceKm: total, orderedStops };
+  return { distanceKm: total, orderedStops, routingSource: source };
 }

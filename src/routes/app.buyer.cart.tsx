@@ -11,9 +11,15 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { getCurrentPosition } from "@/lib/native-geolocation";
 import { trackEvent } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api/fetch-auth";
+import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
+import { reverseGeocode } from "@/lib/api/maps";
 
 /** Default buyer drop-off — East Legon corridor */
-const DEFAULT_DELIVERY = { lat: 5.65, lng: -0.165 };
+const DEFAULT_DELIVERY: MapLocation = {
+  name: "East Legon, Accra, Ghana",
+  lat: 5.65,
+  lng: -0.165,
+};
 
 export const Route = createFileRoute("/app/buyer/cart")({
   head: () => ({ meta: [{ title: "Cart · AgroLink" }] }),
@@ -38,13 +44,14 @@ function Cart() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
-  const [deliveryCoords, setDeliveryCoords] = useState(DEFAULT_DELIVERY);
+  const [deliveryLocation, setDeliveryLocation] = useState<MapLocation>(DEFAULT_DELIVERY);
   const [orderId, setOrderId] = useState<string | null>(null);
 
   const [deliveryQuote, setDeliveryQuote] = useState<{
     total: number;
     breakdown: string[];
     distanceKm: number;
+    routingSource?: "google" | "osrm" | "haversine";
     orderedStops?: { lat: number; lng: number; label?: string }[];
   } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -67,8 +74,14 @@ function Cart() {
   }, [items]);
 
   useEffect(() => {
-    void getCurrentPosition().then((p) => {
-      if (p) setDeliveryCoords({ lat: p.lat, lng: p.lng });
+    void getCurrentPosition().then(async (p) => {
+      if (!p) return;
+      try {
+        const loc = await reverseGeocode(p.lat, p.lng);
+        setDeliveryLocation(loc);
+      } catch {
+        setDeliveryLocation({ name: "Your location", lat: p.lat, lng: p.lng });
+      }
     });
   }, []);
 
@@ -86,8 +99,8 @@ function Cart() {
       body: JSON.stringify({
         pickupLat: first.lat,
         pickupLng: first.lng,
-        deliveryLat: deliveryCoords.lat,
-        deliveryLng: deliveryCoords.lng,
+        deliveryLat: deliveryLocation.lat,
+        deliveryLng: deliveryLocation.lng,
         weightKg,
         vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
         pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
@@ -97,7 +110,7 @@ function Cart() {
       .then((q) => setDeliveryQuote(q))
       .catch(() => setDeliveryQuote(null))
       .finally(() => setQuoteLoading(false));
-  }, [items, pickupStops, deliveryCoords]);
+  }, [items, pickupStops, deliveryLocation]);
 
   async function sendOtp() {
     if (!user?.id) return;
@@ -159,7 +172,9 @@ function Cart() {
           email: user.email,
           phone: profile?.phone ?? "+233551234987",
           momoProvider: channel,
-          deliveryAddress: profile?.region ?? "Greater Accra",
+          deliveryAddress: deliveryLocation.name,
+          deliveryLat: deliveryLocation.lat,
+          deliveryLng: deliveryLocation.lng,
           otpVerified: needsOtp ? otpVerified : undefined,
         }),
       });
@@ -282,6 +297,18 @@ function Cart() {
 
         <aside className="rounded-3xl border border-border bg-card p-6">
           <h2 className="font-serif text-2xl">Summary</h2>
+
+          <div className="mt-5">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Deliver to</p>
+            <div className="mt-2">
+              <LocationPicker
+                value={deliveryLocation}
+                onChange={setDeliveryLocation}
+                placeholder="Delivery address in Ghana"
+              />
+            </div>
+          </div>
+
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Subtotal</dt>
@@ -299,7 +326,14 @@ function Cart() {
                 {deliveryQuote.breakdown.map((line) => (
                   <div key={line}>{line}</div>
                 ))}
-                <div>{deliveryQuote.distanceKm.toFixed(1)} km via OSRM routing</div>
+                <div>
+                  {deliveryQuote.distanceKm.toFixed(1)} km
+                  {deliveryQuote.routingSource === "google"
+                    ? " via Google Maps"
+                    : deliveryQuote.routingSource === "osrm"
+                      ? " via OSRM"
+                      : ""}
+                </div>
                 {deliveryQuote.orderedStops && deliveryQuote.orderedStops.length > 1 && (
                   <div className="text-primary font-medium">
                     {deliveryQuote.orderedStops.length} farm pickups · co-op batch route

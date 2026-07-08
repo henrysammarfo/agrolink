@@ -30,6 +30,7 @@ import { Route as AppCreateRouteImport } from './routes/app.create'
 import { Route as AppBuyerRouteImport } from './routes/app.buyer'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as ApiModerateRouteImport } from './routes/api/moderate'
+import { Route as ApiMapsRouteImport } from './routes/api/maps'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as AppTransportRegisterRouteImport } from './routes/app.transport.register'
 import { Route as AppTransportJobsRouteImport } from './routes/app.transport.jobs'
@@ -162,6 +163,11 @@ const AppAdminRoute = AppAdminRouteImport.update({
 const ApiModerateRoute = ApiModerateRouteImport.update({
   id: '/api/moderate',
   path: '/api/moderate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMapsRoute = ApiMapsRouteImport.update({
+  id: '/api/maps',
+  path: '/api/maps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
   '/api/checkout': typeof ApiCheckoutRoute
+  '/api/maps': typeof ApiMapsRoute
   '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/buyer': typeof AppBuyerRouteWithChildren
@@ -370,6 +377,7 @@ export interface FileRoutesByTo {
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
   '/api/checkout': typeof ApiCheckoutRoute
+  '/api/maps': typeof ApiMapsRoute
   '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/buyer': typeof AppBuyerRouteWithChildren
@@ -422,6 +430,7 @@ export interface FileRoutesById {
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
   '/api/checkout': typeof ApiCheckoutRoute
+  '/api/maps': typeof ApiMapsRoute
   '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/buyer': typeof AppBuyerRouteWithChildren
@@ -475,6 +484,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/pricing'
     | '/api/checkout'
+    | '/api/maps'
     | '/api/moderate'
     | '/app/admin'
     | '/app/buyer'
@@ -525,6 +535,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/pricing'
     | '/api/checkout'
+    | '/api/maps'
     | '/api/moderate'
     | '/app/admin'
     | '/app/buyer'
@@ -576,6 +587,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/pricing'
     | '/api/checkout'
+    | '/api/maps'
     | '/api/moderate'
     | '/app/admin'
     | '/app/buyer'
@@ -628,6 +640,7 @@ export interface RootRouteChildren {
   MarketRoute: typeof MarketRoute
   PricingRoute: typeof PricingRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
+  ApiMapsRoute: typeof ApiMapsRoute
   ApiModerateRoute: typeof ApiModerateRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiChatSendRoute: typeof ApiChatSendRoute
@@ -791,6 +804,13 @@ declare module '@tanstack/react-router' {
       path: '/api/moderate'
       fullPath: '/api/moderate'
       preLoaderRoute: typeof ApiModerateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/maps': {
+      id: '/api/maps'
+      path: '/api/maps'
+      fullPath: '/api/maps'
+      preLoaderRoute: typeof ApiMapsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/checkout': {
@@ -1129,6 +1149,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketRoute: MarketRoute,
   PricingRoute: PricingRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
+  ApiMapsRoute: ApiMapsRoute,
   ApiModerateRoute: ApiModerateRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiChatSendRoute: ApiChatSendRoute,

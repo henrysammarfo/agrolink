@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { watchDriverPosition } from "@/lib/native-geolocation";
+import { fetchDrivingRoute } from "@/lib/api/maps";
 import type { DriverProfile } from "@/lib/types/marketplace";
 
 export async function getOrCreateDriverProfile(userId: string): Promise<DriverProfile> {
@@ -53,6 +54,15 @@ export async function fetchOsrmRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
 ): Promise<OsrmRoute | null> {
+  const google = await fetchDrivingRoute(from, to);
+  if (google) {
+    return {
+      coordinates: google.coordinates,
+      distance_km: google.distance_km,
+      duration_min: google.duration_min,
+    };
+  }
+
   try {
     const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
     const res = await fetch(url);

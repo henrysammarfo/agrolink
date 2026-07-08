@@ -4,15 +4,14 @@ import {
   Camera,
   Image as ImageIcon,
   Hash,
-  MapPin,
   Tag,
-  X,
   Sparkles,
   ShieldAlert,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
 import { useAuth } from "@/lib/auth";
 import { createListing, uploadListingMedia } from "@/lib/api/listings";
 import { apiFetch } from "@/lib/api/fetch-auth";
@@ -45,7 +44,7 @@ function Create() {
   const [qty, setQty] = useState("");
   const [caption, setCaption] = useState("");
   const [tags, setTags] = useState("");
-  const [locationIdx, setLocationIdx] = useState(0);
+  const [location, setLocation] = useState<MapLocation>(GHANA_LOCATIONS[0]);
   const [posting, setPosting] = useState(false);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -125,7 +124,6 @@ function Create() {
         else imageUrl = url;
       }
 
-      const loc = GHANA_LOCATIONS[locationIdx];
       const hashtagList = tags
         .split(/\s+/)
         .filter(Boolean)
@@ -140,9 +138,9 @@ function Create() {
           unit: "kg",
           quantity: Number(qty),
           hashtags: hashtagList,
-          location_name: loc.name,
-          lat: loc.lat,
-          lng: loc.lng,
+          location_name: location.name,
+          lat: location.lat,
+          lng: location.lng,
           image_url: imageUrl,
           video_url: videoUrl,
           organic: hashtagList.some((h) => h.toLowerCase().includes("organic")),
@@ -342,20 +340,12 @@ function Create() {
             </div>
           </Field>
           <Field label="Where?">
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-              <select
-                value={locationIdx}
-                onChange={(e) => setLocationIdx(Number(e.target.value))}
-                className={`${inp} pl-9`}
-              >
-                {GHANA_LOCATIONS.map((l, i) => (
-                  <option key={l.name} value={i}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <LocationPicker
+              value={location}
+              onChange={setLocation}
+              placeholder="Farm location — search or use GPS"
+              quickPicks={GHANA_LOCATIONS}
+            />
           </Field>
 
           {priceAdvice && (

@@ -96,6 +96,7 @@ async function testApiAuthRequired() {
       method: "POST",
       body: JSON.stringify({ pickupLat: 5.883, pickupLng: -0.089, deliveryLat: 5.6037, deliveryLng: -0.187, weightKg: 5 }),
     }],
+    ["POST /api/maps", "/api/maps", { method: "POST", body: JSON.stringify({ action: "geocode", address: "Accra" }) }],
   ];
   for (const [name, path, opts] of cases) {
     const { res } = await fetchJson(path, {
@@ -218,6 +219,22 @@ async function testGoogleMapsConfig() {
   const json = await res.json();
   if (json.status !== "OK") return fail("Google Maps config", json.status);
   pass("Google Maps config", "geocoding OK");
+}
+
+async function testGoogleMapsApiIntegration() {
+  const key = process.env.GOOGLE_MAPS_API_KEY ?? process.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!key) return fail("Google Maps API route", "GOOGLE_MAPS_API_KEY missing");
+  const token = await getE2eToken();
+  if (!token) return fail("Google Maps API route", "E2E login failed");
+  const { res, json } = await authFetch("/api/maps", {
+    method: "POST",
+    body: JSON.stringify({ action: "autocomplete", input: "Dodowa" }),
+  });
+  if (!res.ok) return fail("Google Maps API route", `HTTP ${res.status}: ${JSON.stringify(json).slice(0, 120)}`);
+  if (!Array.isArray(json.suggestions) || json.suggestions.length === 0) {
+    return fail("Google Maps API route", "No autocomplete suggestions");
+  }
+  pass("Google Maps API route", `${json.suggestions.length} suggestion(s) for Dodowa`);
 }
 
 async function testVapidConfig() {
@@ -382,6 +399,7 @@ async function main() {
   await testPostHogConfig();
   await testSentryConfig();
   await testGoogleMapsConfig();
+  await testGoogleMapsApiIntegration();
   await testVapidConfig();
   await testAdminPricing();
   await testDeliveryQuote();
