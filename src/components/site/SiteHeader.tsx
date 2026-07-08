@@ -30,7 +30,7 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
 
   const heroNav = overlay && !scrolled;
   const bg = heroNav
-    ? "bg-gradient-to-b from-black/50 via-black/20 to-transparent"
+    ? "bg-gradient-to-b from-black/40 to-transparent"
     : "bg-background/70 backdrop-blur-xl border-b border-border";
 
   const navLink = heroNav

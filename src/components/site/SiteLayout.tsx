@@ -10,7 +10,7 @@ export function SiteLayout({
   overlayHeader?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <SiteHeader overlay={overlayHeader} />
       <main className={overlayHeader ? "" : "pt-24"}>{children}</main>
       <SiteFooter />

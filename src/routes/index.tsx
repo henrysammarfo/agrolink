@@ -36,7 +36,7 @@ function Index() {
 
 function Hero() {
   return (
-    <section className="relative h-screen w-full overflow-hidden">
+    <section className="relative h-[100svh] w-full overflow-hidden">
       <div
         className="absolute inset-0 h-full w-full bg-cover bg-center"
         style={{ backgroundImage: `url(${MARKETING_FALLBACK_IMAGE})` }}
@@ -56,15 +56,11 @@ function Hero() {
         <source src={HERO_VIDEO_URL} type="video/mp4" />
         <source src={HERO_VIDEO_FALLBACK_URL} type="video/mp4" />
       </video>
-      <div className="pointer-events-none absolute inset-0 z-[2] bg-black/15" />
-      <div className="scrim-top-dark z-[2]" />
-      <div className="scrim-hero-bottom z-[2]" />
 
-      <div className="relative z-10 flex h-full flex-col">
-        {/* Spacer for fixed SiteHeader */}
+      <div className="relative z-10 flex h-full flex-col overflow-hidden">
         <div className="shrink-0 h-[4.75rem] md:h-[5.25rem]" aria-hidden />
 
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-start overflow-y-auto px-6 pt-4 text-center sm:pt-6 md:pt-8 lg:pt-10">
+        <div className="flex flex-1 flex-col items-center justify-start px-6 pt-4 text-center sm:pt-6 md:pt-8 lg:pt-10">
           <span className="cinema-fade inline-flex max-w-[min(100%,28rem)] items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-1.5 text-xs font-light text-white/90 backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
             <span className="truncate">Greater Accra · Agbogbloshie → Tema corridor</span>
@@ -113,7 +109,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="relative z-10 hidden shrink-0 items-center justify-between px-12 pb-8 text-xs font-light text-white/70 md:flex lg:px-16 lg:pb-10">
+        <div className="relative z-10 hidden shrink-0 items-center justify-between px-12 pb-8 text-xs font-light text-white/80 md:flex lg:px-16 lg:pb-10 drop-shadow-sm">
           <span>(01) — Scroll to explore</span>
           <span>Built in Accra · Powered by farmers</span>
         </div>
