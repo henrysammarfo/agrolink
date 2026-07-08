@@ -74,7 +74,7 @@ export function AppShell({
     return (
       <div className="relative h-[100dvh] w-full overflow-hidden bg-black">
         {children ?? <Outlet />}
-        <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-white/10 bg-black/80 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0px)]">
+        <nav className="agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-white/10 bg-black/80 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0px)]">
           {mobileTabs.map((t) => {
             const active = pathname === t.to;
             if (t.center) {
@@ -100,10 +100,10 @@ export function AppShell({
         </nav>
         <Link
           to={roleHome(role)}
-          className="fixed left-3 top-[max(env(safe-area-inset-top),12px)] z-50 grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/10"
+          className="agrolink-immersive-chrome pointer-events-auto fixed left-3 top-[max(env(safe-area-inset-top),12px)] grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-md active:scale-95"
           aria-label="Back to home"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-5 w-5" />
         </Link>
       </div>
     );

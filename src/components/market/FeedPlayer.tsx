@@ -505,7 +505,7 @@ function FeedCardOverlay({
       <div className="scrim-top-dark feed-pass-through" />
       <div className="scrim-bottom-dark feed-pass-through" />
 
-      <div className="feed-touch-target absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
+      <div className="feed-touch-target absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pl-14 pt-[max(env(safe-area-inset-top),12px)]">
         <button
           onClick={onOpenGrid}
           className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition active:scale-95"

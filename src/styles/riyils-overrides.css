@@ -35,3 +35,9 @@
 .agrolink-feed-overlay .feed-pass-through {
   pointer-events: none;
 }
+
+/* App chrome (back + bottom nav) must sit above the feed commerce overlay */
+.agrolink-immersive-chrome {
+  z-index: 10055;
+  pointer-events: auto;
+}
