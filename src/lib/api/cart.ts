@@ -1,7 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { CartItemRow } from "@/lib/types/marketplace";
+import type { FeedListing } from "@/lib/types/marketplace";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isValidUserId(userId: string): boolean {
+  return UUID_RE.test(userId);
+}
 
 export async function getOrCreateCart(userId: string) {
+  if (!isValidUserId(userId)) {
+    throw new Error("Sign in with a real account to use your cart.");
+  }
   const { data: existing } = await supabase
     .from("carts")
     .select("id")
@@ -18,40 +29,63 @@ export async function getOrCreateCart(userId: string) {
   return data.id;
 }
 
+function mapListingRow(
+  row: Record<string, unknown>,
+  profile?: { display_name?: string | null; slug?: string | null; avatar_url?: string | null; verified?: boolean; seller_rating?: number | null } | null,
+): FeedListing {
+  return {
+    ...(row as FeedListing),
+    seller_name: (row.seller_name as string | null) ?? profile?.display_name ?? null,
+    seller_slug: (row.seller_slug as string | null) ?? profile?.slug ?? null,
+    seller_avatar: (row.seller_avatar as string | null) ?? profile?.avatar_url ?? null,
+    seller_verified: (row.seller_verified as boolean | undefined) ?? profile?.verified ?? false,
+    seller_rating: (row.seller_rating as number | null) ?? profile?.seller_rating ?? null,
+    ai_demand_score: (row.ai_demand_score as number | undefined) ?? 0.5,
+    feed_score: (row.feed_score as number | undefined) ?? 0.5,
+  };
+}
+
 export async function fetchCartItems(userId: string): Promise<CartItemRow[]> {
   const cartId = await getOrCreateCart(userId);
-  const { data, error } = await supabase
+  const { data: items, error } = await supabase
     .from("cart_items")
-    .select(
-      `
-      id, cart_id, listing_id, quantity,
-      listing:feed_rank!cart_items_listing_id_fkey(*)
-    `,
-    )
-    .eq("cart_id", cartId);
-  if (error) {
-    // fallback without join if view join fails
-    const { data: items, error: e2 } = await supabase
-      .from("cart_items")
-      .select("id, cart_id, listing_id, quantity")
-      .eq("cart_id", cartId);
-    if (e2) throw e2;
-    const listings = await Promise.all(
-      (items ?? []).map(async (it) => {
-        const { data: l } = await supabase
-          .from("feed_rank")
-          .select("*")
-          .eq("id", it.listing_id)
-          .maybeSingle();
-        return { ...it, listing: l ?? undefined };
-      }),
-    );
-    return listings as CartItemRow[];
-  }
-  return (data ?? []) as CartItemRow[];
+    .select("id, cart_id, listing_id, quantity")
+    .eq("cart_id", cartId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  if (!items?.length) return [];
+
+  const listingIds = items.map((it) => it.listing_id);
+  const [{ data: ranked }, { data: rawListings }] = await Promise.all([
+    supabase.from("feed_rank").select("*").in("id", listingIds),
+    supabase.from("listings").select("*").in("id", listingIds),
+  ]);
+
+  const rankedMap = new Map((ranked ?? []).map((l) => [l.id, l as FeedListing]));
+  const rawMap = new Map((rawListings ?? []).map((l) => [l.id, l]));
+
+  const sellerIds = [...new Set((rawListings ?? []).map((l) => l.seller_id))];
+  const { data: profiles } = sellerIds.length
+    ? await supabase.from("profiles").select("id, display_name, slug, avatar_url, verified, seller_rating").in("id", sellerIds)
+    : { data: [] as { id: string; display_name: string | null; slug: string | null; avatar_url: string | null; verified: boolean; seller_rating: number | null }[] };
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  return items.map((it) => {
+    const rankedListing = rankedMap.get(it.listing_id);
+    const raw = rawMap.get(it.listing_id);
+    const listing =
+      rankedListing ??
+      (raw
+        ? mapListingRow(raw as Record<string, unknown>, profileMap.get(raw.seller_id))
+        : undefined);
+    return { ...it, listing };
+  });
 }
 
 export async function addToCart(userId: string, listingId: string, quantity = 1) {
+  if (!isValidUserId(userId)) {
+    throw new Error("Sign in with a real account to add items to your cart.");
+  }
   const cartId = await getOrCreateCart(userId);
   const { data: existing } = await supabase
     .from("cart_items")

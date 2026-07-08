@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { VerticalFeed, type VerticalFeedRef, type VideoItem } from "react-vertical-feed";
@@ -39,6 +39,7 @@ import {
 import type { FeedListing } from "@/lib/types/marketplace";
 import type { FeedComment } from "@/lib/types/marketplace";
 import { isSeedFeedEnabled, isSeedListingId } from "@/lib/demo-listings";
+import { isValidUserId } from "@/lib/api/cart";
 import { getCurrentPosition } from "@/lib/native-geolocation";
 import { triggerLikeHaptic } from "@/lib/haptics";
 import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
@@ -325,6 +326,7 @@ function FeedCardOverlay({
   showImageOnly?: boolean;
 }) {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const addToCartMut = useAddToCart();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -334,7 +336,8 @@ function FeedCardOverlay({
   const [panel, setPanel] = useState<"comments" | "share" | null>(null);
   const [showLikeBurst, setShowLikeBurst] = useState(false);
   const lastTap = useRef(0);
-  const sellerSlug = item.seller_slug ?? item.seller_id.slice(0, 8);
+  const sellerSlug = item.seller_slug;
+  const sellerHandle = (sellerSlug ?? item.seller_name ?? "seller").replace(/-/g, "");
   const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
   const isDemoListing = isSeedListingId(item.id);
 
@@ -456,6 +459,10 @@ function FeedCardOverlay({
       toast.error("Sign in to add to cart");
       return;
     }
+    if (!isValidUserId(user.id)) {
+      toast.error("Sign in with your account to use the cart");
+      return;
+    }
     if (isDemoListing) {
       toast.info("Demo listing", {
         description: "Browse real farmers or post produce to shop live listings.",
@@ -465,7 +472,13 @@ function FeedCardOverlay({
     try {
       await addToCartMut.mutateAsync({ userId: user.id, listingId: item.id, quantity: 1 });
       trackEvent("feed_add_to_cart", { listing_id: item.id, price: item.price_per_unit });
-      toast.success("Added to cart", { description: item.title });
+      toast.success("Added to cart", {
+        description: item.title,
+        action: {
+          label: "View cart",
+          onClick: () => navigate({ to: "/app/buyer/cart" }),
+        },
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not add to cart");
     }
@@ -524,15 +537,26 @@ function FeedCardOverlay({
       </div>
 
       <div className="feed-touch-target absolute bottom-[calc(8.5rem+env(safe-area-inset-bottom))] right-2 z-20 flex flex-col items-center gap-4 sm:right-3 sm:gap-5 md:bottom-[calc(9rem+env(safe-area-inset-bottom))]">
-        <Link to="/farmers/$slug" params={{ slug: sellerSlug }} className="relative">
+        {sellerSlug ? (
+          <Link
+            to="/farmers/$slug"
+            params={{ slug: sellerSlug }}
+            onClick={(e) => e.stopPropagation()}
+            className="feed-touch-target relative"
+          >
+            <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white sm:h-12 sm:w-12">
+              {item.seller_avatar ? (
+                <img src={item.seller_avatar} alt="" className="h-full w-full object-cover" />
+              ) : (
+                (item.seller_name?.[0] ?? "?")
+              )}
+            </span>
+          </Link>
+        ) : (
           <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white sm:h-12 sm:w-12">
-            {item.seller_avatar ? (
-              <img src={item.seller_avatar} alt="" className="h-full w-full object-cover" />
-            ) : (
-              (item.seller_name?.[0] ?? "?")
-            )}
+            {item.seller_name?.[0] ?? "?"}
           </span>
-        </Link>
+        )}
         <Action
           icon={Heart}
           label={formatCount(likes)}
@@ -556,14 +580,22 @@ function FeedCardOverlay({
       </div>
 
       <div className="feed-touch-target absolute inset-x-0 bottom-0 z-20 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pr-[4.25rem] text-white sm:px-5 sm:pr-24 md:p-6 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
-        <Link
-          to="/farmers/$slug"
-          params={{ slug: sellerSlug }}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-white hover:underline"
-        >
-          @{sellerSlug.replace(/-/g, "")}{" "}
-          {item.seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
-        </Link>
+        {sellerSlug ? (
+          <Link
+            to="/farmers/$slug"
+            params={{ slug: sellerSlug }}
+            onClick={(e) => e.stopPropagation()}
+            className="feed-touch-target inline-flex items-center gap-1.5 text-sm font-medium text-white hover:underline"
+          >
+            @{sellerHandle}{" "}
+            {item.seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white">
+            @{sellerHandle}{" "}
+            {item.seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
+          </span>
+        )}
         <h2 className="mt-1.5 font-sans text-xl font-bold leading-tight text-white sm:mt-2 sm:text-2xl md:text-3xl">
           {item.title}
         </h2>

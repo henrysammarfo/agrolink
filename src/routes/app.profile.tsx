@@ -20,7 +20,7 @@ function Profile() {
   const handle = (profile?.display_name ?? user?.email ?? "you").toLowerCase().replace(/[^a-z0-9]/g, "");
   const name = profile?.display_name ?? user?.email?.split("@")[0] ?? "You";
 
-  const { data: stats } = useProfileStats(user?.id);
+  const { data: stats } = useProfileStats(user?.id, profile?.slug ?? undefined);
   const { data: posts = [], isLoading: postsLoading } = useUserListings(user?.id);
   const { data: saved = [] } = useUserBookmarks(user?.id);
   const { data: liked = [] } = useUserLikedListings(user?.id);
@@ -51,6 +51,15 @@ function Profile() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex items-center gap-2">
+          {profile?.slug && (
+            <Link
+              to="/farmers/$slug"
+              params={{ slug: profile.slug }}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+            >
+              Public profile
+            </Link>
+          )}
           <Link to="/app/settings" className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">
             <Settings className="h-4 w-4" /> Edit profile
           </Link>
@@ -80,8 +89,8 @@ function Profile() {
         <div className="mt-8 rounded-3xl border border-border bg-card p-5">
           <h3 className="font-serif text-lg">Recommended sellers</h3>
           <div className="mt-4 grid gap-3 grid-cols-2 sm:grid-cols-4">
-            {sellers.filter((s) => s.id !== user?.id).slice(0, 4).map((s) => (
-              <Link key={s.id} to="/farmers/$slug" params={{ slug: s.slug ?? s.id }} className="rounded-2xl border border-border bg-background p-3 hover:border-primary/40">
+            {sellers.filter((s) => s.id !== user?.id && s.slug).slice(0, 4).map((s) => (
+              <Link key={s.id} to="/farmers/$slug" params={{ slug: s.slug! }} className="rounded-2xl border border-border bg-background p-3 hover:border-primary/40">
                 <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/15 font-serif text-primary">{(s.display_name ?? "F")[0]}</span>
                 <div className="mt-3 truncate text-sm font-medium">{s.display_name}</div>
               </Link>

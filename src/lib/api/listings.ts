@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedListing, ListingStatus, CropType } from "@/lib/types/marketplace";
 import { rankListings } from "@/lib/feed-algorithm";
-import { mergeDemoFeedIfEmpty, isSeedFeedEnabled, SEED_FEED_LISTINGS } from "@/lib/demo-listings";
+import { mergeDemoFeedIfEmpty, isSeedFeedEnabled, SEED_FEED_LISTINGS, getDemoFarmerProfileBySlug, getDemoListingsBySellerSlug } from "@/lib/demo-listings";
 
 export async function fetchFeedListings(opts?: {
   lat?: number;
@@ -58,21 +58,53 @@ export async function fetchSellerListings(sellerId: string): Promise<FeedListing
 export async function fetchListingsBySlug(
   slug: string,
 ): Promise<{ profile: Record<string, unknown>; listings: FeedListing[] }> {
+  const normalized = slug.trim().toLowerCase();
   const { data: profile, error: pErr } = await supabase
     .from("profiles")
     .select("*")
-    .eq("slug", slug)
+    .eq("slug", normalized)
     .maybeSingle();
   if (pErr) throw pErr;
-  if (!profile) return { profile: {}, listings: [] };
 
-  const { data: listings, error: lErr } = await supabase
-    .from("feed_rank")
-    .select("*")
-    .eq("seller_id", profile.id)
-    .order("created_at", { ascending: false });
-  if (lErr) throw lErr;
-  return { profile, listings: (listings ?? []) as FeedListing[] };
+  if (profile) {
+    const { data: listings, error: lErr } = await supabase
+      .from("feed_rank")
+      .select("*")
+      .eq("seller_id", profile.id)
+      .order("created_at", { ascending: false });
+    if (lErr) throw lErr;
+    if ((listings ?? []).length > 0) {
+      return { profile, listings: (listings ?? []) as FeedListing[] };
+    }
+    const { data: allListings, error: allErr } = await supabase
+      .from("listings")
+      .select("*")
+      .eq("seller_id", profile.id)
+      .in("status", ["active", "pending_review"])
+      .order("created_at", { ascending: false });
+    if (allErr) throw allErr;
+    return {
+      profile,
+      listings: (allListings ?? []).map((row) => ({
+        ...(row as FeedListing),
+        seller_name: profile.display_name,
+        seller_slug: profile.slug,
+        seller_avatar: profile.avatar_url,
+        seller_verified: profile.verified ?? false,
+        seller_rating: profile.seller_rating,
+        ai_demand_score: 0.5,
+        feed_score: 0.5,
+      })),
+    };
+  }
+
+  const demoProfile = getDemoFarmerProfileBySlug(normalized);
+  const demoListings = getDemoListingsBySellerSlug(normalized);
+  if (demoProfile && demoListings.length) {
+    return { profile: demoProfile, listings: demoListings };
+  }
+
+  return { profile: {}, listings: [] };
 }
 
 export type CreateListingInput = {

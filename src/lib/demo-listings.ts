@@ -229,6 +229,25 @@ export function isSeedListingId(id: string): boolean {
   return id.startsWith("seed-listing-");
 }
 
+export function getDemoListingsBySellerSlug(slug: string): FeedListing[] {
+  return SEED_FEED_LISTINGS.filter((l) => l.seller_slug === slug);
+}
+
+export function getDemoFarmerProfileBySlug(slug: string) {
+  const listing = SEED_FEED_LISTINGS.find((l) => l.seller_slug === slug);
+  if (!listing) return null;
+  return {
+    id: listing.seller_id,
+    display_name: listing.seller_name,
+    avatar_url: listing.seller_avatar,
+    bio: listing.description,
+    region: listing.location_name,
+    slug: listing.seller_slug,
+    verified: listing.seller_verified,
+    seller_rating: listing.seller_rating,
+  };
+}
+
 export function sanitizeListingMedia(listing: FeedListing): FeedListing {
   const fallback = MEDIA[listing.crop_type as keyof typeof MEDIA] ?? "/media/demo/tomato.svg";
   return {

@@ -54,13 +54,40 @@ export async function fetchProfileStats(userId: string, slug?: string) {
 }
 
 export async function fetchUserListings(userId: string): Promise<FeedListing[]> {
-  const { data, error } = await supabase
-    .from("feed_rank")
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, slug, avatar_url, verified, seller_rating")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const { data: listings, error } = await supabase
+    .from("listings")
     .select("*")
     .eq("seller_id", userId)
+    .in("status", ["active", "pending_review", "sold_out"])
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as FeedListing[];
+
+  const ids = (listings ?? []).map((l) => l.id);
+  const { data: ranked } = ids.length
+    ? await supabase.from("feed_rank").select("*").in("id", ids)
+    : { data: [] as FeedListing[] };
+  const rankedMap = new Map((ranked ?? []).map((l) => [l.id, l as FeedListing]));
+
+  return (listings ?? []).map((row) => {
+    const hit = rankedMap.get(row.id);
+    if (hit) return hit;
+    return {
+      ...(row as FeedListing),
+      seller_name: profile?.display_name ?? null,
+      seller_slug: profile?.slug ?? null,
+      seller_avatar: profile?.avatar_url ?? null,
+      seller_verified: profile?.verified ?? false,
+      seller_rating: profile?.seller_rating ?? null,
+      ai_demand_score: 0.5,
+      feed_score: 0.5,
+    };
+  });
 }
 
 export async function fetchUserBookmarks(userId: string): Promise<FeedListing[]> {

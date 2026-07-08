@@ -120,9 +120,16 @@ function FarmerProfile() {
   return (
     <SiteLayout>
       <div className="mx-auto max-w-5xl px-4 pt-6 pb-20 md:px-6 md:pt-8">
-        <Link to="/farmers" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> All farmers
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link to="/farmers" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> All farmers
+          </Link>
+          {user && (
+            <Link to="/app/buyer/feed" className="text-sm text-primary hover:underline">
+              Back to feed
+            </Link>
+          )}
+        </div>
 
         <div className="relative mt-5 h-40 sm:h-56 overflow-hidden rounded-3xl bg-muted">
           {farmerProfile.avatar_url ? (

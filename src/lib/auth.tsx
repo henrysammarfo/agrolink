@@ -11,6 +11,7 @@ type Profile = {
   bio: string | null;
   phone: string | null;
   region: string | null;
+  slug: string | null;
 };
 
 type Ctx = {
@@ -54,6 +55,7 @@ const DEMO_PROFILE: Profile = {
   bio: "Demo workspace for buyers, sellers, drivers, and admins.",
   phone: "+233 24 000 0000",
   region: "Greater Accra",
+  slug: null,
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {

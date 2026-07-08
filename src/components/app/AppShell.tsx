@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
-import { useUnreadCounts } from "@/hooks/use-marketplace";
+import { useUnreadCounts, useCart } from "@/hooks/use-marketplace";
 import { GlobalSearch, SearchTrigger } from "@/components/app/GlobalSearch";
 
 export type AppRole = AuthRole;
@@ -57,6 +57,8 @@ export function AppShell({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { profile, roles, signOut, user } = useAuth();
   const { data: unread } = useUnreadCounts(user?.id);
+  const { data: cartItems = [] } = useCart(user?.id);
+  const cartCount = cartItems.reduce((sum, item) => sum + Number(item.quantity), 0);
   const unreadInbox =
     unreadOverride ?? (unread ? unread.notifications + unread.messages : 0);
   const nav = NAV[role];
@@ -64,9 +66,20 @@ export function AppShell({
 
   const mobileTabs = [
     { to: roleHome(role), icon: Home, label: "Home" },
-    { to: role === "transport" ? "/app/transport/jobs" : role === "admin" ? "/app/admin/disputes" : "/app/buyer/feed", icon: Sprout, label: "Discover" },
+    {
+      to:
+        role === "transport"
+          ? "/app/transport/jobs"
+          : role === "admin"
+            ? "/app/admin/disputes"
+            : "/app/buyer/feed",
+      icon: Sprout,
+      label: "Discover",
+    },
     { to: "/app/create", icon: Plus, label: "", center: true },
-    { to: "/app/inbox", icon: Inbox, label: "Inbox" },
+    role === "buyer"
+      ? { to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount }
+      : { to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
     { to: "/app/profile", icon: User, label: "Me" },
   ];
 
@@ -86,14 +99,20 @@ export function AppShell({
                 </Link>
               );
             }
+            const badge = "badge" in t ? t.badge : 0;
             return (
               <Link
                 key={t.to}
                 to={t.to}
-                className={`flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${active ? "text-white" : "text-white/45"}`}
+                className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${active ? "text-white" : "text-white/45"}`}
               >
                 <t.icon className={`h-5 w-5 ${active ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}`} />
                 {t.label}
+                {badge > 0 && (
+                  <span className="absolute right-3 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -245,10 +264,20 @@ export function AppShell({
                 </Link>
               );
             }
+            const badge = "badge" in t ? t.badge : 0;
             return (
-              <Link key={t.to} to={t.to} className={`flex flex-col items-center gap-1 py-2.5 text-[10px] ${active ? "text-primary" : "text-muted-foreground"}`}>
+              <Link
+                key={t.to}
+                to={t.to}
+                className={`relative flex flex-col items-center gap-1 py-2.5 text-[10px] ${active ? "text-primary" : "text-muted-foreground"}`}
+              >
                 <t.icon className="h-5 w-5" />
                 {t.label}
+                {badge > 0 && (
+                  <span className="absolute right-3 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
               </Link>
             );
           })}
