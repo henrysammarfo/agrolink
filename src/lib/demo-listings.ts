@@ -225,6 +225,10 @@ export function isSeedFeedEnabled(): boolean {
   return isDemoMode() || import.meta.env.VITE_SEED_FEED === "true";
 }
 
+export function isSeedListingId(id: string): boolean {
+  return id.startsWith("seed-listing-");
+}
+
 export function sanitizeListingMedia(listing: FeedListing): FeedListing {
   const fallback = MEDIA[listing.crop_type as keyof typeof MEDIA] ?? "/media/demo/tomato.svg";
   return {

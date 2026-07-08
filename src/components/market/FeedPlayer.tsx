@@ -15,7 +15,6 @@ import {
   Share2,
   Bookmark,
   ShoppingBasket,
-  MapPin,
   BadgeCheck,
   Volume2,
   VolumeX,
@@ -39,7 +38,7 @@ import {
 } from "@/lib/api/engagement";
 import type { FeedListing } from "@/lib/types/marketplace";
 import type { FeedComment } from "@/lib/types/marketplace";
-import { isDemoMode, isSeedFeedEnabled } from "@/lib/demo-listings";
+import { isSeedFeedEnabled, isSeedListingId } from "@/lib/demo-listings";
 import { getCurrentPosition } from "@/lib/native-geolocation";
 import { triggerLikeHaptic } from "@/lib/haptics";
 import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
@@ -337,16 +336,18 @@ function FeedCardOverlay({
   const lastTap = useRef(0);
   const sellerSlug = item.seller_slug ?? item.seller_id.slice(0, 8);
   const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
+  const isDemoListing = isSeedListingId(item.id);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || isDemoListing) return;
     fetchUserLiked(item.id, user.id).then(setLiked);
     fetchUserBookmarked(item.id, user.id).then(setSaved);
-  }, [item.id, user?.id]);
+  }, [item.id, user?.id, isDemoListing]);
 
   useEffect(() => {
-    if (panel === "comments") fetchComments(item.id).then(setComments);
-  }, [panel, item.id]);
+    if (panel !== "comments" || isDemoListing) return;
+    fetchComments(item.id).then(setComments);
+  }, [panel, item.id, isDemoListing]);
 
   const handleLike = async () => {
     if (!user?.id) {
@@ -356,6 +357,10 @@ function FeedCardOverlay({
     const next = !liked;
     setLiked(next);
     setLikes((n) => Math.max(0, n + (next ? 1 : -1)));
+    if (isDemoListing) {
+      triggerLikeHaptic();
+      return;
+    }
     try {
       await toggleLike(item.id, user.id, next, {
         sellerId: item.seller_id,
@@ -363,8 +368,10 @@ function FeedCardOverlay({
         actorName: profile?.display_name ?? "Someone",
       });
       trackEvent("feed_like", { listing_id: item.id, liked: next });
-    } catch {
+    } catch (err) {
       setLiked(!next);
+      setLikes((n) => Math.max(0, n + (next ? -1 : 1)));
+      toast.error(err instanceof Error ? err.message : "Could not update like");
     }
   };
 
@@ -386,12 +393,17 @@ function FeedCardOverlay({
     }
     const next = !saved;
     setSaved(next);
+    if (isDemoListing) {
+      toast.success(next ? "Saved (demo)" : "Removed");
+      return;
+    }
     try {
       await toggleBookmark(item.id, user.id, next);
       trackEvent("feed_save", { listing_id: item.id, saved: next });
       toast.success(next ? "Saved" : "Removed");
-    } catch {
+    } catch (err) {
       setSaved(!next);
+      toast.error(err instanceof Error ? err.message : "Could not update save");
     }
   };
 
@@ -402,6 +414,20 @@ function FeedCardOverlay({
     }
     const text = commentText.trim();
     if (!text) return;
+    if (isDemoListing) {
+      setComments((c) => [
+        {
+          id: `demo-${Date.now()}`,
+          user_id: user.id,
+          author: profile?.display_name ?? "You",
+          content: text,
+          created_at: new Date().toISOString(),
+        },
+        ...c,
+      ]);
+      setCommentText("");
+      return;
+    }
     try {
       await addComment(item.id, user.id, text, {
         sellerId: item.seller_id,
@@ -420,8 +446,8 @@ function FeedCardOverlay({
       ]);
       setCommentText("");
       trackEvent("feed_comment", { listing_id: item.id });
-    } catch {
-      toast.error("Could not post comment");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not post comment");
     }
   };
 
@@ -430,12 +456,18 @@ function FeedCardOverlay({
       toast.error("Sign in to add to cart");
       return;
     }
+    if (isDemoListing) {
+      toast.info("Demo listing", {
+        description: "Browse real farmers or post produce to shop live listings.",
+      });
+      return;
+    }
     try {
       await addToCartMut.mutateAsync({ userId: user.id, listingId: item.id, quantity: 1 });
       trackEvent("feed_add_to_cart", { listing_id: item.id, price: item.price_per_unit });
       toast.success("Added to cart", { description: item.title });
-    } catch {
-      toast.error("Could not add to cart");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not add to cart");
     }
   };
 
@@ -452,27 +484,31 @@ function FeedCardOverlay({
   };
 
   return (
-    <div className="pointer-events-none absolute inset-0">
-      <div className="pointer-events-auto absolute inset-0 z-[1]" onClick={onDoubleTap} aria-hidden />
+    <div className="feed-pass-through absolute inset-0">
+      <div
+        className="feed-touch-target absolute inset-x-0 bottom-44 top-28 right-16 z-[1] sm:right-20 sm:bottom-48"
+        onClick={onDoubleTap}
+        aria-hidden
+      />
       {showImageOnly && (
         <img
           src={item.image_url ?? "/media/demo/tomato.svg"}
           alt={item.title}
-          className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
+          className={`feed-pass-through pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
         />
       )}
       {showLikeBurst && (
-        <div className="pointer-events-none absolute inset-0 grid place-items-center z-30">
-          <Heart className="h-24 w-24 text-rose-500 fill-rose-500 animate-ping opacity-90" />
+        <div className="feed-pass-through pointer-events-none absolute inset-0 z-30 grid place-items-center">
+          <Heart className="h-24 w-24 animate-ping fill-rose-500 text-rose-500 opacity-90" />
         </div>
       )}
-      <div className="scrim-top-dark" />
-      <div className="scrim-bottom-dark" />
+      <div className="scrim-top-dark feed-pass-through" />
+      <div className="scrim-bottom-dark feed-pass-through" />
 
-      <div className="pointer-events-auto absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
+      <div className="feed-touch-target absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
         <button
           onClick={onOpenGrid}
-          className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white active:scale-95 transition"
+          className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition active:scale-95"
           aria-label="Browse all"
         >
           <Grid2x2 className="h-4 w-4" />
@@ -480,16 +516,16 @@ function FeedCardOverlay({
         <span className="text-[10px] uppercase tracking-widest text-white/70">{progress}</span>
         <button
           onClick={onToggleMute}
-          className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur text-white active:scale-95 transition"
+          className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition active:scale-95"
           aria-label={muted ? "Unmute" : "Mute"}
         >
           {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </button>
       </div>
 
-      <div className="pointer-events-auto absolute right-3 bottom-28 z-10 flex flex-col items-center gap-5 md:bottom-32">
+      <div className="feed-touch-target absolute bottom-[calc(8.5rem+env(safe-area-inset-bottom))] right-2 z-20 flex flex-col items-center gap-4 sm:right-3 sm:gap-5 md:bottom-[calc(9rem+env(safe-area-inset-bottom))]">
         <Link to="/farmers/$slug" params={{ slug: sellerSlug }} className="relative">
-          <span className="grid h-12 w-12 place-items-center rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white overflow-hidden">
+          <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white sm:h-12 sm:w-12">
             {item.seller_avatar ? (
               <img src={item.seller_avatar} alt="" className="h-full w-full object-cover" />
             ) : (
@@ -506,7 +542,7 @@ function FeedCardOverlay({
         />
         <Action
           icon={MessageCircle}
-          label={formatCount(item.comment_count)}
+          label={formatCount(isDemoListing ? comments.length : item.comment_count)}
           onClick={() => setPanel("comments")}
         />
         <Action
@@ -519,7 +555,7 @@ function FeedCardOverlay({
         <Action icon={Share2} label="Share" onClick={() => setPanel("share")} />
       </div>
 
-      <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 p-4 pb-[max(env(safe-area-inset-bottom),72px)] pr-20 text-white md:p-6 md:pr-24">
+      <div className="feed-touch-target absolute inset-x-0 bottom-0 z-20 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pr-[4.25rem] text-white sm:px-5 sm:pr-24 md:p-6 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
         <Link
           to="/farmers/$slug"
           params={{ slug: sellerSlug }}
@@ -528,34 +564,35 @@ function FeedCardOverlay({
           @{sellerSlug.replace(/-/g, "")}{" "}
           {item.seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
         </Link>
-        <h2 className="mt-2 font-sans text-2xl font-bold leading-tight text-white md:text-3xl">
+        <h2 className="mt-1.5 font-sans text-xl font-bold leading-tight text-white sm:mt-2 sm:text-2xl md:text-3xl">
           {item.title}
         </h2>
-        <p className="mt-1 max-w-[80%] text-sm text-white/85">
+        <p className="mt-1 line-clamp-2 max-w-[85%] text-xs text-white/85 sm:max-w-[80%] sm:text-sm">
           {item.location_name} · {item.quantity}
           {item.unit} available · {hoursAgo}h ago
           {item.distance_km != null && ` · ${item.distance_km.toFixed(1)} km`}
         </p>
-        <div className="mt-4 flex items-center gap-3">
-          <div className="rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
-            <span className="font-sans text-xl font-bold text-white">GHS {item.price_per_unit}</span>
+        <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row sm:items-center sm:gap-3">
+          <div className="inline-flex w-fit rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
+            <span className="font-sans text-lg font-bold text-white sm:text-xl">GHS {item.price_per_unit}</span>
             <span className="ml-1 text-xs text-white/70">/{item.unit}</span>
           </div>
           <button
             onClick={handleAddToCart}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:brightness-110 active:scale-[0.98] transition"
+            disabled={addToCartMut.isPending}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60 sm:flex-1"
           >
             <ShoppingBasket className="h-4 w-4" /> Add to cart
           </button>
         </div>
-        <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-white/65">
-          <MapPin className="h-3 w-3" /> {item.location_name}
-        </div>
+        {isDemoListing && (
+          <p className="mt-2 text-[10px] uppercase tracking-wide text-white/50">Sample listing · actions are local preview</p>
+        )}
       </div>
 
       {panel && (
         <div
-          className="pointer-events-auto absolute inset-0 z-20 flex items-end bg-black/35"
+          className="feed-touch-target absolute inset-0 z-30 flex items-end bg-black/35"
           onClick={() => setPanel(null)}
         >
           <div
@@ -646,11 +683,18 @@ function Action({
   activeClass?: string;
 }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-1 text-white">
-      <span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 backdrop-blur transition active:scale-90">
-        <Icon className={`h-6 w-6 ${active ? activeClass : ""}`} />
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="flex min-w-[52px] flex-col items-center gap-1 text-white"
+    >
+      <span className="grid h-11 w-11 place-items-center rounded-full bg-white/10 backdrop-blur transition active:scale-90 sm:h-12 sm:w-12">
+        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${active ? activeClass : ""}`} />
       </span>
-      <span className="text-[11px] font-medium">{label}</span>
+      <span className="text-[10px] font-medium sm:text-[11px]">{label}</span>
     </button>
   );
 }

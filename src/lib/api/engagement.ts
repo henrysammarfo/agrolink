@@ -13,20 +13,6 @@ export async function toggleLike(
       .from("listing_likes")
       .insert({ listing_id: listingId, user_id: userId });
     if (error && !error.message.includes("duplicate")) throw error;
-    await supabase
-      .rpc("adjust_listing_likes" as never, { listing_id: listingId, delta: 1 } as never)
-      .catch(async () => {
-        const { data } = await supabase
-          .from("listings")
-          .select("like_count")
-          .eq("id", listingId)
-          .single();
-        if (data)
-          await supabase
-            .from("listings")
-            .update({ like_count: data.like_count + 1 })
-            .eq("id", listingId);
-      });
     if (meta?.sellerId) {
       await apiFetch("/api/comms/notify", {
         method: "POST",
@@ -40,21 +26,12 @@ export async function toggleLike(
       }).catch(() => {});
     }
   } else {
-    await supabase.from("listing_likes").delete().eq("listing_id", listingId).eq("user_id", userId);
-    await supabase
-      .rpc("adjust_listing_likes" as never, { listing_id: listingId, delta: -1 } as never)
-      .catch(async () => {
-        const { data } = await supabase
-          .from("listings")
-          .select("like_count")
-          .eq("id", listingId)
-          .single();
-        if (data)
-          await supabase
-            .from("listings")
-            .update({ like_count: Math.max(0, data.like_count - 1) })
-            .eq("id", listingId);
-      });
+    const { error } = await supabase
+      .from("listing_likes")
+      .delete()
+      .eq("listing_id", listingId)
+      .eq("user_id", userId);
+    if (error) throw error;
   }
 }
 
@@ -94,16 +71,6 @@ export async function addComment(
     .from("listing_comments")
     .insert({ listing_id: listingId, user_id: userId, content });
   if (error) throw error;
-  const { data } = await supabase
-    .from("listings")
-    .select("comment_count")
-    .eq("id", listingId)
-    .single();
-  if (data)
-    await supabase
-      .from("listings")
-      .update({ comment_count: data.comment_count + 1 })
-      .eq("id", listingId);
 
   if (meta?.sellerId) {
     await apiFetch("/api/comms/notify", {
@@ -125,28 +92,13 @@ export async function toggleBookmark(listingId: string, userId: string, saved: b
       .from("bookmarks")
       .insert({ listing_id: listingId, user_id: userId });
     if (error && !error.message.includes("duplicate")) throw error;
-    const { data } = await supabase
-      .from("listings")
-      .select("save_count")
-      .eq("id", listingId)
-      .single();
-    if (data)
-      await supabase
-        .from("listings")
-        .update({ save_count: data.save_count + 1 })
-        .eq("id", listingId);
   } else {
-    await supabase.from("bookmarks").delete().eq("listing_id", listingId).eq("user_id", userId);
-    const { data } = await supabase
-      .from("listings")
-      .select("save_count")
-      .eq("id", listingId)
-      .single();
-    if (data)
-      await supabase
-        .from("listings")
-        .update({ save_count: Math.max(0, data.save_count - 1) })
-        .eq("id", listingId);
+    const { error } = await supabase
+      .from("bookmarks")
+      .delete()
+      .eq("listing_id", listingId)
+      .eq("user_id", userId);
+    if (error) throw error;
   }
 }
 

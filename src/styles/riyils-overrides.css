@@ -9,7 +9,7 @@
 }
 
 .react-riyils-viewer {
-  z-index: 10 !important;
+  z-index: 1 !important;
   background: #000 !important;
 }
 
@@ -21,20 +21,17 @@
   pointer-events: auto;
 }
 
+/* Feed commerce overlay — above Riyils, below modals */
 .agrolink-feed-overlay {
   z-index: 10050;
   pointer-events: none;
 }
 
-.agrolink-feed-overlay * {
+.agrolink-feed-overlay .feed-touch-target {
   pointer-events: auto;
+  touch-action: manipulation;
 }
 
-.agrolink-feed-overlay .pointer-events-none,
-.agrolink-feed-overlay .pointer-events-none * {
+.agrolink-feed-overlay .feed-pass-through {
   pointer-events: none;
-}
-
-.agrolink-feed-overlay .pointer-events-auto {
-  pointer-events: auto;
 }

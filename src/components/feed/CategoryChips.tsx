@@ -15,7 +15,7 @@ type Props = {
 
 export function CategoryChips({ active, onChange }: Props) {
   return (
-    <div className="pointer-events-auto absolute inset-x-0 top-[max(env(safe-area-inset-top),52px)] z-20 flex gap-2 overflow-x-auto px-4 pb-2 no-scrollbar">
+    <div className="feed-touch-target absolute inset-x-0 top-[max(env(safe-area-inset-top),52px)] z-20 flex gap-2 overflow-x-auto px-4 pb-2 no-scrollbar">
       {CATEGORIES.map((c) => (
         <button
           key={c.id}
