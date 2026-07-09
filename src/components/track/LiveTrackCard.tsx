@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Phone, MessageCircle, Clock, Navigation, ChevronUp, ChevronDown, UserPlus } from "lucide-react";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { ChatThread } from "@/components/chat/ChatThread";
-import { fetchOsrmRoute } from "@/lib/api/driver";
+import { fetchDrivingRoute } from "@/lib/api/driver";
 import { subscribeToDelivery, subscribeToDriverLocation } from "@/lib/api/orders";
 import { toggleFollow, fetchIsFollowing } from "@/lib/api/engagement";
 import { useAuth } from "@/lib/auth";
@@ -26,6 +26,7 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   const [liveDelivery, setLiveDelivery] = useState(order.delivery);
   const delivery = liveDelivery;
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+  const [routeSource, setRouteSource] = useState<"google" | "osrm" | null>(null);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [etaMin, setEtaMin] = useState<number | null>(null);
   const [tripChatOpen, setTripChatOpen] = useState(false);
@@ -66,13 +67,14 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
 
   useEffect(() => {
     if (!delivery) return;
-    fetchOsrmRoute(
+    fetchDrivingRoute(
       { lat: delivery.pickup_lat, lng: delivery.pickup_lng },
       { lat: delivery.delivery_lat, lng: delivery.delivery_lng },
     ).then((r) => {
       if (r) {
         setRouteCoords(r.coordinates);
-        setEtaMin(Math.round(r.duration_min));
+        setEtaMin(Math.round(r.duration_in_traffic_min ?? r.duration_min));
+        setRouteSource(r.source);
       }
     });
   }, [delivery?.id, delivery?.pickup_lat, delivery?.pickup_lng, delivery?.delivery_lat, delivery?.delivery_lng]);
@@ -184,6 +186,14 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
           <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-background/95 px-4 py-2 text-xs shadow-lg backdrop-blur">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
             <span className="font-medium">{delivery.status.replace(/_/g, " ")}</span>
+            {routeSource && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <span className={`text-[10px] uppercase font-semibold ${routeSource === "google" ? "text-blue-500" : "text-amber-600"}`}>
+                  {routeSource}
+                </span>
+              </>
+            )}
             {etaMin != null && (
               <>
                 <span className="text-muted-foreground">·</span>

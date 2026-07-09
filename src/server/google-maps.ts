@@ -10,11 +10,22 @@ export type PlaceSuggestion = {
   mainText: string;
 };
 
+export type DirectionStep = {
+  instruction: string;
+  distance_m: number;
+  duration_min: number;
+  maneuver?: string;
+  end_lat: number;
+  end_lng: number;
+};
+
 export type DrivingRoute = {
   coordinates: [number, number][];
   distance_km: number;
   duration_min: number;
+  duration_in_traffic_min?: number;
   source: "google" | "osrm";
+  steps?: DirectionStep[];
 };
 
 const ACCRA_BIAS = { lat: 5.6037, lng: -0.187 };
@@ -157,6 +168,65 @@ function decodePolyline(encoded: string): [number, number][] {
   return coords;
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+}
+
+function buildDetailedCoordinates(route: {
+  legs?: {
+    steps?: { polyline?: { points: string }; html_instructions?: string; distance?: { value: number }; duration?: { value: number }; maneuver?: string; end_location?: { lat: number; lng: number } }[];
+    distance?: { value: number };
+    duration?: { value: number };
+    duration_in_traffic?: { value: number };
+  }[];
+  overview_polyline?: { points: string };
+}): [number, number][] {
+  const coords: [number, number][] = [];
+  for (const leg of route.legs ?? []) {
+    for (const step of leg.steps ?? []) {
+      const poly = step.polyline?.points;
+      if (!poly) continue;
+      for (const c of decodePolyline(poly)) {
+        const last = coords[coords.length - 1];
+        if (!last || Math.abs(last[0] - c[0]) > 1e-6 || Math.abs(last[1] - c[1]) > 1e-6) {
+          coords.push(c);
+        }
+      }
+    }
+  }
+  if (coords.length >= 2) return coords;
+  if (route.overview_polyline?.points) return decodePolyline(route.overview_polyline.points);
+  return coords;
+}
+
+function extractSteps(route: {
+  legs?: {
+    steps?: {
+      html_instructions?: string;
+      distance?: { value: number };
+      duration?: { value: number };
+      maneuver?: string;
+      end_location?: { lat: number; lng: number };
+    }[];
+  }[];
+}): DirectionStep[] {
+  const steps: DirectionStep[] = [];
+  for (const leg of route.legs ?? []) {
+    for (const step of leg.steps ?? []) {
+      if (!step.end_location) continue;
+      steps.push({
+        instruction: stripHtml(step.html_instructions ?? "Continue"),
+        distance_m: step.distance?.value ?? 0,
+        duration_min: (step.duration?.value ?? 0) / 60,
+        maneuver: step.maneuver,
+        end_lat: step.end_location.lat,
+        end_lng: step.end_location.lng,
+      });
+    }
+  }
+  return steps;
+}
+
 export async function fetchGoogleDirections(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
@@ -167,6 +237,8 @@ export async function fetchGoogleDirections(
     destination: `${to.lat},${to.lng}`,
     mode: "driving",
     region: "gh",
+    departure_time: "now",
+    traffic_model: "best_guess",
   };
   if (waypoints?.length) {
     params.waypoints = waypoints.map((w) => `${w.lat},${w.lng}`).join("|");
@@ -174,23 +246,42 @@ export async function fetchGoogleDirections(
 
   const json = await googleFetch<{
     routes?: {
-      legs?: { distance: { value: number }; duration: { value: number } }[];
+      legs?: {
+        distance: { value: number };
+        duration: { value: number };
+        duration_in_traffic?: { value: number };
+        steps?: {
+          html_instructions?: string;
+          distance?: { value: number };
+          duration?: { value: number };
+          maneuver?: string;
+          polyline?: { points: string };
+          end_location?: { lat: number; lng: number };
+        }[];
+      }[];
       overview_polyline?: { points: string };
     }[];
   }>("directions/json", params);
 
   const route = json.routes?.[0];
-  const poly = route?.overview_polyline?.points;
-  if (!route?.legs?.length || !poly) return null;
+  if (!route?.legs?.length) return null;
 
   const distance_m = route.legs.reduce((sum, leg) => sum + leg.distance.value, 0);
   const duration_s = route.legs.reduce((sum, leg) => sum + leg.duration.value, 0);
+  const traffic_s = route.legs.reduce(
+    (sum, leg) => sum + (leg.duration_in_traffic?.value ?? leg.duration.value),
+    0,
+  );
+  const coordinates = buildDetailedCoordinates(route);
+  if (coordinates.length < 2) return null;
 
   return {
-    coordinates: decodePolyline(poly),
+    coordinates,
     distance_km: distance_m / 1000,
     duration_min: duration_s / 60,
+    duration_in_traffic_min: traffic_s / 60,
     source: "google",
+    steps: extractSteps(route),
   };
 }
 

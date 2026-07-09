@@ -18,8 +18,9 @@ import {
   completeDeliveryViaApi,
 } from "@/lib/api/orders";
 import {
-  updateDriverAvailability, startDriverLocationWatch, fetchOsrmRoute, goOnlineWithLocation,
+  updateDriverAvailability, startDriverLocationWatch, fetchDrivingRoute, goOnlineWithLocation,
 } from "@/lib/api/driver";
+import type { RouteStep } from "@/lib/api/maps";
 import { filterJobsForDriver } from "@/lib/driver-jobs";
 import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import { vehicleToFilterBucket } from "@/lib/vehicle-types";
@@ -40,7 +41,13 @@ function TransportOverview() {
   const { data: earnings } = useDriverEarnings(user?.id);
   const [jobs, setJobs] = useState<DeliveryRow[]>([]);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
-  const [routeMeta, setRouteMeta] = useState<{ distance_km: number; duration_min: number } | null>(null);
+  const [routeMeta, setRouteMeta] = useState<{
+    distance_km: number;
+    duration_min: number;
+    duration_in_traffic_min?: number;
+    source: "google" | "osrm";
+    steps: RouteStep[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [podJob, setPodJob] = useState<DeliveryRow | null>(null);
   const [offerJob, setOfferJob] = useState<DeliveryRow | null>(null);
@@ -134,10 +141,16 @@ function TransportOverview() {
 
     if (!isValidMapCoord(origin.lat, origin.lng)) return;
 
-    fetchOsrmRoute(origin, to).then((r) => {
+    fetchDrivingRoute(origin, to).then((r) => {
       if (!r) return;
       setRouteCoords(r.coordinates);
-      setRouteMeta({ distance_km: r.distance_km, duration_min: r.duration_min });
+      setRouteMeta({
+        distance_km: r.distance_km,
+        duration_min: r.duration_min,
+        duration_in_traffic_min: r.duration_in_traffic_min,
+        source: r.source,
+        steps: r.steps ?? [],
+      });
     });
   }, [featured?.id, featured?.status, featured?.pickup_lat, featured?.pickup_lng, featured?.delivery_lat, featured?.delivery_lng, isIndex, driverCenter, livePos, active]);
 
@@ -290,6 +303,10 @@ function TransportOverview() {
               destination={{ lat: navDestination.lat, lng: navDestination.lng }}
               distanceKm={routeMeta?.distance_km}
               durationMin={routeMeta?.duration_min}
+              durationInTrafficMin={routeMeta?.duration_in_traffic_min}
+              routeSource={routeMeta?.source}
+              steps={routeMeta?.steps}
+              currentPosition={livePos}
               enabled={!!active}
               muted={navMuted}
               onToggleMute={() => setNavMuted((m) => !m)}

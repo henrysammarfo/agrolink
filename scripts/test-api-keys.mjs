@@ -208,11 +208,29 @@ async function testGoogleMaps() {
   );
   const json = await res.json().catch(() => ({}));
   record(
-    "Google Maps",
+    "Google Maps geocode",
     json.status === "OK" || json.status === "ZERO_RESULTS",
     json.status === "OK"
       ? "Geocoding API key valid"
       : `${json.status ?? res.status}: ${json.error_message ?? "check API restrictions/billing"}`,
+  );
+
+  const dirRes = await fetch(
+    `https://maps.googleapis.com/maps/api/directions/json?origin=5.6037,-0.187&destination=5.6500,-0.1664&mode=driving&departure_time=now&traffic_model=best_guess&key=${encodeURIComponent(key)}`,
+  );
+  const dirJson = await dirRes.json().catch(() => ({}));
+  const route = dirJson.routes?.[0];
+  const stepCount = route?.legs?.[0]?.steps?.length ?? 0;
+  const pointCount = (route?.legs?.[0]?.steps ?? []).reduce(
+    (n, s) => n + (s.polyline?.points?.length ? 1 : 0),
+    0,
+  );
+  record(
+    "Google Maps directions",
+    dirJson.status === "OK" && stepCount > 0,
+    dirJson.status === "OK"
+      ? `Directions OK — ${stepCount} steps, ${pointCount} step polylines (Accra → East Legon)`
+      : `${dirJson.status ?? dirRes.status}: ${dirJson.error_message ?? "enable Directions API"}`,
   );
 }
 
