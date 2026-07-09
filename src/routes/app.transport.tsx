@@ -16,10 +16,11 @@ import {
   fetchAvailableDeliveries, fetchDriverDeliveries, acceptDelivery, declineDelivery, advanceDeliveryStatus,
   completeDeliveryViaApi,
 } from "@/lib/api/orders";
-import { haversineKm, vehicleCanFulfill, VEHICLE_FILTER_OPTIONS } from "@/lib/vehicle-types";
+import { VEHICLE_FILTER_OPTIONS } from "@/lib/vehicle-types";
 import {
-  updateDriverAvailability, startDriverLocationWatch, fetchOsrmRoute,
+  updateDriverAvailability, startDriverLocationWatch, fetchOsrmRoute, goOnlineWithLocation,
 } from "@/lib/api/driver";
+import { filterJobsForDriver } from "@/lib/driver-jobs";
 import type { DeliveryRow } from "@/lib/types/marketplace";
 
 export const Route = createFileRoute("/app/transport")({
@@ -43,24 +44,10 @@ function TransportOverview() {
 
   const online = driverProfile?.available ?? false;
   const active = jobs.find((j) => ["driver_assigned", "driver_enroute_pickup", "picked_up", "enroute_delivery"].includes(j.status));
-  const availableJobs = useMemo(() => {
-    return jobs.filter((j) => {
-      if (j.status !== "requested" || j.driver_id) return false;
-      if (!driverProfile) return false;
-      const req = (j as DeliveryRow & { required_vehicle_type?: string }).required_vehicle_type;
-      if (!vehicleCanFulfill(driverProfile.vehicle_type, req)) return false;
-      if (vehicleFilter !== "all" && !vehicleCanFulfill(driverProfile.vehicle_type, vehicleFilter)) return false;
-      const radius = Number((j as DeliveryRow & { search_radius_km?: number }).search_radius_km ?? 500);
-      if (driverProfile.current_lat != null && driverProfile.current_lng != null) {
-        const dist = haversineKm(
-          { lat: j.pickup_lat, lng: j.pickup_lng },
-          { lat: driverProfile.current_lat, lng: driverProfile.current_lng },
-        );
-        if (dist > radius) return false;
-      }
-      return true;
-    });
-  }, [jobs, driverProfile, vehicleFilter]);
+  const availableJobs = useMemo(
+    () => filterJobsForDriver(jobs, driverProfile ?? undefined, vehicleFilter),
+    [jobs, driverProfile, vehicleFilter],
+  );
   const nextAvailable = availableJobs[0];
   const featured = active ?? nextAvailable;
 
@@ -74,6 +61,7 @@ function TransportOverview() {
       setJobs([...mine, ...available.filter((a) => !mine.find((m) => m.id === a.id))]);
     } catch (e) {
       console.warn("[Transport] load jobs failed", e);
+      toast.error(e instanceof Error ? e.message : "Could not load jobs");
     } finally {
       setLoading(false);
     }
@@ -108,11 +96,25 @@ function TransportOverview() {
   const toggleOnline = async () => {
     if (!user?.id) return;
     try {
-      await updateDriverAvailability(user.id, !online);
+      if (online) {
+        await updateDriverAvailability(user.id, false);
+        trackEvent("driver_online_toggle", { online: false });
+        toast.success("You are offline");
+      } else {
+        const ok = await goOnlineWithLocation(user.id);
+        if (!ok) {
+          toast.error("Turn on location to go online", {
+            description: "We need your GPS to match you with nearby delivery jobs.",
+          });
+          return;
+        }
+        trackEvent("driver_online_toggle", { online: true });
+        toast.success("You are online — watching for jobs nearby");
+      }
       refetch();
-      trackEvent("driver_online_toggle", { online: !online });
-      toast.success(online ? "You are offline" : "You are online");
-    } catch { toast.error("Could not update status"); }
+    } catch {
+      toast.error("Could not update status");
+    }
   };
 
   const acceptJob = async (id: string) => {
@@ -318,6 +320,9 @@ function TransportOverview() {
                 <div className="text-center py-4">
                   <Wallet className="mx-auto h-8 w-8 text-muted-foreground/50" />
                   <div className="mt-2 font-sans text-lg font-semibold">{online ? "Waiting for jobs…" : "Go online to receive jobs"}</div>
+                  {online && driverProfile?.current_lat == null && (
+                    <p className="mt-2 text-xs text-amber-600">Location off — enable GPS so we can match you with nearby pickups.</p>
+                  )}
                   {earnings && earnings.week > 0 && (
                     <p className="mt-1 text-xs text-muted-foreground">GHS {earnings.week.toFixed(2)} earned this week</p>
                   )}

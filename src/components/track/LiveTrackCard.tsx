@@ -6,21 +6,32 @@ import { ChatThread } from "@/components/chat/ChatThread";
 import { fetchOsrmRoute } from "@/lib/api/driver";
 import { subscribeToDelivery, subscribeToDriverLocation } from "@/lib/api/orders";
 import { useAuth } from "@/lib/auth";
-import type { OrderRow } from "@/lib/types/marketplace";
+import type { DeliveryRow, OrderRow } from "@/lib/types/marketplace";
 import { toast } from "sonner";
 
 const STATUS_STEPS = ["confirmed", "processing", "dispatched", "delivered"] as const;
+const DELIVERY_TRACKING = [
+  "driver_assigned",
+  "driver_enroute_pickup",
+  "picked_up",
+  "enroute_delivery",
+] as const;
 
 type Props = { order: OrderRow; fullscreen?: boolean };
 
 export function LiveTrackCard({ order, fullscreen }: Props) {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const delivery = order.delivery;
+  const [liveDelivery, setLiveDelivery] = useState(order.delivery);
+  const delivery = liveDelivery;
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [etaMin, setEtaMin] = useState<number | null>(null);
   const [tripChatOpen, setTripChatOpen] = useState(false);
+
+  useEffect(() => {
+    setLiveDelivery(order.delivery);
+  }, [order.delivery, order.id]);
 
   useEffect(() => {
     if (!delivery) return;
@@ -37,12 +48,22 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
 
   useEffect(() => {
     if (!delivery?.id) return;
-    return subscribeToDelivery(delivery.id, () => {});
+    return subscribeToDelivery(delivery.id, (updated) =>
+      setLiveDelivery((prev) => (prev ? { ...prev, ...updated } : updated)),
+    );
   }, [delivery?.id]);
 
   useEffect(() => {
+    if (delivery?.driver?.current_lat != null && delivery?.driver?.current_lng != null) {
+      setDriverPos({ lat: delivery.driver.current_lat, lng: delivery.driver.current_lng });
+    }
+  }, [delivery?.driver?.current_lat, delivery?.driver?.current_lng]);
+
+  useEffect(() => {
     if (!delivery?.driver_id) return;
-    return subscribeToDriverLocation(delivery.driver_id, (pos) => setDriverPos(pos));
+    return subscribeToDriverLocation(delivery.driver_id, (pos) =>
+      setDriverPos({ lat: pos.current_lat, lng: pos.current_lng }),
+    );
   }, [delivery?.driver_id]);
 
   const callDriver = () => {
@@ -80,7 +101,11 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
       : []),
   ];
 
-  const currentIndex = STATUS_STEPS.indexOf(order.status as (typeof STATUS_STEPS)[number]);
+  const deliveryStep = delivery?.status
+    ? DELIVERY_TRACKING.indexOf(delivery.status as (typeof DELIVERY_TRACKING)[number])
+    : -1;
+  const orderStep = STATUS_STEPS.indexOf(order.status as (typeof STATUS_STEPS)[number]);
+  const currentIndex = deliveryStep >= 0 ? Math.min(deliveryStep + 1, STATUS_STEPS.length - 1) : orderStep;
   const progress = currentIndex >= 0 ? (currentIndex + 1) / STATUS_STEPS.length : 0.25;
 
   const mapHeight = fullscreen ? "min-h-[55vh] h-[55vh]" : "280px";

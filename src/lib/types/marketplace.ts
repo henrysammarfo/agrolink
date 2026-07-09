@@ -129,7 +129,7 @@ export type DeliveryRow = {
     plate_number: string | null;
     current_lat: number | null;
     current_lng: number | null;
-    profile?: { display_name: string | null; avatar_url: string | null };
+    profile?: { display_name: string | null; avatar_url: string | null; phone?: string | null };
   };
 };
 

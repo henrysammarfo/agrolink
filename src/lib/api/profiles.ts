@@ -15,8 +15,13 @@ export type PublicProfile = {
 };
 
 export async function fetchPublicSellers(limit = 12): Promise<PublicProfile[]> {
-  const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "farmer");
-  const ids = (roles ?? []).map((r) => r.user_id);
+  const { data: listingRows, error: lErr } = await supabase
+    .from("listings")
+    .select("seller_id")
+    .eq("status", "active");
+  if (lErr) throw lErr;
+
+  const ids = [...new Set((listingRows ?? []).map((r) => r.seller_id))];
   if (!ids.length) return [];
 
   const { data, error } = await supabase

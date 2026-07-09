@@ -59,12 +59,26 @@ export async function fetchListingsBySlug(
   slug: string,
 ): Promise<{ profile: Record<string, unknown>; listings: FeedListing[] }> {
   const normalized = slug.trim().toLowerCase();
-  const { data: profile, error: pErr } = await supabase
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  let profile: Record<string, unknown> | null = null;
+  const { data: bySlug, error: pErr } = await supabase
     .from("profiles")
     .select("*")
     .eq("slug", normalized)
     .maybeSingle();
   if (pErr) throw pErr;
+  profile = bySlug;
+
+  if (!profile && uuidRe.test(slug.trim())) {
+    const { data: byId, error: idErr } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", slug.trim())
+      .maybeSingle();
+    if (idErr) throw idErr;
+    profile = byId;
+  }
 
   if (profile) {
     const { data: listings, error: lErr } = await supabase

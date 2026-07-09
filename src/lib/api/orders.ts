@@ -9,7 +9,7 @@ export async function fetchBuyerOrders(buyerId: string): Promise<OrderRow[]> {
       `
       *,
       items:order_items(*, listing:listings(title, image_url)),
-      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url)))
+      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone)))
     `,
     )
     .eq("buyer_id", buyerId)
@@ -29,7 +29,13 @@ export async function fetchSellerOrders(sellerId: string): Promise<OrderRow[]> {
 
   const { data, error: oErr } = await supabase
     .from("orders")
-    .select(`*, items:order_items(*)`)
+    .select(
+      `
+      *,
+      items:order_items(*, listing:listings(title, image_url)),
+      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone)))
+    `,
+    )
     .in("id", orderIds)
     .order("created_at", { ascending: false });
   if (oErr) throw oErr;
@@ -61,19 +67,13 @@ export async function updateOrderStatus(orderId: string, status: string) {
 }
 
 export async function fetchAvailableDeliveries(): Promise<DeliveryRow[]> {
-  const { data, error } = await supabase
-    .from("deliveries")
-    .select(
-      `
-      *,
-      order:orders(buyer_id, total_amount)
-    `,
-    )
-    .eq("status", "requested")
-    .is("driver_id", null)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as DeliveryRow[];
+  const res = await apiFetch("/api/deliveries/available");
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? "Could not load available jobs");
+  }
+  const json = (await res.json()) as { deliveries: DeliveryRow[] };
+  return json.deliveries ?? [];
 }
 
 export async function fetchDriverDeliveries(driverProfileId: string): Promise<DeliveryRow[]> {

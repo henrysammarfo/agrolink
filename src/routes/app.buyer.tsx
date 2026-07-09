@@ -21,7 +21,10 @@ function BuyerOverview() {
   if (pathname !== "/app/buyer") return <Outlet />;
 
   const active = orders.filter((o) => !["delivered", "cancelled"].includes(o.status));
-  const inTransit = active.filter((o) => o.status === "dispatched" || o.delivery?.status === "enroute_delivery");
+  const trackingStatuses = ["driver_assigned", "driver_enroute_pickup", "picked_up", "enroute_delivery"];
+  const inTransit = active.filter(
+    (o) => o.status === "dispatched" || trackingStatuses.includes(o.delivery?.status ?? ""),
+  );
   const weekSpend = orders
     .filter((o) => {
       const d = new Date(o.created_at);
