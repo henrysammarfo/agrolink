@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { MapPin, Truck, Clock, Check, Package, Loader2, Navigation } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
@@ -11,6 +11,8 @@ import { useDriverProfile, useTransportJobs } from "@/hooks/use-marketplace";
 import { trackEvent } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { acceptDelivery, declineDelivery, advanceDeliveryStatus, completeDeliveryViaApi } from "@/lib/api/orders";
+import { filterJobsForDriver } from "@/lib/driver-jobs";
+import { vehicleToFilterBucket } from "@/lib/vehicle-types";
 import type { DeliveryRow } from "@/lib/types/marketplace";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -29,12 +31,19 @@ const STATUS_MAP: Record<string, { label: string; tone: string }> = {
 };
 
 function Jobs() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: driver } = useDriverProfile(user?.id);
   const { data: jobs = [], isLoading } = useTransportJobs(driver?.id);
   const [filter, setFilter] = useState<"all" | "requested" | "active" | "delivered">("all");
   const [podJob, setPodJob] = useState<DeliveryRow | null>(null);
   const qc = useQueryClient();
+  const vehicleLabel = vehicleToFilterBucket(driver?.vehicle_type);
+
+  const matchedJobs = useMemo(
+    () => filterJobsForDriver(jobs, driver ?? undefined, "all"),
+    [jobs, driver],
+  );
 
   const refresh = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["transport-jobs", driver?.id] });
@@ -54,6 +63,7 @@ function Jobs() {
   }, [driver?.id, refresh]);
 
   const visible = jobs.filter((j) => {
+    if (j.status === "requested" && !matchedJobs.some((m) => m.id === j.id)) return false;
     if (filter === "all") return true;
     if (filter === "requested") return j.status === "requested";
     if (filter === "delivered") return j.status === "delivered";
@@ -65,8 +75,9 @@ function Jobs() {
     try {
       await acceptDelivery(id, driver.id);
       trackEvent("driver_job_accept", { delivery_id: id, source: "jobs_list" });
-      toast.success("Job accepted");
+      toast.success("Job accepted — opening map");
       refresh();
+      navigate({ to: "/app/transport" });
     } catch {
       toast.error("Could not accept");
     }
@@ -116,7 +127,7 @@ function Jobs() {
         eyebrow="Job board"
         title="Pick a"
         italic="run"
-        sub="Bolt-style job list — accept, pick up, earn on MoMo."
+        sub={`${vehicleLabel} jobs only — accept here or on the live map.`}
         action={
           <div className="flex gap-2">
             {(["all", "requested", "active", "delivered"] as const).map((f) => (
@@ -139,7 +150,7 @@ function Jobs() {
       <div className="space-y-3">
         {visible.map((j) => {
           const st = STATUS_MAP[j.status] ?? { label: j.status, tone: "" };
-          const payout = j.delivery_fee ?? (j.estimated_distance_km ? Math.round(Number(j.estimated_distance_km) * 2.5 + 15) : null);
+          const payout = j.delivery_fee ?? (j.estimated_distance_km ? Math.max(12, Math.round(Number(j.estimated_distance_km) * 1.2 + 8)) : null);
           return (
           <div key={j.id} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between shadow-sm">
             <div className="min-w-0">

@@ -28,7 +28,12 @@ function OrderSuccessPage() {
   const hasDelivery = !!delivery;
 
   return (
-    <AppShell role="buyer" hideMobileNav compact>
+    <AppShell role="buyer" compact>
+      <div className="mb-4">
+        <Link to="/app/buyer/feed" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back to feed
+        </Link>
+      </div>
       <div className="mx-auto max-w-lg">
         {isLoading || !order ? (
           <div className="grid place-items-center py-24">

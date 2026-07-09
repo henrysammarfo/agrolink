@@ -10,6 +10,5 @@ SET
   peak_multiplier = 1.1,
   motorcycle_multiplier = 1.0,
   pickup_multiplier = 1.25,
-  truck_multiplier = 1.5,
-  updated_at = now()
+  truck_multiplier = 1.5
 WHERE name = 'default';
