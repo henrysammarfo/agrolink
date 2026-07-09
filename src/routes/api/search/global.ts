@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/search/global")({
             .from("profiles")
             .select("id, display_name, slug, username, region, avatar_url")
             .or(`display_name.ilike.%${q}%,slug.ilike.%${q}%,username.ilike.%${q}%,region.ilike.%${q}%`)
-            .limit(8);
+            .limit(12);
 
           const ordersP =
             auth && role === "buyer"
@@ -51,6 +51,24 @@ export const Route = createFileRoute("/api/search/global")({
           if (listings.error) throw listings.error;
           if (farmers.error) throw farmers.error;
 
+          const profileIds = (farmers.data ?? []).map((f) => f.id);
+          const { data: drivers } = profileIds.length
+            ? await supabaseAdmin
+                .from("driver_profiles")
+                .select("user_id, vehicle_type, verification_status")
+                .in("user_id", profileIds)
+                .eq("verification_status", "approved")
+            : { data: [] };
+
+          const driverSet = new Set((drivers ?? []).map((d) => d.user_id));
+          const driverVehicle = new Map((drivers ?? []).map((d) => [d.user_id, d.vehicle_type]));
+
+          const enrichedFarmers = (farmers.data ?? []).map((f) => ({
+            ...f,
+            is_driver: driverSet.has(f.id),
+            vehicle_type: driverVehicle.get(f.id) ?? null,
+          }));
+
           const mergedListings = [
             ...(listings.data ?? []),
             ...(tagListings.data ?? []).filter((t) => !(listings.data ?? []).some((l) => l.id === t.id)),
@@ -66,7 +84,7 @@ export const Route = createFileRoute("/api/search/global")({
 
           return Response.json({
             listings: mergedListings,
-            farmers: farmers.data ?? [],
+            farmers: enrichedFarmers.slice(0, 8),
             orders: orders.slice(0, 6),
             hashtags,
           });

@@ -9,7 +9,7 @@ export async function fetchBuyerOrders(buyerId: string): Promise<OrderRow[]> {
       `
       *,
       items:order_items(*, listing:listings(title, image_url)),
-      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone)))
+      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone, slug, username)))
     `,
     )
     .eq("buyer_id", buyerId)
@@ -33,7 +33,7 @@ export async function fetchSellerOrders(sellerId: string): Promise<OrderRow[]> {
       `
       *,
       items:order_items(*, listing:listings(title, image_url)),
-      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone)))
+      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone, slug, username)))
     `,
     )
     .in("id", orderIds)
@@ -49,7 +49,7 @@ export async function fetchOrderById(orderId: string): Promise<OrderRow | null> 
       `
       *,
       items:order_items(*, listing:listings(title, image_url)),
-      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone)))
+      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone, slug, username)))
     `,
     )
     .eq("id", orderId)

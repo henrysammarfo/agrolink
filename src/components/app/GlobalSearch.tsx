@@ -15,7 +15,7 @@ import { apiFetch } from "@/lib/api/fetch-auth";
 
 type SearchResult = {
   listings: { id: string; title: string; seller_name: string; seller_slug: string; price_per_unit: number; unit: string }[];
-  farmers: { id: string; display_name: string; slug: string | null; username?: string | null; region: string | null }[];
+  farmers: { id: string; display_name: string; slug: string | null; username?: string | null; region: string | null; is_driver?: boolean; vehicle_type?: string | null }[];
   orders: { id: string; status: string; total_amount: number }[];
   hashtags: string[];
 };
@@ -108,7 +108,9 @@ export function GlobalSearch({ role, open, onOpenChange }: Props) {
               <CommandItem key={f.id} onSelect={() => go("/app/users/$slug", { slug: f.username ?? f.slug ?? f.id })}>
                 <User className="mr-2 h-4 w-4" />
                 <span>{f.display_name}</span>
-                <span className="ml-auto text-xs text-muted-foreground">@{f.username ?? f.slug?.replace(/-/g, "")}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {f.is_driver ? "Driver" : "User"} · @{f.username ?? f.slug?.replace(/-/g, "")}
+                </span>
               </CommandItem>
             ))}
           </CommandGroup>

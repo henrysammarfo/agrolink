@@ -340,9 +340,9 @@ export function StatCard({ label, value, sub, tone = "primary" }: {
     : tone === "emerald" ? "text-emerald-600 dark:text-emerald-400"
     : "text-foreground";
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 min-w-0 overflow-hidden">
       <div className="text-xs uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className={`mt-2 font-serif text-3xl md:text-4xl ${toneClass}`}>{value}</div>
+      <div className={`mt-2 font-serif text-2xl sm:text-3xl md:text-4xl truncate ${toneClass}`}>{value}</div>
       {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
     </div>
   );
