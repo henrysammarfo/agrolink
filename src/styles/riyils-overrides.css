@@ -59,5 +59,11 @@
 }
 
 .agrolink-immersive-feed {
-  --agrolink-tab-bar: 3.25rem;
+  --agrolink-tab-bar: 3.5rem;
+}
+
+/* Immersive tab bar — TikTok-style translucent overlay on video */
+.agrolink-immersive-chrome a,
+.agrolink-immersive-chrome button {
+  -webkit-tap-highlight-color: transparent;
 }

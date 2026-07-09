@@ -100,10 +100,10 @@ export function AppShell({
     return (
       <div
         className="agrolink-immersive-feed relative h-[100dvh] w-full overflow-hidden bg-black"
-        style={{ "--agrolink-tab-bar": "3.25rem" } as React.CSSProperties}
+        style={{ "--agrolink-tab-bar": "3.5rem" } as React.CSSProperties}
       >
         <div className="absolute inset-0">{children ?? <Outlet />}</div>
-        <nav className="agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t border-white/10 bg-black/70 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0px)]">
+        <nav className="agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t border-white/5 bg-black/55 backdrop-blur-md pb-[max(env(safe-area-inset-bottom),0px)]">
           {mobileTabs.map((t) => {
             const active = pathname === t.to;
             if ("center" in t && t.center) {
