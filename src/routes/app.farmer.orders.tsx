@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Package, Truck, Check, Loader2 } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Package, Truck, Check, Loader2, Phone, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { FarmerGate } from "@/components/app/RoleGate";
@@ -23,6 +23,7 @@ const NEXT: Record<string, { label: string; next: string; icon: typeof Check; to
 
 function FarmerOrders() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: orders = [], isLoading } = useSellerOrders(user?.id);
   const qc = useQueryClient();
 
@@ -71,6 +72,47 @@ function FarmerOrders() {
                   {o.items?.map((i) => `${i.listing?.title ?? "Item"} ×${i.quantity}`).join(" · ")}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</div>
+                {o.delivery && (
+                  <div className="mt-3 rounded-xl bg-muted/50 p-3 text-sm">
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Delivery</div>
+                    <div className="mt-1 capitalize">{o.delivery.status.replace(/_/g, " ")}</div>
+                    {o.delivery.driver ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="font-medium">
+                          {o.delivery.driver.profile?.display_name ?? "Driver assigned"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {o.delivery.driver.vehicle_type} · {o.delivery.driver.plate_number ?? "—"}
+                        </span>
+                        {o.delivery.driver.profile?.phone && (
+                          <a
+                            href={`tel:${o.delivery.driver.profile.phone}`}
+                            className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs"
+                          >
+                            <Phone className="h-3 w-3" /> Call
+                          </a>
+                        )}
+                        {o.delivery.driver.user_id && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate({
+                                to: "/app/inbox/chat/$userId",
+                                params: { userId: o.delivery!.driver!.user_id },
+                                search: { order: o.id },
+                              })
+                            }
+                            className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs"
+                          >
+                            <MessageCircle className="h-3 w-3" /> Message
+                          </button>
+                        )}
+                      </div>
+                    ) : o.delivery.status === "requested" ? (
+                      <p className="mt-1 text-xs text-muted-foreground">Finding a driver nearby…</p>
+                    ) : null}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">

@@ -85,6 +85,16 @@ export async function fetchOsrmRoute(
   }
 }
 
+export async function goOnlineWithLocation(userId: string): Promise<boolean> {
+  const { requestLocationPermission, getCurrentPosition } = await import("@/lib/native-geolocation");
+  await requestLocationPermission();
+  const pos = await getCurrentPosition();
+  if (!pos) return false;
+  await updateDriverLocation(userId, pos.lat, pos.lng);
+  await updateDriverAvailability(userId, true);
+  return true;
+}
+
 export function startDriverLocationWatch(
   userId: string,
   onUpdate: (lat: number, lng: number) => void,

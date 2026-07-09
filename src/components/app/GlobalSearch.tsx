@@ -93,8 +93,8 @@ export function GlobalSearch({ role, open, onOpenChange }: Props) {
         )}
         {results && results.farmers.length > 0 && (
           <CommandGroup heading="Farmers">
-            {results.farmers.map((f) => (
-              <CommandItem key={f.id} onSelect={() => go("/farmers/$slug", { slug: f.slug })}>
+            {results.farmers.filter((f) => f.slug || f.id).map((f) => (
+              <CommandItem key={f.id} onSelect={() => go("/farmers/$slug", { slug: f.slug ?? f.id })}>
                 <User className="mr-2 h-4 w-4" />
                 <span>{f.display_name}</span>
                 <span className="ml-auto text-xs text-muted-foreground">{f.region}</span>

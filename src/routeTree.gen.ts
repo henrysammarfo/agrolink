@@ -58,6 +58,7 @@ import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quot
 import { Route as ApiDeliveriesReassignExpiredRouteImport } from './routes/api/deliveries/reassign-expired'
 import { Route as ApiDeliveriesDeclineRouteImport } from './routes/api/deliveries/decline'
 import { Route as ApiDeliveriesCompleteRouteImport } from './routes/api/deliveries/complete'
+import { Route as ApiDeliveriesAvailableRouteImport } from './routes/api/deliveries/available'
 import { Route as ApiDeliveriesAcceptRouteImport } from './routes/api/deliveries/accept'
 import { Route as ApiCommsNotifyRouteImport } from './routes/api/comms/notify'
 import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
@@ -314,6 +315,11 @@ const ApiDeliveriesCompleteRoute = ApiDeliveriesCompleteRouteImport.update({
   path: '/api/deliveries/complete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDeliveriesAvailableRoute = ApiDeliveriesAvailableRouteImport.update({
+  id: '/api/deliveries/available',
+  path: '/api/deliveries/available',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDeliveriesAcceptRoute = ApiDeliveriesAcceptRouteImport.update({
   id: '/api/deliveries/accept',
   path: '/api/deliveries/accept',
@@ -386,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
+  '/api/deliveries/available': typeof ApiDeliveriesAvailableRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
@@ -444,6 +451,7 @@ export interface FileRoutesByTo {
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
+  '/api/deliveries/available': typeof ApiDeliveriesAvailableRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
@@ -504,6 +512,7 @@ export interface FileRoutesById {
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
+  '/api/deliveries/available': typeof ApiDeliveriesAvailableRoute
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
@@ -565,6 +574,7 @@ export interface FileRouteTypes {
     | '/api/chat/send'
     | '/api/comms/notify'
     | '/api/deliveries/accept'
+    | '/api/deliveries/available'
     | '/api/deliveries/complete'
     | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
@@ -623,6 +633,7 @@ export interface FileRouteTypes {
     | '/api/chat/send'
     | '/api/comms/notify'
     | '/api/deliveries/accept'
+    | '/api/deliveries/available'
     | '/api/deliveries/complete'
     | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
@@ -682,6 +693,7 @@ export interface FileRouteTypes {
     | '/api/chat/send'
     | '/api/comms/notify'
     | '/api/deliveries/accept'
+    | '/api/deliveries/available'
     | '/api/deliveries/complete'
     | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
@@ -732,6 +744,7 @@ export interface RootRouteChildren {
   ApiChatSendRoute: typeof ApiChatSendRoute
   ApiCommsNotifyRoute: typeof ApiCommsNotifyRoute
   ApiDeliveriesAcceptRoute: typeof ApiDeliveriesAcceptRoute
+  ApiDeliveriesAvailableRoute: typeof ApiDeliveriesAvailableRoute
   ApiDeliveriesCompleteRoute: typeof ApiDeliveriesCompleteRoute
   ApiDeliveriesDeclineRoute: typeof ApiDeliveriesDeclineRoute
   ApiDeliveriesReassignExpiredRoute: typeof ApiDeliveriesReassignExpiredRoute
@@ -1091,6 +1104,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDeliveriesCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/deliveries/available': {
+      id: '/api/deliveries/available'
+      path: '/api/deliveries/available'
+      fullPath: '/api/deliveries/available'
+      preLoaderRoute: typeof ApiDeliveriesAvailableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/deliveries/accept': {
       id: '/api/deliveries/accept'
       path: '/api/deliveries/accept'
@@ -1309,6 +1329,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatSendRoute: ApiChatSendRoute,
   ApiCommsNotifyRoute: ApiCommsNotifyRoute,
   ApiDeliveriesAcceptRoute: ApiDeliveriesAcceptRoute,
+  ApiDeliveriesAvailableRoute: ApiDeliveriesAvailableRoute,
   ApiDeliveriesCompleteRoute: ApiDeliveriesCompleteRoute,
   ApiDeliveriesDeclineRoute: ApiDeliveriesDeclineRoute,
   ApiDeliveriesReassignExpiredRoute: ApiDeliveriesReassignExpiredRoute,
