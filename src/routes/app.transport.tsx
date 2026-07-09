@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { MapPin, Truck, Clock, Package, Check, Navigation, Loader2, Wallet, MessageCircle, X } from "lucide-react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
+import { MapPin, Truck, Navigation, Loader2, Wallet, MessageCircle, Zap, Radio } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell, StatCard } from "@/components/app/AppShell";
-import { TransportGate, VerifiedTransportGate } from "@/components/app/RoleGate";
-import { JobAcceptCountdown } from "@/components/transport/JobAcceptCountdown";
+import { AppShell } from "@/components/app/AppShell";
+import { VerifiedTransportGate } from "@/components/app/RoleGate";
+import { JobOfferSheet } from "@/components/transport/JobOfferSheet";
+import { DriverNavHud } from "@/components/transport/DriverNavHud";
 import { PodCaptureSheet } from "@/components/transport/PodCaptureSheet";
 import { SlideToConfirm } from "@/components/ui/SlideToConfirm";
 import { CorridorMap } from "@/components/map/CorridorMap";
@@ -16,11 +17,12 @@ import {
   fetchAvailableDeliveries, fetchDriverDeliveries, acceptDelivery, declineDelivery, advanceDeliveryStatus,
   completeDeliveryViaApi,
 } from "@/lib/api/orders";
-import { VEHICLE_FILTER_OPTIONS } from "@/lib/vehicle-types";
 import {
   updateDriverAvailability, startDriverLocationWatch, fetchOsrmRoute, goOnlineWithLocation,
 } from "@/lib/api/driver";
 import { filterJobsForDriver } from "@/lib/driver-jobs";
+import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { vehicleToFilterBucket } from "@/lib/vehicle-types";
 import type { DeliveryRow } from "@/lib/types/marketplace";
 
 export const Route = createFileRoute("/app/transport")({
@@ -38,18 +40,32 @@ function TransportOverview() {
   const { data: earnings } = useDriverEarnings(user?.id);
   const [jobs, setJobs] = useState<DeliveryRow[]>([]);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+  const [routeMeta, setRouteMeta] = useState<{ distance_km: number; duration_min: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [podJob, setPodJob] = useState<DeliveryRow | null>(null);
-  const [vehicleFilter, setVehicleFilter] = useState<"all" | "bicycle" | "motorcycle" | "car">("all");
+  const [offerJob, setOfferJob] = useState<DeliveryRow | null>(null);
+  const [accepting, setAccepting] = useState(false);
+  const [livePos, setLivePos] = useState<{ lat: number; lng: number } | null>(null);
+  const [navMuted, setNavMuted] = useState(false);
+  const seenOfferIds = useRef<Set<string>>(new Set());
 
   const online = driverProfile?.available ?? false;
   const active = jobs.find((j) => ["driver_assigned", "driver_enroute_pickup", "picked_up", "enroute_delivery"].includes(j.status));
   const availableJobs = useMemo(
-    () => filterJobsForDriver(jobs, driverProfile ?? undefined, vehicleFilter),
-    [jobs, driverProfile, vehicleFilter],
+    () => filterJobsForDriver(jobs, driverProfile ?? undefined, "all"),
+    [jobs, driverProfile],
   );
   const nextAvailable = availableJobs[0];
   const featured = active ?? nextAvailable;
+  const vehicleLabel = vehicleToFilterBucket(driverProfile?.vehicle_type);
+
+  const driverCenter = useMemo(() => {
+    if (livePos && isValidMapCoord(livePos.lat, livePos.lng)) return [livePos.lat, livePos.lng] as [number, number];
+    if (driverProfile?.current_lat != null && driverProfile.current_lng != null && isValidMapCoord(driverProfile.current_lat, driverProfile.current_lng)) {
+      return [driverProfile.current_lat, driverProfile.current_lng] as [number, number];
+    }
+    return ACCRA_CENTER;
+  }, [livePos, driverProfile?.current_lat, driverProfile?.current_lng]);
 
   const loadJobs = useCallback(async () => {
     if (!driverProfile?.id) { setLoading(false); return; }
@@ -70,7 +86,7 @@ function TransportOverview() {
   useEffect(() => {
     if (!user?.id || !isIndex) return;
     loadJobs();
-    const interval = setInterval(loadJobs, 15_000);
+    const interval = setInterval(loadJobs, 12_000);
     const reassign = setInterval(() => apiFetch("/api/deliveries/reassign-expired").catch(() => {}), 10_000);
     return () => {
       clearInterval(interval);
@@ -80,16 +96,50 @@ function TransportOverview() {
 
   useEffect(() => {
     if (!user?.id || !online || !isIndex) return;
-    return startDriverLocationWatch(user.id, () => {});
+    return startDriverLocationWatch(user.id, (lat, lng) => {
+      if (isValidMapCoord(lat, lng)) setLivePos({ lat, lng });
+    });
   }, [user?.id, online, isIndex]);
 
   useEffect(() => {
-    if (!featured || !isIndex) return;
-    fetchOsrmRoute(
-      { lat: featured.pickup_lat, lng: featured.pickup_lng },
-      { lat: featured.delivery_lat, lng: featured.delivery_lng },
-    ).then((r) => { if (r) setRouteCoords(r.coordinates); });
-  }, [featured?.id, featured?.pickup_lat, featured?.pickup_lng, featured?.delivery_lat, featured?.delivery_lng, isIndex]);
+    if (!nextAvailable || active || !online) return;
+    if (nextAvailable.status !== "requested") return;
+    if (seenOfferIds.current.has(nextAvailable.id)) return;
+    seenOfferIds.current.add(nextAvailable.id);
+    setOfferJob(nextAvailable);
+  }, [nextAvailable?.id, nextAvailable?.status, active, online]);
+
+  useEffect(() => {
+    if (!featured || !isIndex) {
+      setRouteCoords([]);
+      setRouteMeta(null);
+      return;
+    }
+
+    const pickupOk = isValidMapCoord(featured.pickup_lat, featured.pickup_lng);
+    const dropOk = isValidMapCoord(featured.delivery_lat, featured.delivery_lng);
+    if (!pickupOk || !dropOk) return;
+
+    const enrouteToPickup = ["driver_assigned", "driver_enroute_pickup"].includes(featured.status);
+    const enrouteToBuyer = ["picked_up", "enroute_delivery"].includes(featured.status);
+
+    const origin = livePos && isValidMapCoord(livePos.lat, livePos.lng)
+      ? livePos
+      : { lat: driverCenter[0], lng: driverCenter[1] };
+    let to = enrouteToBuyer
+      ? { lat: featured.delivery_lat, lng: featured.delivery_lng }
+      : enrouteToPickup || featured.status === "requested"
+        ? { lat: featured.pickup_lat, lng: featured.pickup_lng }
+        : { lat: featured.delivery_lat, lng: featured.delivery_lng };
+
+    if (!isValidMapCoord(origin.lat, origin.lng)) return;
+
+    fetchOsrmRoute(origin, to).then((r) => {
+      if (!r) return;
+      setRouteCoords(r.coordinates);
+      setRouteMeta({ distance_km: r.distance_km, duration_min: r.duration_min });
+    });
+  }, [featured?.id, featured?.status, featured?.pickup_lat, featured?.pickup_lng, featured?.delivery_lat, featured?.delivery_lng, isIndex, driverCenter, livePos, active]);
 
   if (!isIndex) return <Outlet />;
 
@@ -100,6 +150,7 @@ function TransportOverview() {
         await updateDriverAvailability(user.id, false);
         trackEvent("driver_online_toggle", { online: false });
         toast.success("You are offline");
+        setOfferJob(null);
       } else {
         const ok = await goOnlineWithLocation(user.id);
         if (!ok) {
@@ -109,7 +160,7 @@ function TransportOverview() {
           return;
         }
         trackEvent("driver_online_toggle", { online: true });
-        toast.success("You are online — watching for jobs nearby");
+        toast.success("You're live — watching for jobs nearby");
       }
       refetch();
     } catch {
@@ -119,13 +170,17 @@ function TransportOverview() {
 
   const acceptJob = async (id: string) => {
     if (!driverProfile?.id) return;
+    setAccepting(true);
     try {
       await acceptDelivery(id, driverProfile.id);
-      trackEvent("driver_job_accept", { delivery_id: id });
-      toast.success("Job accepted");
+      trackEvent("driver_job_accept", { delivery_id: id, source: "popup" });
+      toast.success("Job accepted — navigation started");
+      setOfferJob(null);
       loadJobs();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not accept job");
+    } finally {
+      setAccepting(false);
     }
   };
 
@@ -133,7 +188,8 @@ function TransportOverview() {
     if (!driverProfile?.id) return;
     try {
       await declineDelivery(id, driverProfile.id);
-      toast.message("Job declined — we'll offer the next nearby driver");
+      toast.message("Job declined");
+      setOfferJob(null);
       loadJobs();
     } catch {
       toast.error("Could not decline");
@@ -179,7 +235,7 @@ function TransportOverview() {
     try {
       await completeDeliveryViaApi(podJob.id, user.id, podPhotoUrl);
       trackEvent("driver_delivery_complete", { delivery_id: podJob.id, source: "map" });
-      toast.success("Delivery completed — POD saved, payouts sent!");
+      toast.success("Delivery completed — POD saved!");
       setPodJob(null);
       loadJobs();
     } catch {
@@ -188,11 +244,22 @@ function TransportOverview() {
     }
   };
 
-  const mapPins = featured ? [
-    { lat: featured.pickup_lat, lng: featured.pickup_lng, label: "Pickup", kind: "farm" as const },
-    { lat: featured.delivery_lat, lng: featured.delivery_lng, label: "Dropoff", kind: "buyer" as const },
-    ...(driverProfile?.current_lat ? [{ lat: driverProfile.current_lat, lng: driverProfile.current_lng!, label: "You", kind: "driver" as const }] : []),
-  ] : [];
+  const mapPins = useMemo(() => {
+    const pins: { lat: number; lng: number; label: string; kind: "farm" | "buyer" | "driver" }[] = [];
+    if (featured && isValidMapCoord(featured.pickup_lat, featured.pickup_lng)) {
+      pins.push({ lat: featured.pickup_lat, lng: featured.pickup_lng, label: "Pickup", kind: "farm" });
+    }
+    if (featured && isValidMapCoord(featured.delivery_lat, featured.delivery_lng)) {
+      pins.push({ lat: featured.delivery_lat, lng: featured.delivery_lng, label: "Dropoff", kind: "buyer" });
+    }
+    return pins;
+  }, [featured]);
+
+  const navDestination = active
+    ? ["picked_up", "enroute_delivery"].includes(active.status)
+      ? { lat: active.delivery_lat, lng: active.delivery_lng, label: active.delivery_address ?? "Buyer" }
+      : { lat: active.pickup_lat, lng: active.pickup_lng, label: active.pickup_address ?? "Pickup" }
+    : null;
 
   const slideLabel =
     featured?.status === "driver_enroute_pickup"
@@ -203,135 +270,147 @@ function TransportOverview() {
 
   return (
     <VerifiedTransportGate>
-      <AppShell role="transport" compact hideMobileNav>
-        <div className="relative -mx-4 -mt-4 sm:-mx-6 md:-mx-10 md:-mt-10 h-[calc(100dvh-8rem)] min-h-[480px] overflow-hidden">
-          <CorridorMap pins={mapPins} route={routeCoords} animateDriver={!!active} driverLabel="You" dark />
+      <AppShell role="transport">
+        <div className="absolute inset-0">
+          <CorridorMap
+            pins={mapPins}
+            route={routeCoords}
+            center={driverCenter}
+            zoom={online ? STREET_ZOOM : DEFAULT_MAP_ZOOM}
+            driverPosition={livePos ?? (driverProfile?.current_lat != null && driverProfile.current_lng != null ? { lat: driverProfile.current_lat, lng: driverProfile.current_lng } : null)}
+            animateDriver={false}
+            driverLabel="You"
+            dark
+            height="100%"
+          />
 
-          <div className="pointer-events-none absolute inset-x-0 top-[max(env(safe-area-inset-top),12px)] flex flex-col items-center gap-3 px-4 z-20">
-            <button type="button" onClick={toggleOnline} className={`pointer-events-auto inline-flex items-center gap-3 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg backdrop-blur transition z-30 ${online ? "bg-emerald-500 text-white" : "bg-background/95 text-foreground border border-border"}`}>
-              <span className={`h-2.5 w-2.5 rounded-full ${online ? "bg-white animate-ping" : "bg-muted-foreground"}`} />
-              {online ? "You're online" : "Go online"}
-            </button>
-            {online && (
-              <div className="pointer-events-auto flex flex-wrap justify-center gap-2">
-                {VEHICLE_FILTER_OPTIONS.map((v) => (
-                  <button
-                    key={v.value}
-                    type="button"
-                    onClick={() => setVehicleFilter(v.value)}
-                    className={`rounded-full px-3 py-1 text-[10px] font-medium backdrop-blur ${
-                      vehicleFilter === v.value
-                        ? "bg-white text-black"
-                        : "bg-black/50 text-white border border-white/20"
-                    }`}
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-            )}
+          {navDestination && (
+            <DriverNavHud
+              destinationLabel={navDestination.label}
+              destination={{ lat: navDestination.lat, lng: navDestination.lng }}
+              distanceKm={routeMeta?.distance_km}
+              durationMin={routeMeta?.duration_min}
+              enabled={!!active}
+              muted={navMuted}
+              onToggleMute={() => setNavMuted((m) => !m)}
+            />
+          )}
+
+          <div className="pointer-events-none absolute left-3 top-[max(env(safe-area-inset-top),10px)] z-20 flex flex-col gap-2">
             {earnings && (
-              <div className="pointer-events-auto grid w-full max-w-xs grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-black/60 p-3 text-white backdrop-blur">
+              <div className="pointer-events-auto grid w-[10.5rem] grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/65 p-2 text-white backdrop-blur-md">
                 <div className="text-center">
-                  <div className="text-[10px] uppercase tracking-widest text-white/60">Today</div>
-                  <div className="font-sans text-lg font-bold">GHS {earnings.today.toFixed(0)}</div>
+                  <div className="text-[9px] uppercase text-white/55">Today</div>
+                  <div className="text-sm font-bold">{earnings.today.toFixed(0)}</div>
                 </div>
                 <div className="text-center border-x border-white/10">
-                  <div className="text-[10px] uppercase tracking-widest text-white/60">Week</div>
-                  <div className="font-sans text-lg font-bold">GHS {earnings.week.toFixed(0)}</div>
+                  <div className="text-[9px] uppercase text-white/55">Week</div>
+                  <div className="text-sm font-bold">{earnings.week.toFixed(0)}</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-[10px] uppercase tracking-widest text-white/60">Trips</div>
-                  <div className="font-sans text-lg font-bold">{earnings.trips}</div>
+                  <div className="text-[9px] uppercase text-white/55">Trips</div>
+                  <div className="text-sm font-bold">{earnings.trips}</div>
                 </div>
               </div>
             )}
+            <span className="pointer-events-auto inline-flex w-fit items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[10px] text-white backdrop-blur">
+              <Truck className="h-3 w-3" /> {vehicleLabel} jobs only
+            </span>
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 px-3 md:px-6 pb-[max(env(safe-area-inset-bottom),12px)] z-20">
-            <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-background/95 p-5 shadow-2xl backdrop-blur">
+          <button
+            type="button"
+            onClick={toggleOnline}
+            className={`pointer-events-auto absolute right-3 bottom-[calc(var(--agrolink-tab-bar,3.5rem)+env(safe-area-inset-bottom)+5.5rem)] z-30 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold shadow-xl transition active:scale-[0.98] ${
+              online ? "bg-emerald-500 text-white" : "bg-white text-foreground"
+            }`}
+          >
+            <Radio className={`h-4 w-4 ${online ? "animate-pulse" : ""}`} />
+            {online ? "Live" : "Go live"}
+          </button>
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--agrolink-tab-bar,3.5rem)+env(safe-area-inset-bottom)+0.5rem)] z-20 px-3">
+            <div className="pointer-events-auto mx-auto max-w-lg rounded-2xl border border-border/80 bg-background/95 p-4 shadow-2xl backdrop-blur">
               {loading ? (
-                <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
               ) : featured ? (
                 <>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-widest text-primary">{active ? "Active job" : "Available job"}</span>
-                    {featured.status === "requested" && featured.accept_deadline && (
-                      <JobAcceptCountdown deadline={featured.accept_deadline} onExpired={loadJobs} compact />
-                    )}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-primary">
+                      {active ? "Active trip" : "Preview"}
+                    </span>
+                    <Link to="/app/transport/jobs" className="text-xs text-muted-foreground hover:text-foreground">
+                      Job board →
+                    </Link>
                   </div>
-                  <div className="mt-2">
-                    <div className="text-xs text-muted-foreground inline-flex flex-wrap items-center gap-x-3">
-                      <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-rose-500" /> {featured.pickup_address}</span>
-                      <Navigation className="h-3 w-3 text-primary" />
-                      <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-primary" /> {featured.delivery_address}</span>
-                    </div>
-                    {featured.estimated_distance_km && (
-                      <div className="mt-2 text-xs text-muted-foreground inline-flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> {featured.estimated_distance_km} km</span>
-                        {(featured as DeliveryRow & { search_radius_km?: number }).search_radius_km != null && (
-                          <span>· within {(featured as DeliveryRow & { search_radius_km?: number }).search_radius_km} km</span>
-                        )}
-                        {(featured as DeliveryRow & { required_vehicle_type?: string }).required_vehicle_type && (
-                          <span>· needs {(featured as DeliveryRow & { required_vehicle_type?: string }).required_vehicle_type}</span>
-                        )}
-                        <span>· {featured.status.replace(/_/g, " ")}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-4 flex flex-col gap-3">
-                    {featured.status === "requested" && featured.accept_deadline && (
-                      <JobAcceptCountdown deadline={featured.accept_deadline} onExpired={loadJobs} />
-                    )}
-                    {slideLabel ? (
+                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                    <MapPin className="mr-1 inline h-3 w-3 text-rose-500" />
+                    {featured.pickup_address}
+                    <Navigation className="mx-1 inline h-3 w-3 text-primary" />
+                    {featured.delivery_address}
+                  </p>
+                  {slideLabel ? (
+                    <div className="mt-3">
                       <SlideToConfirm
                         label={slideLabel}
                         tone={featured.status === "enroute_delivery" ? "blue" : "primary"}
                         onConfirm={() => advance(featured)}
                       />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {featured.status === "requested" && (
-                          <>
-                            <button onClick={() => acceptJob(featured.id)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 py-3 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Accept</button>
-                            <button onClick={() => declineJob(featured.id)} className="inline-flex items-center justify-center gap-1 rounded-full border border-border px-4 py-3 text-sm"><X className="h-4 w-4" /> Decline</button>
-                          </>
-                        )}
-                        {active && (
-                          <button onClick={() => messageBuyer(featured)} className="inline-flex items-center justify-center gap-1 rounded-full border border-primary/40 px-4 py-3 text-sm text-primary">
-                            <MessageCircle className="h-4 w-4" /> Chat buyer
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {active && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => advance(featured)}
+                            className="inline-flex flex-1 items-center justify-center gap-1 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+                          >
+                            <Zap className="h-4 w-4" /> Update status
                           </button>
-                        )}
-                        {featured.status === "driver_assigned" && (
-                          <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"><Navigation className="h-4 w-4" /> En route to pickup</button>
-                        )}
-                        {featured.status === "picked_up" && (
-                          <button onClick={() => advance(featured)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 py-3 text-sm font-semibold text-white"><Truck className="h-4 w-4" /> En route to buyer</button>
-                        )}
-                        <Link to="/app/transport/jobs" className="rounded-full border border-border px-4 py-3 text-sm text-muted-foreground">All jobs</Link>
-                      </div>
-                    )}
-                    {slideLabel && (
-                      <Link to="/app/transport/jobs" className="block text-center text-xs text-muted-foreground hover:text-foreground">All jobs</Link>
-                    )}
-                  </div>
+                          <button
+                            type="button"
+                            onClick={() => messageBuyer(featured)}
+                            className="inline-flex items-center justify-center gap-1 rounded-full border border-border px-4 py-2.5 text-sm"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </>
               ) : (
-                <div className="text-center py-4">
-                  <Wallet className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                  <div className="mt-2 font-sans text-lg font-semibold">{online ? "Waiting for jobs…" : "Go online to receive jobs"}</div>
-                  {online && driverProfile?.current_lat == null && (
-                    <p className="mt-2 text-xs text-amber-600">Location off — enable GPS so we can match you with nearby pickups.</p>
-                  )}
-                  {earnings && earnings.week > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">GHS {earnings.week.toFixed(2)} earned this week</p>
-                  )}
+                <div className="flex items-center gap-3 py-1">
+                  <Wallet className="h-8 w-8 shrink-0 text-muted-foreground/50" />
+                  <div className="min-w-0 text-left">
+                    <p className="font-sans text-sm font-semibold">
+                      {online ? "Waiting for matching jobs…" : "Go live to receive offers"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {online
+                        ? `You'll only see ${vehicleLabel} deliveries in your area.`
+                        : "Enable GPS and tap Go live on the map."}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
       </AppShell>
+
+      {offerJob && !active && (
+        <JobOfferSheet
+          job={offerJob}
+          accepting={accepting}
+          onAccept={() => acceptJob(offerJob.id)}
+          onDecline={() => declineJob(offerJob.id)}
+          onClose={() => setOfferJob(null)}
+          onExpired={loadJobs}
+        />
+      )}
+
       {user?.id && podJob && (
         <PodCaptureSheet
           open

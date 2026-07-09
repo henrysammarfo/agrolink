@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useNavigate, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { WorkspaceSwitcher } from "@/components/app/WorkspaceSwitcher";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { useAuth, type AppRole } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +13,7 @@ import { updateProfile } from "@/lib/api/notifications";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { AvatarCropUpload } from "@/components/profile/AvatarCropUpload";
 import { trackEvent } from "@/lib/analytics";
+import { saveActiveWorkspace, roleHome } from "@/lib/active-workspace";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({ meta: [{ title: "Settings · AgroLink" }] }),
@@ -19,6 +21,7 @@ export const Route = createFileRoute("/app/settings")({
 });
 
 function Settings() {
+  const navigate = useNavigate();
   const [whatsapp, setWhatsapp] = useState(true);
   const [push, setPush] = useState(true);
   const [marketing, setMarketing] = useState(false);
@@ -161,6 +164,9 @@ function Settings() {
     try {
       await addRole(next);
       toast.success(`${next === "transport" ? "Drive" : next === "farmer" ? "Sell" : "Shop"} mode enabled`);
+      if (user?.id) saveActiveWorkspace(user.id, next);
+      if (next === "transport") navigate({ to: "/app/transport/register" });
+      else navigate({ to: roleHome(next) as "/app/buyer" });
     } catch (error) {
       toast.error("Could not update mode", { description: error instanceof Error ? error.message : "Please try again." });
     }
@@ -223,22 +229,26 @@ function Settings() {
         </Card>
 
         <Card title="Workspaces">
-          <p className="text-sm text-muted-foreground mb-4">Like TikTok — one account, switch modes anytime.</p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {([
-              ["buyer", "Shop", "Browse feed and buy produce"],
-              ["farmer", "Sell", "Post listings and fulfill orders"],
-              ["transport", "Drive", "Accept delivery jobs"],
-            ] as const).map(([key, label, desc]) => {
-              const active = roles.includes(key);
-              return (
-                <button key={key} type="button" onClick={() => !active && enableRole(key)} className={`rounded-2xl border p-4 text-left transition ${active ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
-                  <div className="text-sm font-medium">{label}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{active ? "Enabled" : desc}</div>
-                </button>
-              );
-            })}
-          </div>
+          <WorkspaceSwitcher />
+          {(!roles.includes("buyer") || !roles.includes("farmer") || !roles.includes("transport")) && (
+            <div className="mt-4 space-y-2 border-t border-border pt-4">
+              <p className="text-xs text-muted-foreground">Enable a new workspace</p>
+              <div className="flex flex-wrap gap-2">
+                {(["buyer", "farmer", "transport"] as const)
+                  .filter((key) => !roles.includes(key))
+                  .map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => enableRole(key)}
+                      className="rounded-full border border-border px-4 py-2 text-sm hover:border-primary/40"
+                    >
+                      + {key === "buyer" ? "Shop" : key === "farmer" ? "Sell" : "Drive"}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
         </Card>
 
         <Card title="Appearance">
@@ -359,7 +369,7 @@ function FieldRow({
   );
 }
 
-function Toggle({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ label, desc, value, onChange, disabled }: { label: string; desc: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4">
       <div>
@@ -368,8 +378,9 @@ function Toggle({ label, desc, value, onChange }: { label: string; desc: string;
       </div>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => onChange(!value)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${value ? "bg-primary" : "bg-border"}`}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${value ? "bg-primary" : "bg-border"}`}
         aria-pressed={value}
       >
         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${value ? "translate-x-[22px]" : "translate-x-0.5"}`} />

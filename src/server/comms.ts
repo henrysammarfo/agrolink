@@ -164,7 +164,7 @@ export async function sendChatMessageServer(opts: {
   deliveryId?: string;
   senderName?: string;
   attachmentUrl?: string;
-  attachmentType?: "image" | "video";
+  attachmentType?: "image" | "video" | "audio";
 }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const {

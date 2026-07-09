@@ -28,23 +28,15 @@ export function vehicleToFilterBucket(type: string | null | undefined): VehicleF
   return "motorcycle";
 }
 
-/** Can this driver vehicle fulfill the job requirement? */
+/** Can this driver vehicle fulfill the job requirement? Exact bucket match only. */
 export function vehicleCanFulfill(
   driverType: string | null | undefined,
   requiredType: string | null | undefined,
 ): boolean {
+  if (!requiredType) return true;
   const driver = vehicleToFilterBucket(driverType);
   const required = vehicleToFilterBucket(requiredType);
-  if (driver === required) return true;
-  // Larger vehicles can take smaller jobs
-  const rank: Record<VehicleFilter, number> = {
-    all: 99,
-    bicycle: 1,
-    motorcycle: 2,
-    car: 3,
-  };
-  if (driver === "all" || required === "all") return true;
-  return rank[driver] >= rank[required];
+  return driver === required;
 }
 
 export function haversineKm(

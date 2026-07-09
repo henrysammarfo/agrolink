@@ -78,7 +78,7 @@ export async function sendChatMessage(opts: {
   deliveryId?: string;
   senderName?: string;
   attachmentUrl?: string;
-  attachmentType?: "image" | "video";
+  attachmentType?: "image" | "video" | "audio";
 }): Promise<string | "pending"> {
   const res = await apiFetch("/api/chat/send", {
     method: "POST",

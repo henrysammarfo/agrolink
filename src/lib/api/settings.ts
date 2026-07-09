@@ -26,10 +26,11 @@ export async function saveNotificationPrefs(
 export async function uploadChatAttachment(
   file: File,
   userId: string,
-): Promise<{ url: string; type: "image" | "video" }> {
+): Promise<{ url: string; type: "image" | "video" | "audio" }> {
   const { supabase } = await import("@/integrations/supabase/client");
   const isVideo = file.type.startsWith("video/");
-  const ext = file.name.split(".").pop() ?? (isVideo ? "mp4" : "jpg");
+  const isAudio = file.type.startsWith("audio/");
+  const ext = file.name.split(".").pop() ?? (isVideo ? "mp4" : isAudio ? "webm" : "jpg");
   const path = `${userId}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("chat-attachments").upload(path, file, {
     upsert: false,
@@ -37,5 +38,6 @@ export async function uploadChatAttachment(
   });
   if (error) throw error;
   const { data } = supabase.storage.from("chat-attachments").getPublicUrl(path);
-  return { url: data.publicUrl, type: isVideo ? "video" : "image" };
+  const type = isVideo ? "video" : isAudio ? "audio" : "image";
+  return { url: data.publicUrl, type };
 }
