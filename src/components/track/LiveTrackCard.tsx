@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Phone, MessageCircle, Clock, Navigation, ChevronUp, ChevronDown } from "lucide-react";
+import { Phone, MessageCircle, Clock, Navigation, ChevronUp, ChevronDown, UserPlus } from "lucide-react";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { fetchOsrmRoute } from "@/lib/api/driver";
 import { subscribeToDelivery, subscribeToDriverLocation } from "@/lib/api/orders";
+import { toggleFollow, fetchIsFollowing } from "@/lib/api/engagement";
 import { useAuth } from "@/lib/auth";
 import type { DeliveryRow, OrderRow } from "@/lib/types/marketplace";
 import { toast } from "sonner";
@@ -28,6 +29,36 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [etaMin, setEtaMin] = useState<number | null>(null);
   const [tripChatOpen, setTripChatOpen] = useState(false);
+  const [followingDriver, setFollowingDriver] = useState(false);
+
+  const driverUserId = delivery?.driver?.user_id;
+  const driverProfile = delivery?.driver?.profile as {
+    display_name?: string | null;
+    slug?: string | null;
+    username?: string | null;
+  } | undefined;
+  const driverHandle = driverProfile?.username ?? driverProfile?.slug ?? driverUserId ?? "";
+
+  useEffect(() => {
+    if (!user?.id || !driverHandle || !driverUserId) return;
+    void fetchIsFollowing(user.id, driverHandle).then(setFollowingDriver);
+  }, [user?.id, driverHandle, driverUserId]);
+
+  const followDriver = async () => {
+    if (!user?.id || !driverHandle) {
+      toast.error("Sign in to follow");
+      return;
+    }
+    const next = !followingDriver;
+    setFollowingDriver(next);
+    try {
+      await toggleFollow(user.id, driverHandle, next, profile?.display_name ?? undefined);
+      toast.success(next ? "Following driver" : "Unfollowed driver");
+    } catch {
+      setFollowingDriver(!next);
+      toast.error("Could not update follow");
+    }
+  };
 
   useEffect(() => {
     setLiveDelivery(order.delivery);
@@ -180,11 +211,22 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
               {(delivery.driver?.profile?.display_name ?? "D")[0]}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-sans font-semibold truncate">
-                {delivery.driver?.profile?.display_name ?? "Finding driver…"}
-              </div>
+              {driverUserId && driverHandle ? (
+                <Link to="/app/users/$slug" params={{ slug: driverHandle }} className="font-sans font-semibold truncate block hover:underline">
+                  {driverProfile?.display_name ?? "Driver"}
+                </Link>
+              ) : (
+                <div className="font-sans font-semibold truncate">
+                  {delivery.driver?.profile?.display_name ?? "Finding driver…"}
+                </div>
+              )}
               <div className="text-xs text-white/70">{delivery.pickup_address} → {delivery.delivery_address}</div>
             </div>
+            {driverUserId && user?.id && user.id !== driverUserId && (
+              <button onClick={followDriver} className="grid h-10 w-10 place-items-center rounded-full border border-white/20" aria-label="Follow driver">
+                <UserPlus className={`h-4 w-4 ${followingDriver ? "text-primary" : ""}`} />
+              </button>
+            )}
             <button onClick={callDriver} className="grid h-10 w-10 place-items-center rounded-full bg-emerald-500" aria-label="Call">
               <Phone className="h-4 w-4" />
             </button>
@@ -226,14 +268,29 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[10px] uppercase tracking-widest text-primary/80">{order.id.slice(0, 8)}</div>
-              <div className="truncate font-sans text-xl font-semibold">
-                {delivery.driver?.profile?.display_name ?? "Finding driver…"}
-              </div>
+              {driverUserId && driverHandle ? (
+                <Link to="/app/users/$slug" params={{ slug: driverHandle }} className="truncate font-sans text-lg sm:text-xl font-semibold block hover:underline">
+                  {driverProfile?.display_name ?? "Driver"}
+                </Link>
+              ) : (
+                <div className="truncate font-sans text-lg sm:text-xl font-semibold">
+                  {delivery.driver?.profile?.display_name ?? "Finding driver…"}
+                </div>
+              )}
               <div className="mt-0.5 text-xs text-muted-foreground">
                 {delivery.driver?.vehicle_type ?? "Vehicle"} · {delivery.driver?.plate_number ?? "—"}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {driverUserId && user?.id && user.id !== driverUserId && (
+                <button
+                  onClick={followDriver}
+                  className="grid h-11 w-11 min-h-[44px] min-w-[44px] place-items-center rounded-full border border-border"
+                  aria-label="Follow driver"
+                >
+                  <UserPlus className={`h-4 w-4 ${followingDriver ? "text-primary" : ""}`} />
+                </button>
+              )}
               <button
                 onClick={callDriver}
                 className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white"

@@ -36,6 +36,32 @@ export async function fetchPublicSellers(limit = 12): Promise<PublicProfile[]> {
   return (data ?? []) as PublicProfile[];
 }
 
+export async function fetchPublicDriverInfo(userId: string) {
+  const { data, error } = await supabase
+    .from("driver_profiles")
+    .select("vehicle_type, verification_status, plate_number, available")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as {
+    vehicle_type: string | null;
+    verification_status: string | null;
+    plate_number: string | null;
+    available: boolean | null;
+  } | null;
+}
+
+export async function fetchDriverDeliveryCount(userId: string) {
+  const { data: dp } = await supabase.from("driver_profiles").select("id").eq("user_id", userId).maybeSingle();
+  if (!dp?.id) return 0;
+  const { count } = await supabase
+    .from("deliveries")
+    .select("id", { count: "exact", head: true })
+    .eq("driver_id", dp.id)
+    .eq("status", "delivered");
+  return count ?? 0;
+}
+
 export async function fetchProfileBySlug(slug: string): Promise<PublicProfile | null> {
   const { data, error } = await supabase.from("profiles").select("*").eq("slug", slug).maybeSingle();
   if (error) throw error;

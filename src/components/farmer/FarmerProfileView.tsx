@@ -2,11 +2,11 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
-  ArrowLeft, BadgeCheck, MapPin, MessageCircle, Share2, UserPlus, UserCheck, Grid3x3, Play, Loader2, Bookmark,
+  ArrowLeft, BadgeCheck, MapPin, MessageCircle, Share2, UserPlus, UserCheck, Grid3x3, Play, Loader2, Bookmark, Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchListingsBySlug } from "@/lib/api/listings";
-import { fetchProfileStats, fetchPublicBookmarks } from "@/lib/api/profiles";
+import { fetchProfileStats, fetchPublicBookmarks, fetchPublicDriverInfo, fetchDriverDeliveryCount } from "@/lib/api/profiles";
 import { toggleFollow, fetchIsFollowing } from "@/lib/api/engagement";
 import { trackProfileView } from "@/lib/api/profile-views";
 import { fetchRequestStatus } from "@/lib/api/message-requests";
@@ -151,6 +151,21 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
   };
 
   const listings = data?.listings ?? [];
+
+  const { data: driverInfo } = useQuery({
+    queryKey: ["driver-public", farmerProfile?.id],
+    queryFn: () => fetchPublicDriverInfo(farmerProfile!.id!),
+    enabled: !!farmerProfile?.id,
+  });
+
+  const { data: driverTrips = 0 } = useQuery({
+    queryKey: ["driver-trips", farmerProfile?.id],
+    queryFn: () => fetchDriverDeliveryCount(farmerProfile!.id!),
+    enabled: !!farmerProfile?.id && driverInfo?.verification_status === "approved",
+  });
+
+  const isDriver = driverInfo?.verification_status === "approved";
+  const isFarmer = listings.length > 0;
   const handle = farmerProfile?.username ?? (farmerProfile?.slug ?? slug).replace(/-/g, "");
   const isSelf = user?.id === farmerProfile?.id;
   const followersLink = inApp
@@ -205,13 +220,33 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
             </span>
           )}
         </div>
-        <div className="mt-4 sm:mt-0 flex-1 text-center sm:text-left">
-          <h1 className="font-serif text-2xl sm:text-4xl text-foreground">{farmerProfile.display_name}</h1>
-          <p className="text-sm text-muted-foreground">@{handle}</p>
-          <p className="mt-1 inline-flex items-center justify-center sm:justify-start gap-2 text-xs text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" /> {farmerProfile.region ?? "Greater Accra"}
-          </p>
-        </div>
+          <div className="mt-4 sm:mt-0 flex-1 text-center sm:text-left">
+            <h1 className="font-serif text-2xl sm:text-4xl text-foreground">{farmerProfile.display_name}</h1>
+            <p className="text-sm text-muted-foreground">@{handle}</p>
+            <div className="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              {isDriver && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                  <Truck className="h-3 w-3" /> Driver
+                </span>
+              )}
+              {isFarmer && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary">
+                  Seller
+                </span>
+              )}
+              {driverInfo?.available && (
+                <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                  Online now
+                </span>
+              )}
+            </div>
+            <p className="mt-1 inline-flex items-center justify-center sm:justify-start gap-2 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" /> {farmerProfile.region ?? "Greater Accra"}
+              {isDriver && driverInfo?.vehicle_type && (
+                <span>· {driverInfo.vehicle_type}{driverInfo.plate_number ? ` · ${driverInfo.plate_number}` : ""}</span>
+              )}
+            </p>
+          </div>
         <div className="mt-4 sm:mt-0 flex flex-wrap items-center justify-center gap-2">
           {!isSelf && (
             <button
@@ -247,36 +282,45 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
         <Link {...followersLink} className="hover:opacity-80">
           <Stat n={String(stats?.followers ?? farmerProfile.follower_count ?? 0)} label="Followers" />
         </Link>
-        <Stat n={String(stats?.listingCount ?? listings.length)} label="Listings" />
-        <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />
-        <Stat n={farmerProfile.seller_rating != null ? `${farmerProfile.seller_rating.toFixed(1)}★` : "—"} label="Rating" />
+        {isFarmer ? (
+          <Stat n={String(stats?.listingCount ?? listings.length)} label="Listings" />
+        ) : isDriver ? (
+          <Stat n={String(driverTrips)} label="Trips" />
+        ) : null}
+        {isFarmer && <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />}
+        {isFarmer && (
+          <Stat n={farmerProfile.seller_rating != null ? `${farmerProfile.seller_rating.toFixed(1)}★` : "—"} label="Rating" />
+        )}
       </div>
 
       <p className="mt-5 px-2 text-center sm:text-left text-foreground/85 max-w-2xl text-sm sm:text-base">
-        {farmerProfile.bio ?? "Fresh produce from Greater Accra."}
+        {farmerProfile.bio ?? (isDriver ? "AgroLink verified driver on the corridor." : "Fresh produce from Greater Accra.")}
       </p>
 
-      <div className="mt-8 border-b border-border px-2">
-        <div className="flex items-center justify-center gap-8 text-sm">
-          <button
-            type="button"
-            onClick={() => setTab("posts")}
-            className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === "posts" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}
-          >
-            <Grid3x3 className="h-4 w-4" /> Posts
-          </button>
-          {publicBookmarks.length > 0 && (
+      {(isFarmer || publicBookmarks.length > 0) && (
+        <div className="mt-8 border-b border-border px-2">
+          <div className="flex items-center justify-center gap-8 text-sm">
             <button
               type="button"
-              onClick={() => setTab("bookmarks")}
-              className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === "bookmarks" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}
+              onClick={() => setTab("posts")}
+              className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === "posts" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}
             >
-              <Bookmark className="h-4 w-4" /> Saved
+              <Grid3x3 className="h-4 w-4" /> Posts
             </button>
-          )}
+            {publicBookmarks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setTab("bookmarks")}
+                className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === "bookmarks" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}
+              >
+                <Bookmark className="h-4 w-4" /> Saved
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
+      {(isFarmer || publicBookmarks.length > 0) ? (
       <div className="mt-4 grid grid-cols-3 gap-0.5 sm:gap-1">
         {(tab === "posts" ? listings : publicBookmarks).map((l) => (
           <Link
@@ -301,10 +345,15 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
           </div>
         )}
       </div>
+      ) : isDriver ? (
+        <div className="mt-6 rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+          Follow this driver to get updates when they are online for deliveries.
+        </div>
+      ) : null}
 
       {messageOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={() => setMessageOpen(false)}>
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3 sm:p-4" onClick={() => setMessageOpen(false)}>
+          <div className="w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-serif text-xl">Request to message</h3>
             <p className="mt-1 text-xs text-muted-foreground">Introduce yourself — they can accept in their inbox.</p>
             <textarea

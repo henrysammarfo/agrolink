@@ -35,7 +35,7 @@ function BuyerOverview() {
   const name = profile?.display_name?.split(" ")[0] ?? "there";
 
   return (
-    <AppShell role="buyer">
+    <AppShell role="buyer" compact>
       <PageHeader
         eyebrow="Overview"
         title="Welcome back,"
