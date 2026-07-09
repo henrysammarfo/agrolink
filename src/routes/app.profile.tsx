@@ -1,7 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { BadgeCheck, Grid3x3, Bookmark, Heart, Settings, Share2, MapPin, LogOut, Play, Loader2, Eye } from "lucide-react";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { AppShell } from "@/components/app/AppShell";
+import { RecommendedSellers } from "@/components/profile/RecommendedSellers";
 import { useAuth } from "@/lib/auth";
 import {
   useProfileStats, useUserListings, useUserBookmarks, useUserLikedListings, usePublicSellers,
@@ -19,62 +20,78 @@ function Profile() {
   const role = roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
   const handle = profile?.username ?? profile?.slug?.replace(/-/g, "") ?? (profile?.display_name ?? user?.email ?? "you").toLowerCase().replace(/[^a-z0-9]/g, "");
   const name = profile?.display_name ?? user?.email?.split("@")[0] ?? "You";
+  const publicSlug = profile?.username ?? profile?.slug ?? undefined;
 
   const { data: stats } = useProfileStats(user?.id, profile?.slug ?? undefined);
   const { data: posts = [], isLoading: postsLoading } = useUserListings(user?.id);
   const { data: saved = [] } = useUserBookmarks(user?.id);
   const { data: liked = [] } = useUserLikedListings(user?.id);
-  const { data: sellers = [] } = usePublicSellers(4);
+  const { data: sellers = [] } = usePublicSellers(8);
 
   const gridItems = tab === "posts" ? posts : tab === "saved" ? saved : liked;
 
   return (
-    <AppShell role={role}>
-      <PageHeader eyebrow="Profile" title="Your" italic="profile" />
+    <AppShell role={role} compact>
+      <header className="mb-5 sm:mb-8">
+        <span className="text-xs uppercase tracking-widest text-primary/80">Profile</span>
+        <h1 className="mt-1 font-serif text-2xl sm:text-4xl md:text-5xl text-foreground">
+          Your <span className="italic text-accent">profile</span>
+        </h1>
+      </header>
 
-      <div className="px-4 sm:px-8 flex flex-col items-center sm:flex-row sm:items-end sm:gap-6">
-        <div className="relative">
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:gap-6">
+        <div className="relative shrink-0">
           {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-background shadow" />
+            <img src={profile.avatar_url} alt="" className="h-20 w-20 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-background shadow" />
           ) : (
-            <span className="grid h-24 w-24 sm:h-28 sm:w-28 place-items-center rounded-full bg-card font-serif text-4xl text-primary ring-4 ring-background shadow">
+            <span className="grid h-20 w-20 sm:h-28 sm:w-28 place-items-center rounded-full bg-card font-serif text-3xl sm:text-4xl text-primary ring-4 ring-background shadow">
               {name[0].toUpperCase()}
             </span>
           )}
-          <span className="absolute bottom-1 right-1 grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
-            <BadgeCheck className="h-4 w-4" />
+          <span className="absolute bottom-0 right-0 grid h-6 w-6 sm:h-7 sm:w-7 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
+            <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </span>
         </div>
-        <div className="mt-4 sm:mt-0 flex-1 text-center sm:text-left">
-          <h2 className="font-serif text-3xl text-foreground">{name}</h2>
-          <p className="text-sm text-muted-foreground">@{handle}</p>
+
+        <div className="min-w-0 flex-1 text-center sm:text-left">
+          <h2 className="font-serif text-2xl sm:text-3xl text-foreground">{name}</h2>
+          <p className="truncate text-sm text-muted-foreground">@{handle}</p>
           <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3" /> {profile?.region ?? "Greater Accra"}
+            <MapPin className="h-3 w-3 shrink-0" /> {profile?.region ?? "Greater Accra"}
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 flex items-center gap-2">
-          {(profile?.slug || profile?.username) && (
+      </div>
+
+      <div className="mt-4 w-full overflow-x-auto no-scrollbar">
+        <div className="flex min-w-min items-center justify-center gap-2 sm:justify-start">
+          {publicSlug && (
             <Link
-              to="/farmers/$slug"
-              params={{ slug: profile.username ?? profile.slug! }}
-              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+              to="/app/users/$slug"
+              params={{ slug: publicSlug }}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium hover:bg-secondary"
             >
               Public profile
             </Link>
           )}
-          <Link to="/app/settings" className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background">
-            <Settings className="h-4 w-4" /> Edit profile
+          <Link
+            to="/app/settings"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-foreground px-3.5 py-2 text-xs sm:px-5 sm:py-2.5 sm:text-sm font-medium text-background"
+          >
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Edit
           </Link>
-          <Link to="/app/profile/views" className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium hover:bg-secondary">
-            <Eye className="h-4 w-4" /> Views
+          <Link
+            to="/app/profile/views"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium hover:bg-secondary"
+          >
+            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Views
           </Link>
-          <button className="grid h-10 w-10 place-items-center rounded-full border border-border" aria-label="Share">
+          <button className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border sm:h-10 sm:w-10" aria-label="Share profile">
             <Share2 className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div className="mt-8 flex items-center justify-center sm:justify-start gap-10 px-4 sm:px-8 text-center">
+      <div className="mt-6 flex items-center justify-center gap-8 sm:justify-start sm:gap-10 text-center">
         <Link to="/app/profile/following" className="hover:opacity-80">
           <Stat n={String(stats?.following ?? 0)} label="Following" />
         </Link>
@@ -84,34 +101,30 @@ function Profile() {
         <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />
       </div>
 
-      <p className="mt-5 px-4 sm:px-8 text-foreground/80 max-w-xl">
+      <p className="mt-4 text-sm sm:text-base text-foreground/80 max-w-xl text-center sm:text-left">
         {profile?.bio ?? "Welcome to AgroLink. Update your bio in settings."}
       </p>
 
-      <div className="mt-4 px-4 sm:px-8 flex flex-wrap gap-2">
-        {roles.map((r) => (
-          <span key={r} className="rounded-full border border-border bg-card px-3 py-1 text-xs capitalize">{r}</span>
-        ))}
-      </div>
-
-      {sellers.length > 0 && (
-        <div className="mt-8 rounded-3xl border border-border bg-card p-5">
-          <h3 className="font-serif text-lg">Recommended sellers</h3>
-          <div className="mt-4 grid gap-3 grid-cols-2 sm:grid-cols-4">
-            {sellers.filter((s) => s.id !== user?.id && s.slug).slice(0, 4).map((s) => (
-              <Link key={s.id} to="/farmers/$slug" params={{ slug: s.slug! }} className="rounded-2xl border border-border bg-background p-3 hover:border-primary/40">
-                <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/15 font-serif text-primary">{(s.display_name ?? "F")[0]}</span>
-                <div className="mt-3 truncate text-sm font-medium">{s.display_name}</div>
-              </Link>
-            ))}
-          </div>
+      {roles.length > 0 && (
+        <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+          {roles.map((r) => (
+            <span key={r} className="rounded-full border border-border bg-card px-3 py-1 text-xs capitalize">{r}</span>
+          ))}
         </div>
       )}
 
-      <div className="mt-10 border-b border-border">
-        <div className="flex items-center justify-center gap-8 text-sm">
+      <RecommendedSellers sellers={sellers} excludeUserId={user?.id} />
+
+      <div className="mt-8 border-b border-border">
+        <div className="flex items-center justify-center gap-6 sm:gap-8 text-sm">
           {([["posts", Grid3x3, "Posts"], ["saved", Bookmark, "Saved"], ["liked", Heart, "Liked"]] as const).map(([k, Icon, label]) => (
-            <button key={k} onClick={() => setTab(k)} className={`flex items-center gap-2 border-b-2 px-2 pb-3 transition ${tab === k ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              className={`flex items-center gap-1.5 border-b-2 px-1 pb-3 transition sm:gap-2 sm:px-2 ${
+                tab === k ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"
+              }`}
+            >
               <Icon className="h-4 w-4" /> {label}
             </button>
           ))}
@@ -119,25 +132,28 @@ function Profile() {
       </div>
 
       {postsLoading ? (
-        <div className="mt-8 flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        <div className="mt-6 flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
       ) : (
-        <div className="mt-5 grid grid-cols-3 gap-1 sm:gap-2">
+        <div className="mt-4 grid grid-cols-3 gap-0.5 sm:gap-2">
           {gridItems.map((l) => (
-            <Link key={l.id} to="/app/buyer/feed" className="relative aspect-[9/16] overflow-hidden rounded-md bg-muted">
+            <Link key={l.id} to="/app/buyer/feed" className="relative aspect-[9/16] overflow-hidden rounded-sm sm:rounded-md bg-muted">
               <img src={l.image_url ?? MARKETING_FALLBACK_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-              <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[10px] text-white">
-                <Play className="h-3 w-3 fill-current" /> {l.view_count}
+              <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 text-[9px] text-white sm:left-2 sm:top-2 sm:px-2 sm:text-[10px]">
+                <Play className="h-2.5 w-2.5 sm:h-3 sm:w-3 fill-current" /> {l.view_count}
               </span>
             </Link>
           ))}
           {gridItems.length === 0 && (
-            <div className="col-span-3 py-16 text-center text-sm text-muted-foreground">Nothing here yet.</div>
+            <div className="col-span-3 py-12 text-center text-sm text-muted-foreground">Nothing here yet.</div>
           )}
         </div>
       )}
 
-      <div className="mt-10 flex justify-center">
-        <button onClick={() => signOut()} className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm text-muted-foreground hover:border-destructive/40 hover:text-destructive">
+      <div className="mt-8 mb-2 flex justify-center sm:mb-4">
+        <button
+          onClick={() => signOut()}
+          className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm text-muted-foreground hover:border-destructive/40 hover:text-destructive"
+        >
           <LogOut className="h-4 w-4" /> Sign out
         </button>
       </div>
@@ -148,8 +164,8 @@ function Profile() {
 function Stat({ n, label }: { n: string; label: string }) {
   return (
     <div>
-      <div className="font-serif text-xl text-foreground">{n}</div>
-      <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="font-serif text-lg sm:text-xl text-foreground">{n}</div>
+      <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-muted-foreground">{label}</div>
     </div>
   );
 }
