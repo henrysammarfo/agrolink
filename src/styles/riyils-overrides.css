@@ -21,6 +21,22 @@
   pointer-events: auto;
 }
 
+/* TikTok-style feed — override react-vertical-feed hardcoded 100vh */
+.agrolink-tiktok-feed [role="feed"] {
+  height: 100% !important;
+  max-height: 100dvh;
+}
+
+.agrolink-tiktok-feed [role="feed"] [data-index] {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  scroll-snap-align: start;
+}
+
+.agrolink-tiktok-feed [role="feed"] video {
+  object-fit: cover;
+}
+
 /* Feed commerce overlay — above Riyils, below modals */
 .agrolink-feed-overlay {
   z-index: 10050;
@@ -36,8 +52,12 @@
   pointer-events: none;
 }
 
-/* App chrome (back + bottom nav) must sit above the feed commerce overlay */
+/* App chrome (bottom nav) must sit above the feed commerce overlay */
 .agrolink-immersive-chrome {
   z-index: 10055;
   pointer-events: auto;
+}
+
+.agrolink-immersive-feed {
+  --agrolink-tab-bar: 3.25rem;
 }

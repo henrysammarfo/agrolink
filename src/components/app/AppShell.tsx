@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
   ChevronLeft, Bell, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
-  ShieldCheck, AlertTriangle, CreditCard, ListChecks, ArrowLeft, Zap, Search,
+  ShieldCheck, AlertTriangle, CreditCard, ListChecks, Zap, Search,
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
@@ -98,9 +98,12 @@ export function AppShell({
 
   if (immersive) {
     return (
-      <div className="relative h-[100dvh] w-full overflow-hidden bg-black">
-        {children ?? <Outlet />}
-        <nav className="agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-white/10 bg-black/80 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0px)]">
+      <div
+        className="agrolink-immersive-feed relative h-[100dvh] w-full overflow-hidden bg-black"
+        style={{ "--agrolink-tab-bar": "3.25rem" } as React.CSSProperties}
+      >
+        <div className="absolute inset-0">{children ?? <Outlet />}</div>
+        <nav className="agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t border-white/10 bg-black/70 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0px)]">
           {mobileTabs.map((t) => {
             const active = pathname === t.to;
             if ("center" in t && t.center) {
@@ -130,13 +133,6 @@ export function AppShell({
             );
           })}
         </nav>
-        <Link
-          to={roleHome(role)}
-          className="agrolink-immersive-chrome pointer-events-auto fixed left-3 top-[max(env(safe-area-inset-top),12px)] grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-md active:scale-95"
-          aria-label="Back to home"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
       </div>
     );
   }

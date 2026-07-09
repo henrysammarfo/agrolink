@@ -10,7 +10,7 @@ export const Route = createFileRoute("/app/buyer/feed")({
 function Feed() {
   return (
     <AppShell role="buyer">
-      <FeedPlayer fullscreen />
+      <FeedPlayer fullscreen inAppFeed />
     </AppShell>
   );
 }
