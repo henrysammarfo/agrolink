@@ -19,6 +19,7 @@ export const Route = createFileRoute("/api/checkout")({
             deliveryLng?: number;
             fulfillmentMode?: "platform_delivery" | "farm_pickup" | "own_driver";
             otpVerified?: boolean;
+            vehicleType?: "bicycle" | "motorcycle" | "car";
           };
 
           if (!body.phone) {
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/api/checkout")({
             deliveryLng: body.deliveryLng,
             fulfillmentMode: body.fulfillmentMode ?? "platform_delivery",
             otpVerified: body.otpVerified,
+            vehicleType: body.vehicleType,
           });
 
           return Response.json(result);

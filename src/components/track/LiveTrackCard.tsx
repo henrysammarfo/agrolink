@@ -93,6 +93,41 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
     );
   }
 
+  if (delivery.status === "requested" && !delivery.driver_id) {
+    const radius = (delivery as { search_radius_km?: number }).search_radius_km ?? 20;
+    const round = (delivery as { offer_round?: number }).offer_round ?? 1;
+    return (
+      <div className={`overflow-hidden ${fullscreen ? "bg-black text-white" : "rounded-3xl border border-border bg-card"}`}>
+        <div className={`relative ${fullscreen ? "h-[45vh]" : "h-[220px]"}`}>
+          <CorridorMap
+            pins={[
+              { lat: delivery.pickup_lat, lng: delivery.pickup_lng, label: "Farm", kind: "farm" },
+              { lat: delivery.delivery_lat, lng: delivery.delivery_lng, label: "You", kind: "buyer" },
+            ]}
+            dark
+            height={fullscreen ? "45vh" : "220px"}
+          />
+        </div>
+        <div className={`p-6 ${fullscreen ? "text-white" : ""}`}>
+          <div className="flex items-center gap-3">
+            <span className="h-3 w-3 rounded-full bg-primary animate-ping" />
+            <h2 className="font-serif text-xl">Searching for drivers</h2>
+          </div>
+          <p className="mt-2 text-sm opacity-80">
+            Round {round} · scanning within {radius} km for a verified driver.
+          </p>
+          <Link
+            to="/app/buyer/orders/$orderId/match"
+            params={{ orderId: order.id }}
+            className="mt-4 inline-block text-sm text-primary hover:underline"
+          >
+            Open live search view
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const pins = [
     { lat: delivery.pickup_lat, lng: delivery.pickup_lng, label: "Farm", kind: "farm" as const },
     { lat: delivery.delivery_lat, lng: delivery.delivery_lng, label: "You", kind: "buyer" as const },

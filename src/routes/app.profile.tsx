@@ -17,7 +17,7 @@ function Profile() {
   const { profile, user, roles, signOut } = useAuth();
   const [tab, setTab] = useState<"posts" | "saved" | "liked">("posts");
   const role = roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
-  const handle = (profile?.display_name ?? user?.email ?? "you").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const handle = profile?.username ?? profile?.slug?.replace(/-/g, "") ?? (profile?.display_name ?? user?.email ?? "you").toLowerCase().replace(/[^a-z0-9]/g, "");
   const name = profile?.display_name ?? user?.email?.split("@")[0] ?? "You";
 
   const { data: stats } = useProfileStats(user?.id, profile?.slug ?? undefined);
@@ -53,10 +53,10 @@ function Profile() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex items-center gap-2">
-          {profile?.slug && (
+          {(profile?.slug || profile?.username) && (
             <Link
               to="/farmers/$slug"
-              params={{ slug: profile.slug }}
+              params={{ slug: profile.username ?? profile.slug! }}
               className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium hover:bg-secondary"
             >
               Public profile
@@ -75,8 +75,12 @@ function Profile() {
       </div>
 
       <div className="mt-8 flex items-center justify-center sm:justify-start gap-10 px-4 sm:px-8 text-center">
-        <Stat n={String(stats?.following ?? 0)} label="Following" />
-        <Stat n={String(stats?.followers ?? 0)} label="Followers" />
+        <Link to="/app/profile/following" className="hover:opacity-80">
+          <Stat n={String(stats?.following ?? 0)} label="Following" />
+        </Link>
+        <Link to="/app/profile/followers" className="hover:opacity-80">
+          <Stat n={String(stats?.followers ?? 0)} label="Followers" />
+        </Link>
         <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />
       </div>
 

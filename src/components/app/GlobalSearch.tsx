@@ -15,8 +15,9 @@ import { apiFetch } from "@/lib/api/fetch-auth";
 
 type SearchResult = {
   listings: { id: string; title: string; seller_name: string; seller_slug: string; price_per_unit: number; unit: string }[];
-  farmers: { id: string; display_name: string; slug: string; region: string | null }[];
+  farmers: { id: string; display_name: string; slug: string | null; username?: string | null; region: string | null }[];
   orders: { id: string; status: string; total_amount: number }[];
+  hashtags: string[];
 };
 
 type Props = { role: string; open: boolean; onOpenChange: (open: boolean) => void };
@@ -91,13 +92,23 @@ export function GlobalSearch({ role, open, onOpenChange }: Props) {
             ))}
           </CommandGroup>
         )}
+        {results && results.hashtags.length > 0 && (
+          <CommandGroup heading="Hashtags">
+            {results.hashtags.map((tag) => (
+              <CommandItem key={tag} onSelect={() => { setQ(`#${tag}`); void search(tag); }}>
+                <Sprout className="mr-2 h-4 w-4 text-primary" />
+                <span>#{tag}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
         {results && results.farmers.length > 0 && (
-          <CommandGroup heading="Farmers">
-            {results.farmers.filter((f) => f.slug || f.id).map((f) => (
-              <CommandItem key={f.id} onSelect={() => go("/farmers/$slug", { slug: f.slug ?? f.id })}>
+          <CommandGroup heading="Users">
+            {results.farmers.filter((f) => f.slug || f.username || f.id).map((f) => (
+              <CommandItem key={f.id} onSelect={() => go("/farmers/$slug", { slug: f.username ?? f.slug ?? f.id })}>
                 <User className="mr-2 h-4 w-4" />
                 <span>{f.display_name}</span>
-                <span className="ml-auto text-xs text-muted-foreground">{f.region}</span>
+                <span className="ml-auto text-xs text-muted-foreground">@{f.username ?? f.slug?.replace(/-/g, "")}</span>
               </CommandItem>
             ))}
           </CommandGroup>

@@ -54,10 +54,11 @@ export const Route = createFileRoute("/api/comms/notify")({
           }
 
           if (body.type === "follow" && body.farmerSlug) {
+            const slug = body.farmerSlug.toLowerCase();
             const { data: profile } = await supabaseAdmin
               .from("profiles")
               .select("id")
-              .eq("slug", body.farmerSlug)
+              .or(`slug.eq.${slug},username.eq.${slug}`)
               .maybeSingle();
             if (profile?.id && profile.id !== actorUserId) {
               await notifyUser(profile.id, {

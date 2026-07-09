@@ -15,6 +15,8 @@ import {
   X,
   Send,
   Copy,
+  Plus,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useFeed, useAddToCart } from "@/hooks/use-marketplace";
@@ -28,6 +30,8 @@ import {
   addComment,
   toggleBookmark,
   fetchUserBookmarked,
+  toggleFollow,
+  fetchIsFollowing,
 } from "@/lib/api/engagement";
 import type { FeedListing } from "@/lib/types/marketplace";
 import type { FeedComment } from "@/lib/types/marketplace";
@@ -225,11 +229,20 @@ function FeedCardOverlay({
   const [commentText, setCommentText] = useState("");
   const [panel, setPanel] = useState<"comments" | "share" | null>(null);
   const [showLikeBurst, setShowLikeBurst] = useState(false);
+  const [following, setFollowing] = useState(false);
   const lastTap = useRef(0);
   const sellerSlug = item.seller_slug?.trim().toLowerCase() || null;
-  const sellerHandle = (sellerSlug ?? item.seller_name ?? "seller").replace(/-/g, "");
+  const profileHandle = sellerSlug ?? item.seller_id;
+  const followKey = sellerSlug ?? item.seller_id ?? "";
+  const sellerHandle = (item.seller_slug ?? item.seller_name ?? "seller").replace(/-/g, "").slice(0, 20);
+  const isSelf = user?.id === item.seller_id;
   const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
   const isDemoListing = isSeedListingId(item.id);
+
+  useEffect(() => {
+    if (!user?.id || isDemoListing || !followKey || isSelf) return;
+    fetchIsFollowing(user.id, followKey).then(setFollowing);
+  }, [item.id, user?.id, isDemoListing, followKey, isSelf]);
 
   useEffect(() => {
     if (!user?.id || isDemoListing) return;
@@ -393,11 +406,35 @@ function FeedCardOverlay({
   const openSellerProfile = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!sellerSlug) {
+    if (!profileHandle) {
       toast.error("Seller profile unavailable");
       return;
     }
-    void navigate({ to: "/farmers/$slug", params: { slug: sellerSlug } });
+    void navigate({ to: "/farmers/$slug", params: { slug: profileHandle } });
+  };
+
+  const handleFollow = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user?.id) {
+      toast.error("Sign in to follow");
+      return;
+    }
+    if (!followKey) {
+      toast.error("Follow unavailable for this seller");
+      return;
+    }
+    if (isSelf) return;
+    const next = !following;
+    setFollowing(next);
+    try {
+      await toggleFollow(user.id, followKey, next, profile?.display_name ?? undefined);
+      toast.success(next ? "Following" : "Unfollowed");
+      trackEvent("feed_follow", { seller_slug: followKey, following: next });
+    } catch (err) {
+      setFollowing(!next);
+      toast.error(err instanceof Error ? err.message : "Could not update follow");
+    }
   };
 
   const soldOut = Number(item.quantity) <= 0 || item.status === "sold_out";
@@ -443,11 +480,11 @@ function FeedCardOverlay({
       </div>
 
       <div className="feed-touch-target absolute bottom-[calc(10.5rem+env(safe-area-inset-bottom))] right-[4.25rem] z-20 flex flex-col items-center gap-4 sm:right-[4.75rem] sm:gap-5 md:bottom-[calc(11rem+env(safe-area-inset-bottom))]">
-        {sellerSlug ? (
+        <div className="relative">
           <button
             type="button"
             onClick={openSellerProfile}
-            className="feed-touch-target relative"
+            className="feed-touch-target block"
             aria-label={`View ${item.seller_name ?? "seller"} profile`}
           >
             <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white sm:h-12 sm:w-12">
@@ -458,11 +495,19 @@ function FeedCardOverlay({
               )}
             </span>
           </button>
-        ) : (
-          <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary/30 font-sans text-lg font-semibold text-white sm:h-12 sm:w-12">
-            {item.seller_name?.[0] ?? "?"}
-          </span>
-        )}
+          {!isSelf && followKey && (
+            <button
+              type="button"
+              onClick={handleFollow}
+              className={`feed-touch-target absolute -bottom-1 left-1/2 grid h-5 w-5 -translate-x-1/2 place-items-center rounded-full border-2 border-white text-[10px] font-bold shadow ${
+                following ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
+              }`}
+              aria-label={following ? "Unfollow" : "Follow"}
+            >
+              {following ? <UserCheck className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+            </button>
+          )}
+        </div>
         <Action
           icon={Heart}
           label={formatCount(likes)}
@@ -486,7 +531,7 @@ function FeedCardOverlay({
       </div>
 
       <div className="feed-touch-target absolute inset-x-0 bottom-0 z-20 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pr-[4.25rem] text-white sm:px-5 sm:pr-24 md:p-6 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
-        {sellerSlug ? (
+        {profileHandle ? (
           <button
             type="button"
             onClick={openSellerProfile}

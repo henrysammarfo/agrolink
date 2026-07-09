@@ -89,6 +89,7 @@ export async function processCheckout(params: {
   deliveryLng?: number;
   fulfillmentMode?: "platform_delivery" | "farm_pickup" | "own_driver";
   otpVerified?: boolean;
+  vehicleType?: "bicycle" | "motorcycle" | "car";
 }): Promise<{ orderId: string; paymentReference: string; displayText?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -165,15 +166,28 @@ export async function processCheckout(params: {
 
   if (needsDelivery) {
     const { computeDeliveryQuote } = await import("@/server/delivery-quote");
+    const quoteVehicle =
+      params.vehicleType === "car"
+        ? "pickup"
+        : params.vehicleType === "bicycle"
+          ? "motorcycle"
+          : weightKg > 80
+            ? "truck"
+            : weightKg > 40
+              ? "pickup"
+              : "motorcycle";
     quote = await computeDeliveryQuote({
       pickupLat: firstListing.lat,
       pickupLng: firstListing.lng,
       deliveryLat,
       deliveryLng,
       weightKg,
-      vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
+      vehicleType: quoteVehicle,
       pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
     });
+    if (params.vehicleType === "bicycle") {
+      quote = { ...quote, total: Math.round(quote.total * 0.85) };
+    }
     deliveryFee = quote.total;
   }
 
@@ -259,7 +273,17 @@ export async function processCheckout(params: {
     const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
     const { radiusForOfferRound } = await import("@/lib/vehicle-types");
     const vehicleType =
-      weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : weightKg > 15 ? "motorcycle" : "bicycle";
+      params.vehicleType === "bicycle"
+        ? "bicycle"
+        : params.vehicleType === "car"
+          ? "pickup"
+          : weightKg > 80
+            ? "truck"
+            : weightKg > 40
+              ? "pickup"
+              : weightKg > 15
+                ? "motorcycle"
+                : "bicycle";
     await supabaseAdmin.from("deliveries").insert({
       order_id: order.id,
       pickup_lat: firstListing.lat,
