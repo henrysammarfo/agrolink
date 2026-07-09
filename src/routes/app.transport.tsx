@@ -203,12 +203,12 @@ function TransportOverview() {
 
   return (
     <VerifiedTransportGate>
-      <AppShell role="transport">
-        <div className="relative -mx-6 -mt-6 md:-mx-10 md:-mt-10 h-[calc(100vh-140px)] min-h-[560px] overflow-hidden">
+      <AppShell role="transport" compact hideMobileNav>
+        <div className="relative -mx-4 -mt-4 sm:-mx-6 md:-mx-10 md:-mt-10 h-[calc(100dvh-8rem)] min-h-[480px] overflow-hidden">
           <CorridorMap pins={mapPins} route={routeCoords} animateDriver={!!active} driverLabel="You" dark />
 
-          <div className="pointer-events-none absolute inset-x-0 top-4 flex flex-col items-center gap-3 px-4">
-            <button onClick={toggleOnline} className={`pointer-events-auto inline-flex items-center gap-3 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg backdrop-blur transition ${online ? "bg-emerald-500 text-white" : "bg-background/95 text-foreground border border-border"}`}>
+          <div className="pointer-events-none absolute inset-x-0 top-[max(env(safe-area-inset-top),12px)] flex flex-col items-center gap-3 px-4 z-20">
+            <button type="button" onClick={toggleOnline} className={`pointer-events-auto inline-flex items-center gap-3 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg backdrop-blur transition z-30 ${online ? "bg-emerald-500 text-white" : "bg-background/95 text-foreground border border-border"}`}>
               <span className={`h-2.5 w-2.5 rounded-full ${online ? "bg-white animate-ping" : "bg-muted-foreground"}`} />
               {online ? "You're online" : "Go online"}
             </button>
@@ -248,7 +248,7 @@ function TransportOverview() {
             )}
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 px-3 md:px-6 pb-4">
+          <div className="absolute inset-x-0 bottom-0 px-3 md:px-6 pb-[max(env(safe-area-inset-bottom),12px)] z-20">
             <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-background/95 p-5 shadow-2xl backdrop-blur">
               {loading ? (
                 <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>

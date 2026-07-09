@@ -91,7 +91,7 @@ function AdminPayments() {
 
   return (
     <AdminGate>
-      <AppShell role="admin">
+      <AppShell role="admin" compact>
         <PageHeader
           eyebrow="Finance"
           title="All"

@@ -48,10 +48,16 @@ export function AppShell({
   role,
   children,
   unreadInbox: unreadOverride,
+  hideMobileNav,
+  compact,
 }: {
   role: AppRole;
   children?: ReactNode;
   unreadInbox?: number;
+  /** Hide bottom tab bar (checkout, fullscreen flows) */
+  hideMobileNav?: boolean;
+  /** Tighter mobile padding */
+  compact?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -70,19 +76,25 @@ export function AppShell({
     {
       to:
         role === "transport"
-          ? "/app/transport/jobs"
+          ? "/app/transport"
           : role === "admin"
-            ? "/app/admin/disputes"
-            : "/app/buyer/feed",
-      icon: Sprout,
-      label: "Discover",
+            ? "/app/admin"
+            : role === "farmer"
+              ? "/app/farmer"
+              : "/app/buyer/feed",
+      icon: role === "transport" ? Truck : role === "admin" ? ShieldCheck : Sprout,
+      label: role === "transport" ? "Map" : role === "admin" ? "Admin" : "Discover",
     },
-    { to: "/app/create", icon: Plus, label: "", center: true },
+    role === "farmer" || role === "buyer"
+      ? { to: "/app/create", icon: Plus, label: "", center: true }
+      : role === "transport"
+        ? { to: "/app/transport/jobs", icon: Truck, label: "Jobs" }
+        : { to: "/app/admin/drivers", icon: Truck, label: "Drivers" },
     role === "buyer"
       ? { to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount }
       : { to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
     { to: "/app/profile", icon: User, label: "Me" },
-  ];
+  ] as const;
 
   if (immersive) {
     return (
@@ -91,7 +103,7 @@ export function AppShell({
         <nav className="agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-white/10 bg-black/80 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0px)]">
           {mobileTabs.map((t) => {
             const active = pathname === t.to;
-            if (t.center) {
+            if ("center" in t && t.center) {
               return (
                 <Link key="create" to={t.to} className="flex items-center justify-center -mt-3">
                   <span className="grid h-12 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/30">
@@ -251,12 +263,19 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 p-6 md:p-10 pb-24 md:pb-10">{children ?? <Outlet />}</main>
+        <main
+          className={`flex-1 ${
+            compact ? "px-4 py-4 md:px-8 md:py-8" : "px-4 py-5 sm:px-6 md:p-10"
+          } ${hideMobileNav ? "pb-6 md:pb-10" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-10"}`}
+        >
+          {children ?? <Outlet />}
+        </main>
 
+        {!hideMobileNav && (
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur pb-[max(env(safe-area-inset-bottom),0px)]">
           {mobileTabs.map((t) => {
             const active = pathname === t.to;
-            if (t.center) {
+            if ("center" in t && t.center) {
               return (
                 <Link key="create" to={t.to} className="flex items-center justify-center -mt-3">
                   <span className="grid h-12 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg">
@@ -283,6 +302,7 @@ export function AppShell({
             );
           })}
         </nav>
+        )}
       </div>
     </div>
   );
@@ -299,7 +319,7 @@ export function PageHeader({ eyebrow, title, italic, sub, action }: {
     <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
         {eyebrow && <span className="text-xs uppercase tracking-widest text-primary/80">{eyebrow}</span>}
-        <h1 className="mt-2 font-serif text-4xl md:text-5xl text-foreground">
+        <h1 className="mt-2 font-serif text-3xl sm:text-4xl md:text-5xl text-foreground">
           {title} {italic && <span className="italic text-accent">{italic}</span>}
         </h1>
         {sub && <p className="mt-2 text-sm text-muted-foreground">{sub}</p>}

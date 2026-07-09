@@ -410,7 +410,11 @@ function FeedCardOverlay({
       toast.error("Seller profile unavailable");
       return;
     }
-    void navigate({ to: "/farmers/$slug", params: { slug: profileHandle } });
+    const inApp = location.pathname.startsWith("/app");
+    void navigate({
+      to: inApp ? "/app/users/$slug" : "/farmers/$slug",
+      params: { slug: profileHandle },
+    });
   };
 
   const handleFollow = async (e: React.MouseEvent) => {

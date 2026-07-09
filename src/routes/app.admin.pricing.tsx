@@ -73,7 +73,7 @@ function AdminPricing() {
 
   return (
     <AdminGate>
-      <AppShell role="admin">
+      <AppShell role="admin" compact>
         <PageHeader
           eyebrow="Admin"
           title="Delivery"

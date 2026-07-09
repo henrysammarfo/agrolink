@@ -91,7 +91,7 @@ function AdminDrivers() {
 
   return (
     <AdminGate>
-      <AppShell role="admin">
+      <AppShell role="admin" compact>
         <PageHeader
           eyebrow="Transport"
           title="Driver"
