@@ -11,19 +11,24 @@ const CATEGORIES = [
 type Props = {
   active: string;
   onChange: (id: string) => void;
+  inAppFeed?: boolean;
 };
 
-export function CategoryChips({ active, onChange }: Props) {
+export function CategoryChips({ active, onChange, inAppFeed = false }: Props) {
   return (
-    <div className="feed-touch-target absolute inset-x-0 top-[max(env(safe-area-inset-top),52px)] z-20 flex gap-2 overflow-x-auto px-4 pb-2 no-scrollbar">
+    <div
+      className={`feed-touch-target flex gap-1.5 overflow-x-auto px-3 pb-2 no-scrollbar ${
+        inAppFeed ? "justify-start" : "absolute inset-x-0 top-[max(env(safe-area-inset-top),3rem)] z-20 justify-center px-12"
+      }`}
+    >
       {CATEGORIES.map((c) => (
         <button
           key={c.id}
           onClick={() => onChange(c.id)}
-          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium backdrop-blur transition ${
+          className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold backdrop-blur-sm transition ${
             active === c.id
               ? "bg-white text-black"
-              : "bg-black/35 text-white/90 border border-white/20"
+              : "border border-white/20 bg-black/25 text-white/90"
           }`}
         >
           {c.label}

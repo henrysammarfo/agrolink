@@ -219,7 +219,16 @@ function Cart() {
   }
 
   return (
-    <AppShell role="buyer" compact hideMobileNav>
+    <AppShell role="buyer" compact>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/app/buyer/feed" })}
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" /> Back to feed
+        </button>
+      </div>
       <PageHeader eyebrow="Checkout" title="Your" italic="order" />
       <CheckoutSteps step={step} />
 

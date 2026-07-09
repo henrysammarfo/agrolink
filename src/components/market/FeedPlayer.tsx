@@ -47,9 +47,11 @@ export { FEED_ALGORITHM_COPY };
 type Props = {
   initialIndex?: number;
   fullscreen?: boolean;
+  /** In-app buyer feed with bottom tab bar overlay (TikTok-style) */
+  inAppFeed?: boolean;
 };
 
-export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
+export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = false }: Props) {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | undefined>();
   const { data, isLoading, error } = useFeed(coords?.lat, coords?.lng);
   const rankedListings = data?.listings ?? [];
@@ -89,7 +91,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
   }));
 
   const wrapperClass = fullscreen
-    ? "h-full w-full bg-black"
+    ? `h-full w-full bg-black${inAppFeed ? " agrolink-tiktok-feed" : ""}`
     : "relative mx-auto aspect-[9/16] w-full max-w-[420px] overflow-hidden rounded-[2rem] border border-border bg-black shadow-[var(--shadow-cinema)]";
 
   if (isLoading) {
@@ -130,18 +132,19 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true }: Props) {
         renderItemOverlay={(item, i) => {
           const listing = (item.metadata as { listing: FeedListing }).listing;
           return (
-            <>
-              {i === 0 && <CategoryChips active={category} onChange={setCategory} />}
-              <FeedCardOverlay
-                item={listing}
-                isActive={i === active}
-                muted={muted}
-                onToggleMute={() => setMuted((m) => !m)}
-                onOpenGrid={() => setShowGrid(true)}
-                progress={`${i + 1} / ${filteredListings.length}`}
-                showImageOnly={!listing.video_url}
-              />
-            </>
+            <FeedCardOverlay
+              item={listing}
+              isActive={i === active}
+              muted={muted}
+              onToggleMute={() => setMuted((m) => !m)}
+              onOpenGrid={() => setShowGrid(true)}
+              progress={`${i + 1} / ${filteredListings.length}`}
+              showImageOnly={!listing.video_url}
+              inAppFeed={inAppFeed}
+              category={category}
+              onCategoryChange={setCategory}
+              showCategories={i === 0}
+            />
           );
         }}
       />
@@ -210,6 +213,10 @@ function FeedCardOverlay({
   onOpenGrid,
   progress,
   showImageOnly,
+  inAppFeed = false,
+  category = "all",
+  onCategoryChange,
+  showCategories = false,
 }: {
   item: FeedListing;
   isActive: boolean;
@@ -218,6 +225,10 @@ function FeedCardOverlay({
   onOpenGrid: () => void;
   progress: string;
   showImageOnly?: boolean;
+  inAppFeed?: boolean;
+  category?: string;
+  onCategoryChange?: (id: string) => void;
+  showCategories?: boolean;
 }) {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -442,11 +453,20 @@ function FeedCardOverlay({
   };
 
   const soldOut = Number(item.quantity) <= 0 || item.status === "sold_out";
+  const tabInset = inAppFeed
+    ? "calc(var(--agrolink-tab-bar,3.5rem) + env(safe-area-inset-bottom,0px))"
+    : "env(safe-area-inset-bottom,0px)";
+  const captionBottom = `calc(${tabInset} + 0.375rem)`;
+  const railBottom = `calc(${tabInset} + 4.75rem)`;
 
   return (
-    <div className="feed-pass-through absolute inset-0">
+    <div className="agrolink-feed-overlay feed-pass-through absolute inset-0">
       <div
-        className="feed-touch-target absolute inset-x-0 bottom-44 top-28 right-16 z-[1] sm:right-20 sm:bottom-48"
+        className="feed-touch-target absolute inset-0 z-[1]"
+        style={{
+          bottom: tabInset,
+          right: "4.25rem",
+        }}
         onClick={onDoubleTap}
         aria-hidden
       />
@@ -465,25 +485,47 @@ function FeedCardOverlay({
       <div className="scrim-top-dark feed-pass-through" />
       <div className="scrim-bottom-dark feed-pass-through" />
 
-      <div className="feed-touch-target absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pl-14 pt-[max(env(safe-area-inset-top),12px)]">
-        <button
-          onClick={onOpenGrid}
-          className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition active:scale-95"
-          aria-label="Browse all"
-        >
-          <Grid2x2 className="h-4 w-4" />
-        </button>
-        <span className="text-[10px] uppercase tracking-widest text-white/70">{progress}</span>
-        <button
-          onClick={onToggleMute}
-          className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition active:scale-95"
-          aria-label={muted ? "Unmute" : "Mute"}
-        >
-          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-        </button>
-      </div>
+      {inAppFeed ? (
+        <div className="feed-touch-target absolute inset-x-0 top-0 z-10 pt-[max(env(safe-area-inset-top),6px)]">
+          {showCategories && onCategoryChange && (
+            <CategoryChips active={category} onChange={onCategoryChange} inAppFeed />
+          )}
+          <div className="flex items-center justify-end px-3 pb-1">
+            <button
+              onClick={onToggleMute}
+              className="grid h-9 w-9 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition active:scale-95"
+              aria-label={muted ? "Unmute" : "Mute"}
+            >
+              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="feed-touch-target absolute inset-x-0 top-0 z-10 flex items-center justify-between px-3 pt-[max(env(safe-area-inset-top),8px)]">
+          <button
+            onClick={onOpenGrid}
+            className="grid h-10 w-10 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition active:scale-95"
+            aria-label="Browse all"
+          >
+            <Grid2x2 className="h-4 w-4" />
+          </button>
+          <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-white/80 backdrop-blur-sm">
+            {progress}
+          </span>
+          <button
+            onClick={onToggleMute}
+            className="grid h-10 w-10 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition active:scale-95"
+            aria-label={muted ? "Unmute" : "Mute"}
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
+        </div>
+      )}
 
-      <div className="feed-touch-target absolute bottom-[calc(10.5rem+env(safe-area-inset-bottom))] right-[4.25rem] z-20 flex flex-col items-center gap-4 sm:right-[4.75rem] sm:gap-5 md:bottom-[calc(11rem+env(safe-area-inset-bottom))]">
+      <div
+        className="feed-touch-target absolute right-1.5 z-20 flex flex-col items-center gap-4"
+        style={{ bottom: railBottom }}
+      >
         <div className="relative">
           <button
             type="button"
@@ -531,10 +573,21 @@ function FeedCardOverlay({
           activeClass="text-amber-sun fill-amber-sun"
           onClick={handleSave}
         />
+        <Action
+          icon={ShoppingBasket}
+          label={soldOut ? "Sold" : "Buy"}
+          onClick={handleAddToCart}
+          disabled={addToCartMut.isPending || soldOut}
+        />
         <Action icon={Share2} label="Share" onClick={() => setPanel("share")} />
       </div>
 
-      <div className="feed-touch-target absolute inset-x-0 bottom-0 z-20 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pr-[4.25rem] text-white sm:px-5 sm:pr-24 md:p-6 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+      <div
+        className="feed-touch-target absolute inset-x-0 bottom-0 z-20 max-w-[78%] px-3 text-white sm:max-w-[72%] sm:px-4"
+        style={{
+          paddingBottom: captionBottom,
+        }}
+      >
         {profileHandle ? (
           <button
             type="button"
@@ -550,26 +603,41 @@ function FeedCardOverlay({
             {item.seller_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
           </span>
         )}
-        <h2 className="mt-1.5 font-sans text-xl font-bold leading-tight text-white sm:mt-2 sm:text-2xl md:text-3xl">
+        <h2 className="mt-1 line-clamp-2 font-sans text-[15px] font-semibold leading-snug text-white">
           {item.title}
+          <span className="font-normal text-white/80">
+            {" "}· GHS {item.price_per_unit}/{item.unit}
+            {soldOut ? " · Sold out" : ""}
+          </span>
         </h2>
-        <p className="mt-1 line-clamp-2 max-w-[85%] text-xs text-white/85 sm:max-w-[80%] sm:text-sm">
-          {item.location_name} · {soldOut ? "Sold out" : `${item.quantity}${item.unit} available`} · {hoursAgo}h ago
+        <p className="mt-1 line-clamp-1 text-xs text-white/75">
+          {item.location_name}
           {item.distance_km != null && ` · ${item.distance_km.toFixed(1)} km`}
+          {" · "}{hoursAgo}h ago
         </p>
-        <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row sm:items-center sm:gap-3">
-          <div className="inline-flex w-fit rounded-full bg-white/15 px-3 py-1.5 backdrop-blur">
-            <span className="font-sans text-lg font-bold text-white sm:text-xl">GHS {item.price_per_unit}</span>
-            <span className="ml-1 text-xs text-white/70">/{item.unit}</span>
-          </div>
+        {inAppFeed ? (
           <button
-            onClick={handleAddToCart}
-            disabled={addToCartMut.isPending || soldOut}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60 sm:flex-1"
+            type="button"
+            onClick={onOpenGrid}
+            className="feed-touch-target mt-2 text-xs font-medium text-white/60 underline-offset-2 hover:text-white hover:underline"
           >
-            <ShoppingBasket className="h-4 w-4" /> {soldOut ? "Sold out" : "Add to cart"}
+            Browse all produce
           </button>
-        </div>
+        ) : (
+          <div className="mt-2 flex items-center gap-2">
+            <div className="inline-flex rounded-full bg-white/15 px-2.5 py-1 backdrop-blur-sm">
+              <span className="font-sans text-base font-bold text-white">GHS {item.price_per_unit}</span>
+              <span className="ml-1 text-[11px] text-white/70">/{item.unit}</span>
+            </div>
+            <button
+              onClick={handleAddToCart}
+              disabled={addToCartMut.isPending || soldOut}
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+            >
+              <ShoppingBasket className="h-4 w-4" /> {soldOut ? "Sold out" : "Add to cart"}
+            </button>
+          </div>
+        )}
         {isDemoListing && (
           <p className="mt-2 text-[10px] uppercase tracking-wide text-white/50">Sample listing · actions are local preview</p>
         )}
@@ -660,26 +728,29 @@ function Action({
   onClick,
   active,
   activeClass,
+  disabled,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   onClick: () => void;
   active?: boolean;
   activeClass?: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
       }}
-      className="flex min-w-[52px] flex-col items-center gap-1 text-white"
+      className="flex min-w-[48px] flex-col items-center gap-0.5 text-white disabled:opacity-45"
     >
-      <span className="grid h-11 w-11 place-items-center rounded-full bg-white/10 backdrop-blur transition active:scale-90 sm:h-12 sm:w-12">
-        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${active ? activeClass : ""}`} />
+      <span className="grid h-11 w-11 place-items-center rounded-full bg-black/25 backdrop-blur-sm transition active:scale-90">
+        <Icon className={`h-5 w-5 ${active ? activeClass : ""}`} />
       </span>
-      <span className="text-[10px] font-medium sm:text-[11px]">{label}</span>
+      <span className="text-[10px] font-medium drop-shadow-sm">{label}</span>
     </button>
   );
 }
