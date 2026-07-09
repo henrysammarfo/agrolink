@@ -97,13 +97,18 @@ export function AppShell({
   ] as const;
 
   if (immersive) {
+    const lightChrome = pathname.startsWith("/app/transport");
     return (
       <div
-        className="agrolink-immersive-feed relative h-[100dvh] w-full overflow-hidden bg-black"
+        className={`agrolink-immersive-feed relative h-[100dvh] w-full overflow-hidden ${lightChrome ? "bg-background" : "bg-black"}`}
         style={{ "--agrolink-tab-bar": "3.5rem" } as React.CSSProperties}
       >
         <div className="absolute inset-0">{children ?? <Outlet />}</div>
-        <nav className="agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t border-white/5 bg-black/55 backdrop-blur-md pb-[max(env(safe-area-inset-bottom),0px)]">
+        <nav className={`agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t pb-[max(env(safe-area-inset-bottom),0px)] ${
+          lightChrome
+            ? "border-border bg-background/95 backdrop-blur-md"
+            : "border-white/5 bg-black/55 backdrop-blur-md"
+        }`}>
           {mobileTabs.map((t) => {
             const active = pathname === t.to;
             if ("center" in t && t.center) {
@@ -120,7 +125,15 @@ export function AppShell({
               <Link
                 key={t.to}
                 to={t.to}
-                className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${active ? "text-white" : "text-white/45"}`}
+                className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${
+                  active
+                    ? lightChrome
+                      ? "text-primary"
+                      : "text-white"
+                    : lightChrome
+                      ? "text-muted-foreground"
+                      : "text-white/45"
+                }`}
               >
                 <t.icon className={`h-5 w-5 ${active ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}`} />
                 {t.label}

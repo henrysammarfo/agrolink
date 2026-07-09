@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchFeedListings, fetchSellerListings } from "@/lib/api/listings";
 import { fetchCartItems, addToCart, updateCartItemQuantity, removeCartItem, reorderFromOrder } from "@/lib/api/cart";
-import { fetchBuyerOrders, fetchSellerOrders, fetchAvailableDeliveries, fetchDriverDeliveries } from "@/lib/api/orders";
+import { fetchBuyerOrders, fetchSellerOrders, fetchAvailableDeliveries, fetchDriverDeliveries, loadTransportJobs } from "@/lib/api/orders";
 import { fetchNotifications, fetchMessages, fetchUnreadNotificationCount } from "@/lib/api/notifications";
 import { fetchConversations, fetchUnreadMessageCount } from "@/lib/api/chat";
 import { fetchDriverProfile } from "@/lib/api/driver-onboarding";
@@ -240,14 +240,9 @@ export function useReorderCart() {
 export function useTransportJobs(driverProfileId?: string) {
   return useQuery({
     queryKey: ["transport-jobs", driverProfileId],
-    queryFn: async () => {
-      const [available, mine] = await Promise.all([
-        fetchAvailableDeliveries(),
-        driverProfileId ? fetchDriverDeliveries(driverProfileId) : Promise.resolve([]),
-      ]);
-      return [...mine, ...available.filter((a) => !mine.find((m) => m.id === a.id))];
-    },
+    queryFn: () => loadTransportJobs(driverProfileId!),
     enabled: !!driverProfileId,
     refetchInterval: 15_000,
+    retry: 2,
   });
 }

@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Phone, MessageCircle, Clock, Navigation, ChevronUp, ChevronDown, UserPlus } from "lucide-react";
+import { Phone, MessageCircle, Navigation, ChevronUp, ChevronDown, UserPlus, ChevronRight } from "lucide-react";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { fetchDrivingRoute } from "@/lib/api/driver";
 import { subscribeToDelivery, subscribeToDriverLocation } from "@/lib/api/orders";
 import { toggleFollow, fetchIsFollowing } from "@/lib/api/engagement";
+import { buildTrafficSegments } from "@/lib/route-display";
+import type { RouteStep } from "@/lib/api/maps";
 import { useAuth } from "@/lib/auth";
 import type { DeliveryRow, OrderRow } from "@/lib/types/marketplace";
 import { toast } from "sonner";
@@ -26,6 +28,7 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   const [liveDelivery, setLiveDelivery] = useState(order.delivery);
   const delivery = liveDelivery;
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+  const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
   const [routeSource, setRouteSource] = useState<"google" | "osrm" | null>(null);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [etaMin, setEtaMin] = useState<number | null>(null);
@@ -73,11 +76,17 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
     ).then((r) => {
       if (r) {
         setRouteCoords(r.coordinates);
+        setRouteSteps(r.steps ?? []);
         setEtaMin(Math.round(r.duration_in_traffic_min ?? r.duration_min));
         setRouteSource(r.source);
       }
     });
   }, [delivery?.id, delivery?.pickup_lat, delivery?.pickup_lng, delivery?.delivery_lat, delivery?.delivery_lng]);
+
+  const routeSegments = useMemo(
+    () => buildTrafficSegments(routeCoords, routeSteps),
+    [routeCoords, routeSteps],
+  );
 
   useEffect(() => {
     if (!delivery?.id) return;
@@ -177,151 +186,97 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   const progress = currentIndex >= 0 ? (currentIndex + 1) / STATUS_STEPS.length : 0.25;
 
   const mapHeight = fullscreen ? "min-h-[55vh] h-[55vh]" : "280px";
+  const driverName = delivery.driver?.profile?.display_name ?? "Driver";
+  const vehicleDesc = [
+    delivery.driver?.vehicle_color,
+    delivery.driver?.vehicle_make,
+    delivery.driver?.vehicle_model,
+  ].filter(Boolean).join(" ") || delivery.driver?.vehicle_type || "Vehicle";
+  const plate = delivery.driver?.plate_number ?? "—";
 
   return (
     <div className={`overflow-hidden ${fullscreen ? "bg-black" : "rounded-3xl border border-border bg-card shadow-sm"}`}>
       <div className={`relative ${fullscreen ? "h-[55vh] min-h-[55vh]" : "h-[280px] md:h-[340px]"}`}>
-        <CorridorMap pins={pins} route={routeCoords} animateDriver={!!driverPos} driverLabel="Driver" dark height={mapHeight} />
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-4">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-background/95 px-4 py-2 text-xs shadow-lg backdrop-blur">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-            <span className="font-medium">{delivery.status.replace(/_/g, " ")}</span>
-            {routeSource && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                <span className={`text-[10px] uppercase font-semibold ${routeSource === "google" ? "text-blue-500" : "text-amber-600"}`}>
-                  {routeSource}
-                </span>
-              </>
-            )}
-            {etaMin != null && (
-              <>
-                <span className="text-muted-foreground">·</span>
-                <span className="inline-flex items-center gap-1 text-muted-foreground">
-                  <Clock className="h-3 w-3" /> ~{etaMin} min
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-        {fullscreen && (
-          <Link
-            to="/app/buyer/orders"
-            className="pointer-events-auto absolute bottom-4 right-4 rounded-full bg-white/15 px-3 py-1.5 text-xs text-white backdrop-blur"
-          >
-            All orders
-          </Link>
-        )}
+        <CorridorMap
+          pins={pins}
+          route={routeCoords}
+          routeSegments={routeSegments}
+          fitKey={delivery.id}
+          animateDriver={!!driverPos}
+          driverPosition={driverPos}
+          driverLabel="Driver"
+          dark={false}
+          height={mapHeight}
+          etaLabel={etaMin != null ? `${etaMin} min` : undefined}
+          priceLabel={`GHS ${Math.round(order.total_amount)}`}
+        />
       </div>
 
-      {fullscreen ? (
-        <div className="bg-black/90 p-5 text-white border-t border-white/10">
-          <div className="flex items-center gap-4">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/30 font-sans text-lg font-bold">
-              {(delivery.driver?.profile?.display_name ?? "D")[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              {driverUserId && driverHandle ? (
-                <Link to="/app/users/$slug" params={{ slug: driverHandle }} className="font-sans font-semibold truncate block hover:underline">
-                  {driverProfile?.display_name ?? "Driver"}
-                </Link>
-              ) : (
-                <div className="font-sans font-semibold truncate">
-                  {delivery.driver?.profile?.display_name ?? "Finding driver…"}
-                </div>
+      <div className={`${fullscreen ? "bg-black/95 text-white" : "bg-background"} border-t border-border/60 p-4 md:p-5`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1 font-sans text-lg font-bold">
+              {etaMin != null ? `Arriving in ~${etaMin} min` : delivery.status.replace(/_/g, " ")}
+              <ChevronRight className="h-4 w-4 opacity-60" />
+            </p>
+            <p className="mt-0.5 text-sm text-muted-foreground capitalize">
+              {vehicleDesc}
+              {routeSource && (
+                <span className={`ml-2 text-[10px] uppercase font-semibold ${routeSource === "google" ? "text-blue-500" : "text-amber-600"}`}>
+                  · {routeSource} route
+                </span>
               )}
-              <div className="text-xs text-white/70">{delivery.pickup_address} → {delivery.delivery_address}</div>
+            </p>
+          </div>
+          <div className={`shrink-0 rounded-xl px-3 py-2 text-center ${fullscreen ? "bg-white/10" : "bg-muted"}`}>
+            <div className="font-mono text-sm font-bold">{plate}</div>
+            <div className="text-[10px] uppercase tracking-widest opacity-60">Plate</div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <div className="relative">
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-primary/15 font-sans text-xl font-bold text-primary">
+              {driverName[0]}
             </div>
+            {delivery.driver?.rating != null && (
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-background px-1.5 py-0.5 text-[10px] font-semibold shadow">
+                {Number(delivery.driver.rating).toFixed(2)}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            {driverUserId && driverHandle ? (
+              <Link to="/app/users/$slug" params={{ slug: driverHandle }} className="truncate font-sans font-semibold block hover:underline">
+                {driverName}
+              </Link>
+            ) : (
+              <div className="truncate font-sans font-semibold">{driverName}</div>
+            )}
+            <div className={`text-xs ${fullscreen ? "text-white/70" : "text-muted-foreground"}`}>
+              {delivery.pickup_address} → {delivery.delivery_address}
+            </div>
+          </div>
+          <div className="flex gap-2">
             {driverUserId && user?.id && user.id !== driverUserId && (
-              <button onClick={followDriver} className="grid h-10 w-10 place-items-center rounded-full border border-white/20" aria-label="Follow driver">
+              <button onClick={followDriver} className="grid h-11 w-11 place-items-center rounded-full border border-border" aria-label="Follow driver">
                 <UserPlus className={`h-4 w-4 ${followingDriver ? "text-primary" : ""}`} />
               </button>
             )}
-            <button onClick={callDriver} className="grid h-10 w-10 place-items-center rounded-full bg-emerald-500" aria-label="Call">
+            <button onClick={callDriver} className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white" aria-label="Call driver">
               <Phone className="h-4 w-4" />
             </button>
-            <button onClick={messageDriver} className="grid h-10 w-10 place-items-center rounded-full border border-white/20" aria-label="Message">
+            <button onClick={messageDriver} className="grid h-11 w-11 place-items-center rounded-full border border-border" aria-label="Message driver">
               <MessageCircle className="h-4 w-4" />
             </button>
           </div>
-          {delivery.driver?.user_id && user?.id && (
-            <div className="mt-4 border-t border-white/10 pt-3">
-              <button
-                type="button"
-                onClick={() => setTripChatOpen((o) => !o)}
-                className="flex w-full items-center justify-between text-xs text-white/80"
-              >
-                <span>In-trip chat with your driver</span>
-                {tripChatOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-              </button>
-              {tripChatOpen && (
-                <div className="mt-3 max-h-[40vh] overflow-hidden rounded-2xl bg-background text-foreground">
-                  <ChatThread
-                    userId={user.id}
-                    partnerId={delivery.driver.user_id}
-                    partnerName={delivery.driver.profile?.display_name ?? "Driver"}
-                    senderName={profile?.display_name ?? "You"}
-                    orderId={order.id}
-                    deliveryId={delivery.id}
-                    tripMode
-                  />
-                </div>
-              )}
-            </div>
-          )}
         </div>
-      ) : (
-        <div className="p-5 md:p-6">
-          <div className="flex items-center gap-4">
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary/15 font-sans text-xl font-bold text-primary">
-              {(delivery.driver?.profile?.display_name ?? "D")[0]}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[10px] uppercase tracking-widest text-primary/80">{order.id.slice(0, 8)}</div>
-              {driverUserId && driverHandle ? (
-                <Link to="/app/users/$slug" params={{ slug: driverHandle }} className="truncate font-sans text-lg sm:text-xl font-semibold block hover:underline">
-                  {driverProfile?.display_name ?? "Driver"}
-                </Link>
-              ) : (
-                <div className="truncate font-sans text-lg sm:text-xl font-semibold">
-                  {delivery.driver?.profile?.display_name ?? "Finding driver…"}
-                </div>
-              )}
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                {delivery.driver?.vehicle_type ?? "Vehicle"} · {delivery.driver?.plate_number ?? "—"}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {driverUserId && user?.id && user.id !== driverUserId && (
-                <button
-                  onClick={followDriver}
-                  className="grid h-11 w-11 min-h-[44px] min-w-[44px] place-items-center rounded-full border border-border"
-                  aria-label="Follow driver"
-                >
-                  <UserPlus className={`h-4 w-4 ${followingDriver ? "text-primary" : ""}`} />
-                </button>
-              )}
-              <button
-                onClick={callDriver}
-                className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white"
-                aria-label="Call driver"
-              >
-                <Phone className="h-4 w-4" />
-              </button>
-              <button
-                onClick={messageDriver}
-                className="grid h-11 w-11 place-items-center rounded-full border border-border"
-                aria-label="Message driver"
-              >
-                <MessageCircle className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
 
-          <div className="mt-5 rounded-2xl bg-background p-4">
+        {!fullscreen && (
+          <div className="mt-4 rounded-2xl bg-muted/50 p-3">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
-                <Navigation className="h-3 w-3 text-primary" /> {delivery.pickup_address} → {delivery.delivery_address}
+                <Navigation className="h-3 w-3 text-primary" /> Trip progress
               </span>
               <span>{Math.round(progress * 100)}%</span>
             </div>
@@ -331,20 +286,54 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
                 style={{ width: `${Math.max(6, progress * 100)}%` }}
               />
             </div>
+            <div className="mt-3 flex items-center justify-between">
+              <div className="font-sans text-xl font-bold text-primary">GHS {order.total_amount}</div>
+              <Link
+                to="/app/buyer/orders/$orderId/track"
+                params={{ orderId: order.id }}
+                className="text-xs uppercase tracking-widest text-primary hover:underline"
+              >
+                Full-screen track
+              </Link>
+            </div>
           </div>
+        )}
 
-          <div className="mt-5 flex items-center justify-between">
-            <div className="font-sans text-2xl font-bold text-primary">GHS {order.total_amount}</div>
-            <Link
-              to="/app/buyer/orders/$orderId/track"
-              params={{ orderId: order.id }}
-              className="text-xs uppercase tracking-widest text-primary hover:underline"
+        {fullscreen && delivery.driver?.user_id && user?.id && (
+          <div className="mt-4 border-t border-white/10 pt-3">
+            <button
+              type="button"
+              onClick={() => setTripChatOpen((o) => !o)}
+              className="flex w-full items-center justify-between text-xs text-white/80"
             >
-              Full-screen track
-            </Link>
+              <span>In-trip chat with your driver</span>
+              {tripChatOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </button>
+            {tripChatOpen && (
+              <div className="mt-3 max-h-[40vh] overflow-hidden rounded-2xl bg-background text-foreground">
+                <ChatThread
+                  userId={user.id}
+                  partnerId={delivery.driver.user_id}
+                  partnerName={driverName}
+                  senderName={profile?.display_name ?? "You"}
+                  orderId={order.id}
+                  deliveryId={delivery.id}
+                  tripMode
+                />
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+
+        {fullscreen && (
+          <Link
+            to="/app/buyer/orders"
+            className="mt-4 inline-block text-xs text-white/70 hover:text-white"
+          >
+            ← All orders
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { OrderRow, DeliveryRow } from "@/lib/types/marketplace";
 import { apiFetch } from "@/lib/api/fetch-auth";
+import { fetchOpenDeliveries, fetchDriverActiveDeliveries, loadTransportJobs } from "@/lib/api/transport-jobs";
 
 export async function fetchBuyerOrders(buyerId: string): Promise<OrderRow[]> {
   const { data, error } = await supabase
@@ -67,25 +68,14 @@ export async function updateOrderStatus(orderId: string, status: string) {
 }
 
 export async function fetchAvailableDeliveries(): Promise<DeliveryRow[]> {
-  const res = await apiFetch("/api/deliveries/available");
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(err.error ?? "Could not load available jobs");
-  }
-  const json = (await res.json()) as { deliveries: DeliveryRow[] };
-  return json.deliveries ?? [];
+  return fetchOpenDeliveries();
 }
 
 export async function fetchDriverDeliveries(driverProfileId: string): Promise<DeliveryRow[]> {
-  const { data, error } = await supabase
-    .from("deliveries")
-    .select("*")
-    .eq("driver_id", driverProfileId)
-    .in("status", ["driver_assigned", "driver_enroute_pickup", "picked_up", "enroute_delivery"])
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as DeliveryRow[];
+  return fetchDriverActiveDeliveries(driverProfileId);
 }
+
+export { loadTransportJobs };
 
 export async function acceptDelivery(deliveryId: string, driverProfileId: string) {
   const res = await apiFetch("/api/deliveries/accept", {
