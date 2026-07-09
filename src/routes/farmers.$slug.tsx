@@ -39,10 +39,14 @@ function FarmerProfile() {
     avatar_url?: string;
     bio?: string;
     region?: string;
+    username?: string;
     slug?: string;
+    follower_count?: number;
     seller_rating?: number;
     verified?: boolean;
   } | undefined;
+
+  const followKey = (farmerProfile?.slug ?? farmerSlug).trim().toLowerCase();
 
   const { data: stats } = useQuery({
     queryKey: ["farmer-stats", farmerProfile?.id, farmerSlug],
@@ -51,9 +55,9 @@ function FarmerProfile() {
   });
 
   const { data: isFollowing = false } = useQuery({
-    queryKey: ["following", user?.id, farmerSlug],
-    queryFn: () => fetchIsFollowing(user!.id, farmerSlug),
-    enabled: !!user?.id,
+    queryKey: ["following", user?.id, followKey],
+    queryFn: () => fetchIsFollowing(user!.id, followKey),
+    enabled: !!user?.id && !!followKey,
   });
 
   const { data: publicBookmarks = [] } = useQuery({
@@ -95,10 +99,11 @@ function FarmerProfile() {
       toast.error("Sign in to follow");
       return;
     }
+    if (user.id === farmerProfile?.id) return;
     try {
-      await toggleFollow(user.id, farmerSlug, !isFollowing, authProfile?.display_name ?? undefined);
-      await qc.invalidateQueries({ queryKey: ["following", user.id, farmerSlug] });
-      await qc.invalidateQueries({ queryKey: ["farmer-stats", farmerProfile?.id, farmerSlug] });
+      await toggleFollow(user.id, followKey, !isFollowing, authProfile?.display_name ?? undefined);
+      await qc.invalidateQueries({ queryKey: ["following", user.id, followKey] });
+      await qc.invalidateQueries({ queryKey: ["farmer-stats", farmerProfile?.id, followKey] });
       toast.success(isFollowing ? "Unfollowed" : "Following");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update follow");
@@ -106,7 +111,8 @@ function FarmerProfile() {
   };
 
   const listings = data?.listings ?? [];
-  const handle = (farmerProfile?.slug ?? slug).replace(/-/g, "");
+  const handle = farmerProfile?.username ?? (farmerProfile?.slug ?? slug).replace(/-/g, "");
+  const isSelf = user?.id === farmerProfile?.id;
 
   if (isLoading) {
     return (
@@ -168,15 +174,17 @@ function FarmerProfile() {
             </p>
           </div>
           <div className="mt-4 sm:mt-0 flex items-center gap-2">
-            <button
-              onClick={onFollow}
-              className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
-                isFollowing ? "border border-border text-foreground hover:bg-secondary" : "bg-foreground text-background hover:bg-foreground/90"
-              }`}
-            >
-              {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-              {isFollowing ? "Following" : "Follow"}
-            </button>
+            {!isSelf && (
+              <button
+                onClick={onFollow}
+                className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+                  isFollowing ? "border border-border text-foreground hover:bg-secondary" : "bg-foreground text-background hover:bg-foreground/90"
+                }`}
+              >
+                {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                {isFollowing ? "Following" : "Follow"}
+              </button>
+            )}
             <button
               onClick={handleMessage}
               className="grid h-10 w-10 place-items-center rounded-full border border-border hover:bg-secondary"
@@ -195,7 +203,9 @@ function FarmerProfile() {
         </div>
 
         <div className="mt-8 px-4 sm:px-8 flex items-center justify-center sm:justify-start gap-10 text-center">
-          <Stat n={String(stats?.followers ?? 0)} label="Followers" />
+          <Link to="/farmers/$slug/followers" params={{ slug }} className="hover:opacity-80">
+            <Stat n={String(stats?.followers ?? farmerProfile.follower_count ?? 0)} label="Followers" />
+          </Link>
           <Stat n={String(stats?.listingCount ?? listings.length)} label="Listings" />
           <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />
           <Stat n={farmerProfile.seller_rating != null ? `${farmerProfile.seller_rating.toFixed(1)}★` : "—"} label="Rating" />

@@ -14,6 +14,7 @@ import { apiFetch } from "@/lib/api/fetch-auth";
 import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
 import { FULFILLMENT_OPTIONS } from "@/lib/fulfillment";
 import { reverseGeocode } from "@/lib/api/maps";
+import { DeliveryVehiclePicker, mapQuoteVehicle } from "@/components/checkout/DeliveryVehiclePicker";
 
 /** Default buyer drop-off — East Legon corridor */
 const DEFAULT_DELIVERY: MapLocation = {
@@ -47,6 +48,7 @@ function Cart() {
   const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
   const [deliveryLocation, setDeliveryLocation] = useState<MapLocation>(DEFAULT_DELIVERY);
   const [fulfillmentMode, setFulfillmentMode] = useState<FulfillmentMode>("platform_delivery");
+  const [selectedVehicle, setSelectedVehicle] = useState<"bicycle" | "motorcycle" | "car">("motorcycle");
   const [orderId, setOrderId] = useState<string | null>(null);
 
   const [deliveryQuote, setDeliveryQuote] = useState<{
@@ -105,7 +107,7 @@ function Cart() {
         deliveryLat: deliveryLocation.lat,
         deliveryLng: deliveryLocation.lng,
         weightKg,
-        vehicleType: weightKg > 80 ? "truck" : weightKg > 40 ? "pickup" : "motorcycle",
+        vehicleType: mapQuoteVehicle(selectedVehicle),
         pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
       }),
     })
@@ -113,7 +115,7 @@ function Cart() {
       .then((q) => setDeliveryQuote(q))
       .catch(() => setDeliveryQuote(null))
       .finally(() => setQuoteLoading(false));
-  }, [items, pickupStops, deliveryLocation, needsDelivery]);
+  }, [items, pickupStops, deliveryLocation, needsDelivery, selectedVehicle]);
 
   async function sendOtp() {
     if (!user?.id) return;
@@ -184,6 +186,7 @@ function Cart() {
           deliveryLng: needsDelivery ? deliveryLocation.lng : undefined,
           fulfillmentMode,
           otpVerified: needsOtp ? otpVerified : undefined,
+          vehicleType: needsDelivery ? selectedVehicle : undefined,
         }),
       });
       const data = (await res.json()) as { orderId?: string; displayText?: string; error?: string };
@@ -195,6 +198,9 @@ function Cart() {
       toast.success("Payment initiated", {
         description: data.displayText ?? "Check your phone to approve MoMo.",
       });
+      if (needsDelivery && data.orderId) {
+        navigate({ to: "/app/buyer/orders/$orderId/match", params: { orderId: data.orderId } });
+      }
     } catch (error) {
       toast.error("Payment failed", {
         description: error instanceof Error ? error.message : "Try again.",
@@ -340,15 +346,28 @@ function Cart() {
           )}
 
           {needsDelivery ? (
-            <div className="mt-5">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Deliver to</p>
-              <div className="mt-2">
-                <LocationPicker
-                  value={deliveryLocation}
-                  onChange={setDeliveryLocation}
-                  placeholder="Delivery address in Ghana"
-                />
+            <div className="mt-5 space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Deliver to</p>
+                <div className="mt-2">
+                  <LocationPicker
+                    value={deliveryLocation}
+                    onChange={setDeliveryLocation}
+                    placeholder="Delivery address in Ghana"
+                  />
+                </div>
               </div>
+              {items[0]?.listing?.lat && items[0]?.listing?.lng && (
+                <DeliveryVehiclePicker
+                  pickupLat={items[0].listing.lat}
+                  pickupLng={items[0].listing.lng}
+                  deliveryLat={deliveryLocation.lat}
+                  deliveryLng={deliveryLocation.lng}
+                  weightKg={items.reduce((s, i) => s + Number(i.quantity), 0)}
+                  value={selectedVehicle}
+                  onChange={setSelectedVehicle}
+                />
+              )}
             </div>
           ) : (
             <div className="mt-5 rounded-2xl border border-dashed border-border p-4 text-xs text-muted-foreground">

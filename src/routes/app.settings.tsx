@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { registerForPushNotifications } from "@/lib/push-client";
 import { fetchNotificationPrefs, saveNotificationPrefs } from "@/lib/api/settings";
 import { updateProfile } from "@/lib/api/notifications";
+import { apiFetch } from "@/lib/api/fetch-auth";
 import { AvatarCropUpload } from "@/components/profile/AvatarCropUpload";
 import { trackEvent } from "@/lib/analytics";
 
@@ -26,6 +27,8 @@ function Settings() {
   const [phone, setPhone] = useState("");
   const [region, setRegion] = useState("");
   const [bio, setBio] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameOk, setUsernameOk] = useState<boolean | null>(null);
   const [publicBookmarks, setPublicBookmarks] = useState(false);
   const [profileViewNotifs, setProfileViewNotifs] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -39,8 +42,9 @@ function Settings() {
     setPhone(profile?.phone ?? "");
     setRegion(profile?.region ?? "Greater Accra");
     setBio(profile?.bio ?? "");
+    setUsername((profile as { username?: string })?.username ?? "");
     setAvatarUrl(profile?.avatar_url ?? null);
-  }, [profile?.display_name, profile?.phone, profile?.region, profile?.bio, profile?.avatar_url]);
+  }, [profile?.display_name, profile?.phone, profile?.region, profile?.bio, profile?.avatar_url, profile]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -104,6 +108,15 @@ function Settings() {
       toast.error("Sign in to save your profile");
       return;
     }
+    const uname = username.trim().toLowerCase();
+    if (uname && !/^[a-z0-9_]{3,30}$/.test(uname)) {
+      toast.error("Username: 3–30 chars, letters, numbers, underscore only");
+      return;
+    }
+    if (uname && usernameOk === false) {
+      toast.error("Username is already taken");
+      return;
+    }
     setSavingProfile(true);
     try {
       await updateProfile(user.id, {
@@ -111,6 +124,7 @@ function Settings() {
         phone: phone.trim() || null,
         region: region.trim() || null,
         bio: bio.trim() || null,
+        username: uname || null,
         public_bookmarks: publicBookmarks,
         profile_view_notifications: profileViewNotifs,
       });
@@ -150,6 +164,7 @@ function Settings() {
             />
           )}
           <FieldRow label="Full name" value={displayName} onChange={setDisplayName} />
+          <UsernameField value={username} onChange={setUsername} onAvailability={setUsernameOk} />
           <FieldRow label="Phone" value={phone} onChange={setPhone} placeholder="+233" />
           <FieldRow label="Email" value={user?.email ?? ""} onChange={() => {}} disabled hint="Email is managed by your sign-in provider." />
           <FieldRow label="Location" value={region} onChange={setRegion} placeholder="Greater Accra" />
@@ -243,6 +258,56 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <h2 className="font-serif text-2xl">{title}</h2>
       <div className="mt-5 space-y-4">{children}</div>
     </section>
+  );
+}
+
+function UsernameField({
+  value,
+  onChange,
+  onAvailability,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onAvailability: (ok: boolean | null) => void;
+}) {
+  useEffect(() => {
+    const uname = value.trim().toLowerCase();
+    if (!uname || uname.length < 3) {
+      onAvailability(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      apiFetch(`/api/profile/username-check?username=${encodeURIComponent(uname)}`)
+        .then((r) => r.json())
+        .then((j: { available?: boolean }) => onAvailability(j.available ?? false))
+        .catch(() => onAvailability(null));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [value, onAvailability]);
+
+  const uname = value.trim().toLowerCase();
+  const valid = !uname || /^[a-z0-9_]{3,30}$/.test(uname);
+
+  return (
+    <label className="block">
+      <span className="text-xs uppercase tracking-widest text-muted-foreground">Username</span>
+      <div className="relative mt-2">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">@</span>
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase())}
+          placeholder="yourname"
+          maxLength={30}
+          className="block w-full rounded-xl border border-border bg-background py-3 pl-8 pr-4 text-sm outline-none focus:border-primary"
+        />
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Unique handle — if taken, try another (e.g. attenu122).
+        {!valid && uname ? " Invalid format." : ""}
+        {uname && valid && usernameOk === true && " Available."}
+        {uname && valid && usernameOk === false && " Already taken."}
+      </p>
+    </label>
   );
 }
 

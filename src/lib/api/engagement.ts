@@ -112,14 +112,64 @@ export async function fetchUserBookmarked(listingId: string, userId: string): Pr
   return !!data;
 }
 
+export async function fetchFollowersList(slug: string) {
+  const res = await apiFetch(`/api/social/followers?slug=${encodeURIComponent(slug)}`);
+  if (!res.ok) throw new Error("Could not load followers");
+  const json = (await res.json()) as { users: FollowUser[] };
+  return json.users ?? [];
+}
+
+export async function fetchFollowingList() {
+  const res = await apiFetch("/api/social/following");
+  if (!res.ok) throw new Error("Could not load following");
+  const json = (await res.json()) as { users: FollowUser[] };
+  return json.users ?? [];
+}
+
+export type FollowUser = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  slug: string | null;
+  username: string | null;
+  region: string | null;
+  followed_at?: string;
+  follows_you?: boolean;
+};
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Resolve URL handle (slug, @username, or UUID) to canonical profile slug for follows. */
+async function resolveFarmerSlug(key: string): Promise<string> {
+  const normalized = key.trim().toLowerCase();
+  if (!normalized) throw new Error("Invalid farmer profile");
+
+  if (UUID_RE.test(key.trim())) {
+    const { data } = await supabase.from("profiles").select("slug").eq("id", key.trim()).maybeSingle();
+    if (data?.slug) return data.slug.toLowerCase();
+    throw new Error("Seller profile is not set up yet");
+  }
+
+  const { data: bySlug } = await supabase.from("profiles").select("slug").eq("slug", normalized).maybeSingle();
+  if (bySlug?.slug) return bySlug.slug.toLowerCase();
+
+  const { data: byUsername } = await supabase
+    .from("profiles")
+    .select("slug")
+    .ilike("username", normalized)
+    .maybeSingle();
+  if (byUsername?.slug) return byUsername.slug.toLowerCase();
+
+  return normalized;
+}
+
 export async function toggleFollow(
   followerId: string,
   farmerSlug: string,
   following: boolean,
   actorName?: string,
 ) {
-  const slug = farmerSlug.trim().toLowerCase();
-  if (!slug) throw new Error("Invalid farmer profile");
+  const slug = await resolveFarmerSlug(farmerSlug);
 
   if (following) {
     const { error } = await supabase
@@ -141,7 +191,7 @@ export async function toggleFollow(
 }
 
 export async function fetchIsFollowing(followerId: string, farmerSlug: string): Promise<boolean> {
-  const slug = farmerSlug.trim().toLowerCase();
+  const slug = await resolveFarmerSlug(farmerSlug);
   const { data } = await supabase
     .from("follows")
     .select("id")

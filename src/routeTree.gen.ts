@@ -32,9 +32,12 @@ import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as ApiModerateRouteImport } from './routes/api/moderate'
 import { Route as ApiMapsRouteImport } from './routes/api/maps'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
+import { Route as FarmersSlugFollowersRouteImport } from './routes/farmers.$slug.followers'
 import { Route as AppTransportRegisterRouteImport } from './routes/app.transport.register'
 import { Route as AppTransportJobsRouteImport } from './routes/app.transport.jobs'
 import { Route as AppProfileViewsRouteImport } from './routes/app.profile.views'
+import { Route as AppProfileFollowingRouteImport } from './routes/app.profile.following'
+import { Route as AppProfileFollowersRouteImport } from './routes/app.profile.followers'
 import { Route as AppFarmerPayoutsRouteImport } from './routes/app.farmer.payouts'
 import { Route as AppFarmerOrdersRouteImport } from './routes/app.farmer.orders'
 import { Route as AppFarmerListingsRouteImport } from './routes/app.farmer.listings'
@@ -48,13 +51,17 @@ import { Route as AppAdminDriversRouteImport } from './routes/app.admin.drivers'
 import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
 import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks/paystack'
 import { Route as ApiVerifyGhanaCardRouteImport } from './routes/api/verify/ghana-card'
+import { Route as ApiSocialFollowingRouteImport } from './routes/api/social/following'
+import { Route as ApiSocialFollowersRouteImport } from './routes/api/social/followers'
 import { Route as ApiSettingsNotificationsRouteImport } from './routes/api/settings/notifications'
 import { Route as ApiSearchGlobalRouteImport } from './routes/api/search/global'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiProfileViewRouteImport } from './routes/api/profile/view'
+import { Route as ApiProfileUsernameCheckRouteImport } from './routes/api/profile/username-check'
 import { Route as ApiOtpVerifyRouteImport } from './routes/api/otp/verify'
 import { Route as ApiOtpSendRouteImport } from './routes/api/otp/send'
 import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
+import { Route as ApiDeliveryAvailabilityRouteImport } from './routes/api/delivery/availability'
 import { Route as ApiDeliveriesReassignExpiredRouteImport } from './routes/api/deliveries/reassign-expired'
 import { Route as ApiDeliveriesDeclineRouteImport } from './routes/api/deliveries/decline'
 import { Route as ApiDeliveriesCompleteRouteImport } from './routes/api/deliveries/complete'
@@ -67,6 +74,7 @@ import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAdminDriversRouteImport } from './routes/api/admin/drivers'
 import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.$userId'
 import { Route as AppBuyerOrdersOrderIdTrackRouteImport } from './routes/app.buyer.orders.$orderId.track'
+import { Route as AppBuyerOrdersOrderIdMatchRouteImport } from './routes/app.buyer.orders.$orderId.match'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -183,6 +191,11 @@ const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   path: '/api/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FarmersSlugFollowersRoute = FarmersSlugFollowersRouteImport.update({
+  id: '/followers',
+  path: '/followers',
+  getParentRoute: () => FarmersSlugRoute,
+} as any)
 const AppTransportRegisterRoute = AppTransportRegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -196,6 +209,16 @@ const AppTransportJobsRoute = AppTransportJobsRouteImport.update({
 const AppProfileViewsRoute = AppProfileViewsRouteImport.update({
   id: '/views',
   path: '/views',
+  getParentRoute: () => AppProfileRoute,
+} as any)
+const AppProfileFollowingRoute = AppProfileFollowingRouteImport.update({
+  id: '/following',
+  path: '/following',
+  getParentRoute: () => AppProfileRoute,
+} as any)
+const AppProfileFollowersRoute = AppProfileFollowersRouteImport.update({
+  id: '/followers',
+  path: '/followers',
   getParentRoute: () => AppProfileRoute,
 } as any)
 const AppFarmerPayoutsRoute = AppFarmerPayoutsRouteImport.update({
@@ -263,6 +286,16 @@ const ApiVerifyGhanaCardRoute = ApiVerifyGhanaCardRouteImport.update({
   path: '/api/verify/ghana-card',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSocialFollowingRoute = ApiSocialFollowingRouteImport.update({
+  id: '/api/social/following',
+  path: '/api/social/following',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSocialFollowersRoute = ApiSocialFollowersRouteImport.update({
+  id: '/api/social/followers',
+  path: '/api/social/followers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSettingsNotificationsRoute =
   ApiSettingsNotificationsRouteImport.update({
     id: '/api/settings/notifications',
@@ -284,6 +317,11 @@ const ApiProfileViewRoute = ApiProfileViewRouteImport.update({
   path: '/api/profile/view',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProfileUsernameCheckRoute = ApiProfileUsernameCheckRouteImport.update({
+  id: '/api/profile/username-check',
+  path: '/api/profile/username-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOtpVerifyRoute = ApiOtpVerifyRouteImport.update({
   id: '/api/otp/verify',
   path: '/api/otp/verify',
@@ -297,6 +335,11 @@ const ApiOtpSendRoute = ApiOtpSendRouteImport.update({
 const ApiDeliveryQuoteRoute = ApiDeliveryQuoteRouteImport.update({
   id: '/api/delivery/quote',
   path: '/api/delivery/quote',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeliveryAvailabilityRoute = ApiDeliveryAvailabilityRouteImport.update({
+  id: '/api/delivery/availability',
+  path: '/api/delivery/availability',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDeliveriesReassignExpiredRoute =
@@ -361,6 +404,12 @@ const AppBuyerOrdersOrderIdTrackRoute =
     path: '/$orderId/track',
     getParentRoute: () => AppBuyerOrdersRoute,
   } as any)
+const AppBuyerOrdersOrderIdMatchRoute =
+  AppBuyerOrdersOrderIdMatchRouteImport.update({
+    id: '/$orderId/match',
+    path: '/$orderId/match',
+    getParentRoute: () => AppBuyerOrdersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -384,7 +433,7 @@ export interface FileRoutesByFullPath {
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
-  '/farmers/$slug': typeof FarmersSlugRoute
+  '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -396,13 +445,17 @@ export interface FileRoutesByFullPath {
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
+  '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/profile/username-check': typeof ApiProfileUsernameCheckRoute
   '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/search/global': typeof ApiSearchGlobalRoute
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
+  '/api/social/followers': typeof ApiSocialFollowersRoute
+  '/api/social/following': typeof ApiSocialFollowingRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
@@ -416,10 +469,14 @@ export interface FileRoutesByFullPath {
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/profile/followers': typeof AppProfileFollowersRoute
+  '/app/profile/following': typeof AppProfileFollowingRoute
   '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/farmers/$slug/followers': typeof FarmersSlugFollowersRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
+  '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRoutesByTo {
@@ -443,7 +500,7 @@ export interface FileRoutesByTo {
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
-  '/farmers/$slug': typeof FarmersSlugRoute
+  '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -455,13 +512,17 @@ export interface FileRoutesByTo {
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
+  '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/profile/username-check': typeof ApiProfileUsernameCheckRoute
   '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/search/global': typeof ApiSearchGlobalRoute
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
+  '/api/social/followers': typeof ApiSocialFollowersRoute
+  '/api/social/following': typeof ApiSocialFollowingRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
@@ -475,10 +536,14 @@ export interface FileRoutesByTo {
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/profile/followers': typeof AppProfileFollowersRoute
+  '/app/profile/following': typeof AppProfileFollowingRoute
   '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/farmers/$slug/followers': typeof FarmersSlugFollowersRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
+  '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRoutesById {
@@ -504,7 +569,7 @@ export interface FileRoutesById {
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/transport': typeof AppTransportRouteWithChildren
-  '/farmers/$slug': typeof FarmersSlugRoute
+  '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -516,13 +581,17 @@ export interface FileRoutesById {
   '/api/deliveries/complete': typeof ApiDeliveriesCompleteRoute
   '/api/deliveries/decline': typeof ApiDeliveriesDeclineRoute
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
+  '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/profile/username-check': typeof ApiProfileUsernameCheckRoute
   '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
   '/api/search/global': typeof ApiSearchGlobalRoute
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
+  '/api/social/followers': typeof ApiSocialFollowersRoute
+  '/api/social/following': typeof ApiSocialFollowingRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
@@ -536,10 +605,14 @@ export interface FileRoutesById {
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
+  '/app/profile/followers': typeof AppProfileFollowersRoute
+  '/app/profile/following': typeof AppProfileFollowingRoute
   '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/farmers/$slug/followers': typeof FarmersSlugFollowersRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
+  '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRouteTypes {
@@ -578,13 +651,17 @@ export interface FileRouteTypes {
     | '/api/deliveries/complete'
     | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
+    | '/api/delivery/availability'
     | '/api/delivery/quote'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/profile/username-check'
     | '/api/profile/view'
     | '/api/push/register'
     | '/api/search/global'
     | '/api/settings/notifications'
+    | '/api/social/followers'
+    | '/api/social/following'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
@@ -598,10 +675,14 @@ export interface FileRouteTypes {
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
+    | '/app/profile/followers'
+    | '/app/profile/following'
     | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/farmers/$slug/followers'
     | '/app/inbox/chat/$userId'
+    | '/app/buyer/orders/$orderId/match'
     | '/app/buyer/orders/$orderId/track'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -637,13 +718,17 @@ export interface FileRouteTypes {
     | '/api/deliveries/complete'
     | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
+    | '/api/delivery/availability'
     | '/api/delivery/quote'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/profile/username-check'
     | '/api/profile/view'
     | '/api/push/register'
     | '/api/search/global'
     | '/api/settings/notifications'
+    | '/api/social/followers'
+    | '/api/social/following'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
@@ -657,10 +742,14 @@ export interface FileRouteTypes {
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
+    | '/app/profile/followers'
+    | '/app/profile/following'
     | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/farmers/$slug/followers'
     | '/app/inbox/chat/$userId'
+    | '/app/buyer/orders/$orderId/match'
     | '/app/buyer/orders/$orderId/track'
   id:
     | '__root__'
@@ -697,13 +786,17 @@ export interface FileRouteTypes {
     | '/api/deliveries/complete'
     | '/api/deliveries/decline'
     | '/api/deliveries/reassign-expired'
+    | '/api/delivery/availability'
     | '/api/delivery/quote'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/profile/username-check'
     | '/api/profile/view'
     | '/api/push/register'
     | '/api/search/global'
     | '/api/settings/notifications'
+    | '/api/social/followers'
+    | '/api/social/following'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
@@ -717,10 +810,14 @@ export interface FileRouteTypes {
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
+    | '/app/profile/followers'
+    | '/app/profile/following'
     | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/farmers/$slug/followers'
     | '/app/inbox/chat/$userId'
+    | '/app/buyer/orders/$orderId/match'
     | '/app/buyer/orders/$orderId/track'
   fileRoutesById: FileRoutesById
 }
@@ -748,13 +845,17 @@ export interface RootRouteChildren {
   ApiDeliveriesCompleteRoute: typeof ApiDeliveriesCompleteRoute
   ApiDeliveriesDeclineRoute: typeof ApiDeliveriesDeclineRoute
   ApiDeliveriesReassignExpiredRoute: typeof ApiDeliveriesReassignExpiredRoute
+  ApiDeliveryAvailabilityRoute: typeof ApiDeliveryAvailabilityRoute
   ApiDeliveryQuoteRoute: typeof ApiDeliveryQuoteRoute
   ApiOtpSendRoute: typeof ApiOtpSendRoute
   ApiOtpVerifyRoute: typeof ApiOtpVerifyRoute
+  ApiProfileUsernameCheckRoute: typeof ApiProfileUsernameCheckRoute
   ApiProfileViewRoute: typeof ApiProfileViewRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
   ApiSearchGlobalRoute: typeof ApiSearchGlobalRoute
   ApiSettingsNotificationsRoute: typeof ApiSettingsNotificationsRoute
+  ApiSocialFollowersRoute: typeof ApiSocialFollowersRoute
+  ApiSocialFollowingRoute: typeof ApiSocialFollowingRoute
   ApiVerifyGhanaCardRoute: typeof ApiVerifyGhanaCardRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
 }
@@ -922,6 +1023,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/farmers/$slug/followers': {
+      id: '/farmers/$slug/followers'
+      path: '/followers'
+      fullPath: '/farmers/$slug/followers'
+      preLoaderRoute: typeof FarmersSlugFollowersRouteImport
+      parentRoute: typeof FarmersSlugRoute
+    }
     '/app/transport/register': {
       id: '/app/transport/register'
       path: '/register'
@@ -941,6 +1049,20 @@ declare module '@tanstack/react-router' {
       path: '/views'
       fullPath: '/app/profile/views'
       preLoaderRoute: typeof AppProfileViewsRouteImport
+      parentRoute: typeof AppProfileRoute
+    }
+    '/app/profile/following': {
+      id: '/app/profile/following'
+      path: '/following'
+      fullPath: '/app/profile/following'
+      preLoaderRoute: typeof AppProfileFollowingRouteImport
+      parentRoute: typeof AppProfileRoute
+    }
+    '/app/profile/followers': {
+      id: '/app/profile/followers'
+      path: '/followers'
+      fullPath: '/app/profile/followers'
+      preLoaderRoute: typeof AppProfileFollowersRouteImport
       parentRoute: typeof AppProfileRoute
     }
     '/app/farmer/payouts': {
@@ -1034,6 +1156,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVerifyGhanaCardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/social/following': {
+      id: '/api/social/following'
+      path: '/api/social/following'
+      fullPath: '/api/social/following'
+      preLoaderRoute: typeof ApiSocialFollowingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social/followers': {
+      id: '/api/social/followers'
+      path: '/api/social/followers'
+      fullPath: '/api/social/followers'
+      preLoaderRoute: typeof ApiSocialFollowersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/settings/notifications': {
       id: '/api/settings/notifications'
       path: '/api/settings/notifications'
@@ -1062,6 +1198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProfileViewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/profile/username-check': {
+      id: '/api/profile/username-check'
+      path: '/api/profile/username-check'
+      fullPath: '/api/profile/username-check'
+      preLoaderRoute: typeof ApiProfileUsernameCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/otp/verify': {
       id: '/api/otp/verify'
       path: '/api/otp/verify'
@@ -1081,6 +1224,13 @@ declare module '@tanstack/react-router' {
       path: '/api/delivery/quote'
       fullPath: '/api/delivery/quote'
       preLoaderRoute: typeof ApiDeliveryQuoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/delivery/availability': {
+      id: '/api/delivery/availability'
+      path: '/api/delivery/availability'
+      fullPath: '/api/delivery/availability'
+      preLoaderRoute: typeof ApiDeliveryAvailabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/deliveries/reassign-expired': {
@@ -1167,6 +1317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBuyerOrdersOrderIdTrackRouteImport
       parentRoute: typeof AppBuyerOrdersRoute
     }
+    '/app/buyer/orders/$orderId/match': {
+      id: '/app/buyer/orders/$orderId/match'
+      path: '/$orderId/match'
+      fullPath: '/app/buyer/orders/$orderId/match'
+      preLoaderRoute: typeof AppBuyerOrdersOrderIdMatchRouteImport
+      parentRoute: typeof AppBuyerOrdersRoute
+    }
   }
 }
 
@@ -1191,10 +1348,12 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
 )
 
 interface AppBuyerOrdersRouteChildren {
+  AppBuyerOrdersOrderIdMatchRoute: typeof AppBuyerOrdersOrderIdMatchRoute
   AppBuyerOrdersOrderIdTrackRoute: typeof AppBuyerOrdersOrderIdTrackRoute
 }
 
 const AppBuyerOrdersRouteChildren: AppBuyerOrdersRouteChildren = {
+  AppBuyerOrdersOrderIdMatchRoute: AppBuyerOrdersOrderIdMatchRoute,
   AppBuyerOrdersOrderIdTrackRoute: AppBuyerOrdersOrderIdTrackRoute,
 }
 
@@ -1247,10 +1406,14 @@ const AppInboxRouteWithChildren = AppInboxRoute._addFileChildren(
 )
 
 interface AppProfileRouteChildren {
+  AppProfileFollowersRoute: typeof AppProfileFollowersRoute
+  AppProfileFollowingRoute: typeof AppProfileFollowingRoute
   AppProfileViewsRoute: typeof AppProfileViewsRoute
 }
 
 const AppProfileRouteChildren: AppProfileRouteChildren = {
+  AppProfileFollowersRoute: AppProfileFollowersRoute,
+  AppProfileFollowingRoute: AppProfileFollowingRoute,
   AppProfileViewsRoute: AppProfileViewsRoute,
 }
 
@@ -1298,12 +1461,24 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface FarmersSlugRouteChildren {
+  FarmersSlugFollowersRoute: typeof FarmersSlugFollowersRoute
+}
+
+const FarmersSlugRouteChildren: FarmersSlugRouteChildren = {
+  FarmersSlugFollowersRoute: FarmersSlugFollowersRoute,
+}
+
+const FarmersSlugRouteWithChildren = FarmersSlugRoute._addFileChildren(
+  FarmersSlugRouteChildren,
+)
+
 interface FarmersRouteChildren {
-  FarmersSlugRoute: typeof FarmersSlugRoute
+  FarmersSlugRoute: typeof FarmersSlugRouteWithChildren
 }
 
 const FarmersRouteChildren: FarmersRouteChildren = {
-  FarmersSlugRoute: FarmersSlugRoute,
+  FarmersSlugRoute: FarmersSlugRouteWithChildren,
 }
 
 const FarmersRouteWithChildren =
@@ -1333,13 +1508,17 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeliveriesCompleteRoute: ApiDeliveriesCompleteRoute,
   ApiDeliveriesDeclineRoute: ApiDeliveriesDeclineRoute,
   ApiDeliveriesReassignExpiredRoute: ApiDeliveriesReassignExpiredRoute,
+  ApiDeliveryAvailabilityRoute: ApiDeliveryAvailabilityRoute,
   ApiDeliveryQuoteRoute: ApiDeliveryQuoteRoute,
   ApiOtpSendRoute: ApiOtpSendRoute,
   ApiOtpVerifyRoute: ApiOtpVerifyRoute,
+  ApiProfileUsernameCheckRoute: ApiProfileUsernameCheckRoute,
   ApiProfileViewRoute: ApiProfileViewRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,
   ApiSearchGlobalRoute: ApiSearchGlobalRoute,
   ApiSettingsNotificationsRoute: ApiSettingsNotificationsRoute,
+  ApiSocialFollowersRoute: ApiSocialFollowersRoute,
+  ApiSocialFollowingRoute: ApiSocialFollowingRoute,
   ApiVerifyGhanaCardRoute: ApiVerifyGhanaCardRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,
 }
