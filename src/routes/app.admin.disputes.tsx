@@ -67,7 +67,7 @@ function AdminDisputes() {
 
   return (
     <AdminGate>
-      <AppShell role="admin">
+      <AppShell role="admin" compact>
         <PageHeader eyebrow="Trust & Safety" title="Open" italic="disputes" sub="Live disputes from Supabase — human review within 24h." />
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -32,16 +32,20 @@ export const Route = createFileRoute("/api/social/following")({
         const slugs = [...new Set((rows ?? []).map((r) => r.farmer_slug.toLowerCase()))];
         if (!slugs.length) return Response.json({ users: [] });
 
-        const slugList = slugs.join(",");
-        const { data: profiles } = await supabaseAdmin
+        const { data: bySlug } = await supabaseAdmin
           .from("profiles")
           .select("id, display_name, avatar_url, slug, username, region, follower_count")
-          .or(`slug.in.(${slugList}),username.in.(${slugList})`);
+          .in("slug", slugs);
 
-        const bySlug = new Map<string, ProfileRow>();
-        for (const p of (profiles ?? []) as ProfileRow[]) {
-          if (p.slug) bySlug.set(p.slug.toLowerCase(), p);
-          if (p.username) bySlug.set(p.username.toLowerCase(), p);
+        const { data: byUsername } = await supabaseAdmin
+          .from("profiles")
+          .select("id, display_name, avatar_url, slug, username, region, follower_count")
+          .in("username", slugs);
+
+        const byKey = new Map<string, ProfileRow>();
+        for (const p of [...(bySlug ?? []), ...(byUsername ?? [])] as ProfileRow[]) {
+          if (p.slug) byKey.set(p.slug.toLowerCase(), p);
+          if (p.username) byKey.set(p.username.toLowerCase(), p);
         }
 
         const { data: myProfile } = await supabaseAdmin
@@ -53,7 +57,7 @@ export const Route = createFileRoute("/api/social/following")({
 
         const result: (ProfileRow & { followed_at: string })[] = [];
         for (const r of rows ?? []) {
-          const p = bySlug.get(r.farmer_slug.toLowerCase());
+          const p = byKey.get(r.farmer_slug.toLowerCase());
           if (p) result.push({ ...p, followed_at: r.created_at });
         }
 

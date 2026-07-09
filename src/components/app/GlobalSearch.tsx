@@ -68,7 +68,7 @@ export function GlobalSearch({ role, open, onOpenChange }: Props) {
   const go = (to: string, params?: Record<string, string>) => {
     onOpenChange(false);
     setQ("");
-    if (params) navigate({ to: to as "/farmers/$slug", params: params as { slug: string } });
+    if (params) navigate({ to: to as "/app/users/$slug", params: params as { slug: string } });
     else navigate({ to: to as "/app/buyer/feed" });
   };
 
@@ -105,7 +105,7 @@ export function GlobalSearch({ role, open, onOpenChange }: Props) {
         {results && results.farmers.length > 0 && (
           <CommandGroup heading="Users">
             {results.farmers.filter((f) => f.slug || f.username || f.id).map((f) => (
-              <CommandItem key={f.id} onSelect={() => go("/farmers/$slug", { slug: f.username ?? f.slug ?? f.id })}>
+              <CommandItem key={f.id} onSelect={() => go("/app/users/$slug", { slug: f.username ?? f.slug ?? f.id })}>
                 <User className="mr-2 h-4 w-4" />
                 <span>{f.display_name}</span>
                 <span className="ml-auto text-xs text-muted-foreground">@{f.username ?? f.slug?.replace(/-/g, "")}</span>

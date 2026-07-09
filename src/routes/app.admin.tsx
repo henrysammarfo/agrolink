@@ -42,7 +42,7 @@ function AdminOverview() {
 
   return (
     <AdminGate>
-      <AppShell role="admin">
+      <AppShell role="admin" compact>
         <PageHeader
           eyebrow="Operations"
           title="Admin"

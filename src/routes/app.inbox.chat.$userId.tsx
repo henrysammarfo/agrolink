@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { useAuth } from "@/lib/auth";
+import { resolveAppRole } from "@/lib/app-role";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/inbox/chat/$userId")({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/app/inbox/chat/$userId")({
 function ChatPage() {
   const { userId: partnerId } = Route.useParams();
   const { order } = Route.useSearch();
-  const { user, profile } = useAuth();
+  const { user, profile, roles } = useAuth();
 
   const { data: partner, isLoading } = useQuery({
     queryKey: ["chat-partner", partnerId],
@@ -34,7 +35,7 @@ function ChatPage() {
 
   if (!user?.id) {
     return (
-      <AppShell role="buyer">
+      <AppShell role={resolveAppRole(roles)} compact>
         <div className="py-20 text-center text-muted-foreground">Sign in to chat.</div>
       </AppShell>
     );

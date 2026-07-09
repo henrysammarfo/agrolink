@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Info, Smartphone } from "lucide-react";
+import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Info, Smartphone, ChevronLeft } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
@@ -12,11 +12,10 @@ import { getCurrentPosition } from "@/lib/native-geolocation";
 import { trackEvent } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
-import { FULFILLMENT_OPTIONS } from "@/lib/fulfillment";
+import { FULFILLMENT_OPTIONS, type FulfillmentMode } from "@/lib/fulfillment";
 import { reverseGeocode } from "@/lib/api/maps";
 import { DeliveryVehiclePicker, mapQuoteVehicle } from "@/components/checkout/DeliveryVehiclePicker";
 
-/** Default buyer drop-off — East Legon corridor */
 const DEFAULT_DELIVERY: MapLocation = {
   name: "East Legon, Accra, Ghana",
   lat: 5.65,
@@ -39,8 +38,6 @@ function Cart() {
   const removeItem = useRemoveCartItem(user?.id);
   const [channel, setChannel] = useState<"mtn" | "vod" | "atl">("mtn");
   const [paying, setPaying] = useState(false);
-  const [done, setDone] = useState(false);
-  const [displayText, setDisplayText] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpVerified, setOtpVerified] = useState(false);
@@ -49,8 +46,7 @@ function Cart() {
   const [deliveryLocation, setDeliveryLocation] = useState<MapLocation>(DEFAULT_DELIVERY);
   const [fulfillmentMode, setFulfillmentMode] = useState<FulfillmentMode>("platform_delivery");
   const [selectedVehicle, setSelectedVehicle] = useState<"bicycle" | "motorcycle" | "car">("motorcycle");
-  const [orderId, setOrderId] = useState<string | null>(null);
-
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [deliveryQuote, setDeliveryQuote] = useState<{
     total: number;
     breakdown: string[];
@@ -69,6 +65,13 @@ function Cart() {
   const platformFee = Math.round(subtotal * 0.06 * 100) / 100;
   const total = subtotal + delivery + platformFee;
   const needsOtp = total >= HIGH_VALUE_OTP_THRESHOLD_GHS;
+  const canPay =
+    items.length > 0 &&
+    !quoteLoading &&
+    (needsDelivery ? !!deliveryQuote : true) &&
+    (!needsOtp || otpVerified);
+  const canContinueStep2 =
+    items.length > 0 && (needsDelivery ? !!deliveryQuote && !quoteLoading : true);
 
   const pickupStops = useMemo(() => {
     const stops = items
@@ -91,7 +94,7 @@ function Cart() {
   }, []);
 
   useEffect(() => {
-    if (!items.length || !needsDelivery) {
+    if (!items.length || !needsDelivery || step < 2) {
       if (!needsDelivery) setDeliveryQuote(null);
       return;
     }
@@ -115,7 +118,7 @@ function Cart() {
       .then((q) => setDeliveryQuote(q))
       .catch(() => setDeliveryQuote(null))
       .finally(() => setQuoteLoading(false));
-  }, [items, pickupStops, deliveryLocation, needsDelivery, selectedVehicle]);
+  }, [items, pickupStops, deliveryLocation, needsDelivery, selectedVehicle, step]);
 
   async function sendOtp() {
     if (!user?.id) return;
@@ -165,12 +168,8 @@ function Cart() {
       toast.error("Sign in to checkout");
       return;
     }
-    if (needsOtp && !otpVerified) {
-      toast.error(`Verify your phone for orders over GHS ${HIGH_VALUE_OTP_THRESHOLD_GHS}`);
-      return;
-    }
-    if (needsDelivery && !deliveryQuote) {
-      toast.error("Set a delivery address to get a driver quote");
+    if (!canPay) {
+      toast.error("Complete delivery and verification first");
       return;
     }
     setPaying(true);
@@ -191,15 +190,15 @@ function Cart() {
       });
       const data = (await res.json()) as { orderId?: string; displayText?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
-      setDisplayText(data.displayText ?? "Approve payment on your phone.");
-      setOrderId(data.orderId ?? null);
-      setDone(true);
       trackEvent("checkout_initiated", { total, channel });
       toast.success("Payment initiated", {
         description: data.displayText ?? "Check your phone to approve MoMo.",
       });
-      if (needsDelivery && data.orderId) {
-        navigate({ to: "/app/buyer/orders/$orderId/match", params: { orderId: data.orderId } });
+      if (data.orderId) {
+        navigate({
+          to: "/app/buyer/orders/$orderId/success",
+          params: { orderId: data.orderId },
+        });
       }
     } catch (error) {
       toast.error("Payment failed", {
@@ -212,7 +211,7 @@ function Cart() {
 
   if (isLoading) {
     return (
-      <AppShell role="buyer">
+      <AppShell role="buyer" compact>
         <PageHeader eyebrow="Checkout" title="Your" italic="cart" />
         <CartSkeleton />
       </AppShell>
@@ -220,84 +219,20 @@ function Cart() {
   }
 
   return (
-    <AppShell role="buyer">
-      <PageHeader eyebrow="Checkout" title="Your" italic="cart" />
+    <AppShell role="buyer" compact hideMobileNav>
+      <PageHeader eyebrow="Checkout" title="Your" italic="order" />
+      <CheckoutSteps step={step} />
 
-      {DEMO_MODE && (
-        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
-          <Wallet className="h-4 w-4 text-amber-600 mt-0.5" />
-          <p className="text-foreground/80">
-            <span className="font-medium text-foreground">Test mode.</span> Paystack test MoMo — use
-            0551234987 on MTN. No real money unless live keys are set.
-          </p>
-        </div>
-      )}
-
-      {done && displayText && (
-        <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
-          <ShieldCheck className="inline h-4 w-4 text-primary mr-2" />
-          {displayText}
-          <button
-            onClick={() =>
-              orderId
-                ? navigate({ to: "/app/buyer/orders/$orderId/track", params: { orderId } })
-                : navigate({ to: "/app/buyer/orders" })
-            }
-            className="mt-3 block text-primary underline-offset-4 hover:underline"
-          >
-            Track your order full-screen →
-          </button>
-        </div>
-      )}
-
-      <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] pb-28 md:pb-0">
+      {step === 1 && (
         <div className="space-y-4">
           {items.map((it) => (
-            <div
+            <CartLine
               key={it.id}
-              className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4"
-            >
-              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
-                {it.listing?.image_url && (
-                  <img
-                    src={it.listing.image_url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-serif text-xl">{it.listing?.title ?? "Produce"}</div>
-                <div className="text-xs text-muted-foreground">{it.listing?.location_name}</div>
-                <div className="mt-2 text-sm text-primary">
-                  GHS {it.listing?.price_per_unit}/{it.listing?.unit ?? "kg"}
-                </div>
-              </div>
-              <div className="flex items-center gap-1 rounded-full border border-border p-1">
-                <button
-                  onClick={() =>
-                    updateItem.mutate({ itemId: it.id, quantity: Math.max(1, it.quantity - 1) })
-                  }
-                  className="grid h-7 w-7 place-items-center rounded-full hover:bg-background"
-                >
-                  <Minus className="h-3.5 w-3.5" />
-                </button>
-                <span className="w-8 text-center text-sm">{it.quantity}</span>
-                <button
-                  onClick={() => updateItem.mutate({ itemId: it.id, quantity: it.quantity + 1 })}
-                  className="grid h-7 w-7 place-items-center rounded-full hover:bg-background"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <button
-                onClick={() => removeItem.mutate(it.id)}
-                className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+              it={it}
+              onMinus={() => updateItem.mutate({ itemId: it.id, quantity: Math.max(1, it.quantity - 1) })}
+              onPlus={() => updateItem.mutate({ itemId: it.id, quantity: it.quantity + 1 })}
+              onRemove={() => removeItem.mutate(it.id)}
+            />
           ))}
           {items.length === 0 && (
             <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
@@ -307,12 +242,24 @@ function Cart() {
               </a>
             </div>
           )}
+          <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
+          <button
+            type="button"
+            disabled={items.length === 0}
+            onClick={() => setStep(2)}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-50"
+          >
+            Continue to delivery <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
+      )}
 
-        <aside className="rounded-3xl border border-border bg-card p-6">
-          <h2 className="font-serif text-2xl">Summary</h2>
-
-          <div className="mt-5 space-y-3">
+      {step === 2 && (
+        <div className="space-y-5">
+          <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="h-4 w-4" /> Back to cart
+          </button>
+          <div className="space-y-3">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Fulfillment</p>
             {FULFILLMENT_OPTIONS.map((opt) => (
               <button
@@ -320,9 +267,7 @@ function Cart() {
                 type="button"
                 onClick={() => setFulfillmentMode(opt.value)}
                 className={`w-full rounded-2xl border p-4 text-left transition ${
-                  fulfillmentMode === opt.value
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/30"
+                  fulfillmentMode === opt.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
                 }`}
               >
                 <div className="text-sm font-medium">{opt.label}</div>
@@ -330,33 +275,9 @@ function Cart() {
               </button>
             ))}
           </div>
-
-          {pickupStops.length > 0 && (
-            <div className="mt-5 rounded-2xl border border-border bg-background p-4 text-xs text-muted-foreground">
-              <p className="font-medium text-foreground">Pickup from farm(s)</p>
-              <ul className="mt-2 space-y-1">
-                {pickupStops.map((stop) => (
-                  <li key={`${stop.lat},${stop.lng}`}>• {stop.label ?? "Farm location"}</li>
-                ))}
-              </ul>
-              {pickupStops.length > 1 && needsDelivery && (
-                <p className="mt-2 text-primary">One driver can collect from all farms on a batch route.</p>
-              )}
-            </div>
-          )}
-
           {needsDelivery ? (
-            <div className="mt-5 space-y-4">
-              <div>
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Deliver to</p>
-                <div className="mt-2">
-                  <LocationPicker
-                    value={deliveryLocation}
-                    onChange={setDeliveryLocation}
-                    placeholder="Delivery address in Ghana"
-                  />
-                </div>
-              </div>
+            <div className="space-y-4">
+              <LocationPicker value={deliveryLocation} onChange={setDeliveryLocation} placeholder="Delivery address in Ghana" />
               {items[0]?.listing?.lat && items[0]?.listing?.lng && (
                 <DeliveryVehiclePicker
                   pickupLat={items[0].listing.lat}
@@ -370,116 +291,50 @@ function Cart() {
               )}
             </div>
           ) : (
-            <div className="mt-5 rounded-2xl border border-dashed border-border p-4 text-xs text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-border p-4 text-xs text-muted-foreground">
               {fulfillmentMode === "farm_pickup"
-                ? "You'll collect at the farmer's location after payment. No AgroLink driver fee."
-                : "Your driver collects at the farm. Share pickup details with them after payment."}
+                ? "You'll collect at the farmer's location after payment."
+                : "Your driver collects at the farm after payment."}
             </div>
           )}
+          <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} quoteLoading={quoteLoading} />
+          <button
+            type="button"
+            disabled={!canContinueStep2}
+            onClick={() => setStep(3)}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-50"
+          >
+            Continue to payment <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-          <dl className="mt-5 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Subtotal</dt>
-              <dd>GHS {subtotal.toFixed(2)}</dd>
+      {step === 3 && (
+        <div className="mx-auto max-w-md space-y-5">
+          <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="h-4 w-4" /> Back to delivery
+          </button>
+          {DEMO_MODE && (
+            <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
+              <Wallet className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <p>Test mode — use 0551234987 on MTN.</p>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground inline-flex items-center gap-1">
-                Delivery {needsDelivery && quoteLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-              </dt>
-              <dd>
-                {!needsDelivery
-                  ? "GHS 0.00"
-                  : deliveryQuote
-                    ? `GHS ${delivery.toFixed(2)}`
-                    : "—"}
-              </dd>
-            </div>
-            {needsDelivery && deliveryQuote?.breakdown && (
-              <div className="rounded-xl border border-border bg-background p-3 text-[11px] text-muted-foreground space-y-1">
-                <div className="inline-flex items-center gap-1 font-medium text-foreground"><Info className="h-3 w-3" /> Pricing factors</div>
-                {deliveryQuote.breakdown.map((line) => (
-                  <div key={line}>{line}</div>
-                ))}
-                <div>
-                  {deliveryQuote.distanceKm.toFixed(1)} km
-                  {deliveryQuote.routingSource === "google"
-                    ? " via Google Maps"
-                    : deliveryQuote.routingSource === "osrm"
-                      ? " via OSRM"
-                      : ""}
-                </div>
-                {deliveryQuote.orderedStops && deliveryQuote.orderedStops.length > 1 && (
-                  <div className="text-primary font-medium">
-                    {deliveryQuote.orderedStops.length} farm pickups · co-op batch route
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Platform fee (6%)</dt>
-              <dd>GHS {platformFee.toFixed(2)}</dd>
-            </div>
-            <div className="flex justify-between border-t border-border pt-3 font-medium">
-              <dt>Total</dt>
-              <dd className="font-serif text-xl">GHS {total.toFixed(2)}</dd>
-            </div>
-          </dl>
-
+          )}
+          <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
           {needsOtp && (
-            <div className="mt-6 rounded-2xl border border-primary/25 bg-primary/5 p-4">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Smartphone className="h-4 w-4 text-primary" />
-                B2B verification (GHS {HIGH_VALUE_OTP_THRESHOLD_GHS}+)
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Free email OTP required before checkout (Resend — 3,000/month free).
-              </p>
-              {!otpVerified ? (
-                <div className="mt-4 space-y-3">
-                  {!otpSent ? (
-                    <button
-                      onClick={sendOtp}
-                      disabled={otpLoading}
-                      className="w-full rounded-full border border-primary py-2.5 text-sm text-primary hover:bg-primary/10 disabled:opacity-50"
-                    >
-                      {otpLoading ? "Sending…" : "Send verification code"}
-                    </button>
-                  ) : (
-                    <>
-                      {demoOtpHint && (
-                        <p className="text-xs text-amber-700 dark:text-amber-400">
-                          Demo code: <span className="font-mono font-bold">{demoOtpHint}</span>
-                        </p>
-                      )}
-                      <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
-                        <InputOTPGroup>
-                          {[0, 1, 2, 3, 4, 5].map((i) => (
-                            <InputOTPSlot key={i} index={i} />
-                          ))}
-                        </InputOTPGroup>
-                      </InputOTP>
-                      <button
-                        onClick={verifyOtp}
-                        disabled={otpLoading || otpCode.length < 6}
-                        className="w-full rounded-full bg-primary py-2.5 text-sm text-primary-foreground disabled:opacity-50"
-                      >
-                        {otpLoading ? "Checking…" : "Verify code"}
-                      </button>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Phone verified
-                </p>
-              )}
-            </div>
+            <OtpBlock
+              verified={otpVerified}
+              otpSent={otpSent}
+              otpCode={otpCode}
+              otpLoading={otpLoading}
+              demoOtpHint={demoOtpHint}
+              onSend={sendOtp}
+              onVerify={verifyOtp}
+              onCodeChange={setOtpCode}
+            />
           )}
-
-          <div className="mt-6">
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">
-              MoMo network
-            </label>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">MoMo network</label>
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value as "mtn" | "vod" | "atl")}
@@ -490,37 +345,130 @@ function Cart() {
               <option value="atl">AT Money</option>
             </select>
           </div>
-
           <button
+            type="button"
             onClick={pay}
-            disabled={paying || items.length === 0 || done || quoteLoading || !deliveryQuote || (needsOtp && !otpVerified)}
-            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background hover:bg-foreground/90 disabled:opacity-50"
+            disabled={paying || !canPay}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-50"
           >
-            {paying ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ArrowRight className="h-4 w-4" />
-            )}
+            {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             {paying ? "Processing…" : `Pay GHS ${total.toFixed(2)} via MoMo`}
           </button>
-        </aside>
-      </div>
-
-      {/* DoorDash-style sticky checkout bar (mobile) */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-4 pb-[max(env(safe-area-inset-bottom),16px)] backdrop-blur md:hidden">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{items.length} item{items.length !== 1 ? "s" : ""}</span>
-          <span className="font-sans text-lg font-bold">GHS {total.toFixed(2)}</span>
         </div>
-        <button
-          onClick={pay}
-          disabled={paying || items.length === 0 || done || quoteLoading || !deliveryQuote || (needsOtp && !otpVerified)}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-50"
-        >
-          <ArrowRight className="h-4 w-4" />
-          {paying ? "Processing…" : `Pay GHS ${total.toFixed(2)}`}
-        </button>
-      </div>
+      )}
     </AppShell>
+  );
+}
+
+function CheckoutSteps({ step }: { step: 1 | 2 | 3 }) {
+  const labels = ["Cart", "Delivery", "Payment"] as const;
+  return (
+    <div className="mb-6 flex items-center gap-2">
+      {labels.map((label, i) => {
+        const n = (i + 1) as 1 | 2 | 3;
+        const active = step === n;
+        const done = step > n;
+        return (
+          <div key={label} className="flex flex-1 items-center gap-2">
+            <span
+              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-medium ${
+                active ? "bg-foreground text-background" : done ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {n}
+            </span>
+            <span className={`text-xs sm:text-sm ${active ? "font-medium text-foreground" : "text-muted-foreground"}`}>{label}</span>
+            {i < 2 && <div className="h-px flex-1 bg-border" />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OrderTotals({
+  subtotal, delivery, platformFee, total, needsDelivery, quoteLoading,
+}: {
+  subtotal: number; delivery: number; platformFee: number; total: number; needsDelivery: boolean; quoteLoading?: boolean;
+}) {
+  return (
+    <dl className="rounded-2xl border border-border bg-card p-4 space-y-2 text-sm">
+      <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd>GHS {subtotal.toFixed(2)}</dd></div>
+      <div className="flex justify-between">
+        <dt className="text-muted-foreground inline-flex items-center gap-1">
+          Delivery {quoteLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+        </dt>
+        <dd>{needsDelivery ? `GHS ${delivery.toFixed(2)}` : "GHS 0.00"}</dd>
+      </div>
+      <div className="flex justify-between"><dt className="text-muted-foreground">Platform fee</dt><dd>GHS {platformFee.toFixed(2)}</dd></div>
+      <div className="flex justify-between border-t border-border pt-2 font-medium">
+        <dt>Total</dt><dd className="font-serif text-lg">GHS {total.toFixed(2)}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function OtpBlock({
+  verified, otpSent, otpCode, otpLoading, demoOtpHint, onSend, onVerify, onCodeChange,
+}: {
+  verified: boolean; otpSent: boolean; otpCode: string; otpLoading: boolean; demoOtpHint: string | null;
+  onSend: () => void; onVerify: () => void; onCodeChange: (v: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Smartphone className="h-4 w-4 text-primary" />
+        B2B verification (GHS {HIGH_VALUE_OTP_THRESHOLD_GHS}+)
+      </div>
+      {!verified ? (
+        <div className="mt-4 space-y-3">
+          {!otpSent ? (
+            <button type="button" onClick={onSend} disabled={otpLoading} className="w-full rounded-full border border-primary py-2.5 text-sm text-primary disabled:opacity-50">
+              {otpLoading ? "Sending…" : "Send verification code"}
+            </button>
+          ) : (
+            <>
+              {demoOtpHint && <p className="text-xs text-amber-700">Demo code: <span className="font-mono font-bold">{demoOtpHint}</span></p>}
+              <InputOTP maxLength={6} value={otpCode} onChange={onCodeChange}>
+                <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} />)}</InputOTPGroup>
+              </InputOTP>
+              <button type="button" onClick={onVerify} disabled={otpLoading || otpCode.length < 6} className="w-full rounded-full bg-primary py-2.5 text-sm text-primary-foreground disabled:opacity-50">
+                {otpLoading ? "Checking…" : "Verify code"}
+              </button>
+            </>
+          )}
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Phone verified</p>
+      )}
+    </div>
+  );
+}
+
+function CartLine({
+  it, onMinus, onPlus, onRemove,
+}: {
+  it: { id: string; quantity: number; listing?: { title?: string; location_name?: string; price_per_unit?: number; unit?: string; image_url?: string | null } | null };
+  onMinus: () => void; onPlus: () => void; onRemove: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 sm:gap-4 rounded-2xl border border-border bg-card p-3 sm:p-4">
+      <div className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
+        {it.listing?.image_url && <img src={it.listing.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="font-serif text-lg sm:text-xl line-clamp-1">{it.listing?.title ?? "Produce"}</div>
+        <div className="text-xs text-muted-foreground">{it.listing?.location_name}</div>
+        <div className="mt-1 text-sm text-primary">GHS {it.listing?.price_per_unit}/{it.listing?.unit ?? "kg"}</div>
+      </div>
+      <div className="flex items-center gap-1 rounded-full border border-border p-1">
+        <button type="button" onClick={onMinus} className="grid h-7 w-7 place-items-center rounded-full hover:bg-background"><Minus className="h-3.5 w-3.5" /></button>
+        <span className="w-6 text-center text-sm">{it.quantity}</span>
+        <button type="button" onClick={onPlus} className="grid h-7 w-7 place-items-center rounded-full hover:bg-background"><Plus className="h-3.5 w-3.5" /></button>
+      </div>
+      <button type="button" onClick={onRemove} className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:text-destructive">
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
   );
 }

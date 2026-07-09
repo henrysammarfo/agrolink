@@ -103,6 +103,25 @@ function Settings() {
     await persistPref("marketing", enabled);
   };
 
+  const persistProfilePrefs = async (patch: { public_bookmarks?: boolean; profile_view_notifications?: boolean }) => {
+    if (!user?.id) return;
+    try {
+      await updateProfile(user.id, patch);
+    } catch {
+      toast.error("Could not save preference");
+    }
+  };
+
+  const onPublicBookmarksToggle = async (enabled: boolean) => {
+    setPublicBookmarks(enabled);
+    await persistProfilePrefs({ public_bookmarks: enabled });
+  };
+
+  const onProfileViewToggle = async (enabled: boolean) => {
+    setProfileViewNotifs(enabled);
+    await persistProfilePrefs({ profile_view_notifications: enabled });
+  };
+
   const saveProfile = async () => {
     if (!user?.id) {
       toast.error("Sign in to save your profile");
@@ -148,7 +167,7 @@ function Settings() {
   };
 
   return (
-    <AppShell role={role}>
+    <AppShell role={role} compact>
       <PageHeader eyebrow="Account" title="Your" italic="settings" />
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -192,13 +211,13 @@ function Settings() {
               label="Public bookmarks"
               desc="Let others see produce you've saved on your public profile."
               value={publicBookmarks}
-              onChange={setPublicBookmarks}
+              onChange={onPublicBookmarksToggle}
             />
             <Toggle
               label="Profile view alerts"
               desc="Get notified when someone views your farmer profile."
               value={profileViewNotifs}
-              onChange={setProfileViewNotifs}
+              onChange={onProfileViewToggle}
             />
           </div>
         </Card>
@@ -244,8 +263,7 @@ function Settings() {
         </Card>
 
         <Card title="Security">
-          <FieldRow label="Password" value="••••••••••" onChange={() => {}} disabled hint="Use your sign-in provider to change password." />
-          <button className="mt-4 rounded-full border border-border px-5 py-2 text-sm hover:border-primary/40">Enable 2FA</button>
+          <p className="text-xs text-muted-foreground">Password and 2FA are managed by your sign-in provider.</p>
         </Card>
       </div>
     </AppShell>

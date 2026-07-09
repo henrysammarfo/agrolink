@@ -53,7 +53,7 @@ function AdminListings() {
 
   return (
     <AdminGate>
-      <AppShell role="admin">
+      <AppShell role="admin" compact>
         <PageHeader
           eyebrow="Moderation"
           title="Listing"

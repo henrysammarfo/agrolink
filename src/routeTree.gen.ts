@@ -33,6 +33,7 @@ import { Route as ApiModerateRouteImport } from './routes/api/moderate'
 import { Route as ApiMapsRouteImport } from './routes/api/maps'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as FarmersSlugFollowersRouteImport } from './routes/farmers.$slug.followers'
+import { Route as AppUsersSlugRouteImport } from './routes/app.users.$slug'
 import { Route as AppTransportRegisterRouteImport } from './routes/app.transport.register'
 import { Route as AppTransportJobsRouteImport } from './routes/app.transport.jobs'
 import { Route as AppProfileViewsRouteImport } from './routes/app.profile.views'
@@ -72,8 +73,10 @@ import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
 import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAdminDriversRouteImport } from './routes/api/admin/drivers'
+import { Route as AppUsersSlugFollowersRouteImport } from './routes/app.users.$slug.followers'
 import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.$userId'
 import { Route as AppBuyerOrdersOrderIdTrackRouteImport } from './routes/app.buyer.orders.$orderId.track'
+import { Route as AppBuyerOrdersOrderIdSuccessRouteImport } from './routes/app.buyer.orders.$orderId.success'
 import { Route as AppBuyerOrdersOrderIdMatchRouteImport } from './routes/app.buyer.orders.$orderId.match'
 
 const PricingRoute = PricingRouteImport.update({
@@ -195,6 +198,11 @@ const FarmersSlugFollowersRoute = FarmersSlugFollowersRouteImport.update({
   id: '/followers',
   path: '/followers',
   getParentRoute: () => FarmersSlugRoute,
+} as any)
+const AppUsersSlugRoute = AppUsersSlugRouteImport.update({
+  id: '/users/$slug',
+  path: '/users/$slug',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppTransportRegisterRoute = AppTransportRegisterRouteImport.update({
   id: '/register',
@@ -393,6 +401,11 @@ const ApiAdminDriversRoute = ApiAdminDriversRouteImport.update({
   path: '/api/admin/drivers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppUsersSlugFollowersRoute = AppUsersSlugFollowersRouteImport.update({
+  id: '/followers',
+  path: '/followers',
+  getParentRoute: () => AppUsersSlugRoute,
+} as any)
 const AppInboxChatUserIdRoute = AppInboxChatUserIdRouteImport.update({
   id: '/chat/$userId',
   path: '/chat/$userId',
@@ -402,6 +415,12 @@ const AppBuyerOrdersOrderIdTrackRoute =
   AppBuyerOrdersOrderIdTrackRouteImport.update({
     id: '/$orderId/track',
     path: '/$orderId/track',
+    getParentRoute: () => AppBuyerOrdersRoute,
+  } as any)
+const AppBuyerOrdersOrderIdSuccessRoute =
+  AppBuyerOrdersOrderIdSuccessRouteImport.update({
+    id: '/$orderId/success',
+    path: '/$orderId/success',
     getParentRoute: () => AppBuyerOrdersRoute,
   } as any)
 const AppBuyerOrdersOrderIdMatchRoute =
@@ -474,9 +493,12 @@ export interface FileRoutesByFullPath {
   '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/app/users/$slug': typeof AppUsersSlugRouteWithChildren
   '/farmers/$slug/followers': typeof FarmersSlugFollowersRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
+  '/app/users/$slug/followers': typeof AppUsersSlugFollowersRoute
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
+  '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRoutesByTo {
@@ -541,9 +563,12 @@ export interface FileRoutesByTo {
   '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/app/users/$slug': typeof AppUsersSlugRouteWithChildren
   '/farmers/$slug/followers': typeof FarmersSlugFollowersRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
+  '/app/users/$slug/followers': typeof AppUsersSlugFollowersRoute
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
+  '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRoutesById {
@@ -610,9 +635,12 @@ export interface FileRoutesById {
   '/app/profile/views': typeof AppProfileViewsRoute
   '/app/transport/jobs': typeof AppTransportJobsRoute
   '/app/transport/register': typeof AppTransportRegisterRoute
+  '/app/users/$slug': typeof AppUsersSlugRouteWithChildren
   '/farmers/$slug/followers': typeof FarmersSlugFollowersRoute
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
+  '/app/users/$slug/followers': typeof AppUsersSlugFollowersRoute
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
+  '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
 }
 export interface FileRouteTypes {
@@ -680,9 +708,12 @@ export interface FileRouteTypes {
     | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/app/users/$slug'
     | '/farmers/$slug/followers'
     | '/app/inbox/chat/$userId'
+    | '/app/users/$slug/followers'
     | '/app/buyer/orders/$orderId/match'
+    | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -747,9 +778,12 @@ export interface FileRouteTypes {
     | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/app/users/$slug'
     | '/farmers/$slug/followers'
     | '/app/inbox/chat/$userId'
+    | '/app/users/$slug/followers'
     | '/app/buyer/orders/$orderId/match'
+    | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
   id:
     | '__root__'
@@ -815,9 +849,12 @@ export interface FileRouteTypes {
     | '/app/profile/views'
     | '/app/transport/jobs'
     | '/app/transport/register'
+    | '/app/users/$slug'
     | '/farmers/$slug/followers'
     | '/app/inbox/chat/$userId'
+    | '/app/users/$slug/followers'
     | '/app/buyer/orders/$orderId/match'
+    | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
   fileRoutesById: FileRoutesById
 }
@@ -1029,6 +1066,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/farmers/$slug/followers'
       preLoaderRoute: typeof FarmersSlugFollowersRouteImport
       parentRoute: typeof FarmersSlugRoute
+    }
+    '/app/users/$slug': {
+      id: '/app/users/$slug'
+      path: '/users/$slug'
+      fullPath: '/app/users/$slug'
+      preLoaderRoute: typeof AppUsersSlugRouteImport
+      parentRoute: typeof AppRoute
     }
     '/app/transport/register': {
       id: '/app/transport/register'
@@ -1303,6 +1347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminDriversRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/users/$slug/followers': {
+      id: '/app/users/$slug/followers'
+      path: '/followers'
+      fullPath: '/app/users/$slug/followers'
+      preLoaderRoute: typeof AppUsersSlugFollowersRouteImport
+      parentRoute: typeof AppUsersSlugRoute
+    }
     '/app/inbox/chat/$userId': {
       id: '/app/inbox/chat/$userId'
       path: '/chat/$userId'
@@ -1315,6 +1366,13 @@ declare module '@tanstack/react-router' {
       path: '/$orderId/track'
       fullPath: '/app/buyer/orders/$orderId/track'
       preLoaderRoute: typeof AppBuyerOrdersOrderIdTrackRouteImport
+      parentRoute: typeof AppBuyerOrdersRoute
+    }
+    '/app/buyer/orders/$orderId/success': {
+      id: '/app/buyer/orders/$orderId/success'
+      path: '/$orderId/success'
+      fullPath: '/app/buyer/orders/$orderId/success'
+      preLoaderRoute: typeof AppBuyerOrdersOrderIdSuccessRouteImport
       parentRoute: typeof AppBuyerOrdersRoute
     }
     '/app/buyer/orders/$orderId/match': {
@@ -1349,11 +1407,13 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
 
 interface AppBuyerOrdersRouteChildren {
   AppBuyerOrdersOrderIdMatchRoute: typeof AppBuyerOrdersOrderIdMatchRoute
+  AppBuyerOrdersOrderIdSuccessRoute: typeof AppBuyerOrdersOrderIdSuccessRoute
   AppBuyerOrdersOrderIdTrackRoute: typeof AppBuyerOrdersOrderIdTrackRoute
 }
 
 const AppBuyerOrdersRouteChildren: AppBuyerOrdersRouteChildren = {
   AppBuyerOrdersOrderIdMatchRoute: AppBuyerOrdersOrderIdMatchRoute,
+  AppBuyerOrdersOrderIdSuccessRoute: AppBuyerOrdersOrderIdSuccessRoute,
   AppBuyerOrdersOrderIdTrackRoute: AppBuyerOrdersOrderIdTrackRoute,
 }
 
@@ -1435,6 +1495,18 @@ const AppTransportRouteWithChildren = AppTransportRoute._addFileChildren(
   AppTransportRouteChildren,
 )
 
+interface AppUsersSlugRouteChildren {
+  AppUsersSlugFollowersRoute: typeof AppUsersSlugFollowersRoute
+}
+
+const AppUsersSlugRouteChildren: AppUsersSlugRouteChildren = {
+  AppUsersSlugFollowersRoute: AppUsersSlugFollowersRoute,
+}
+
+const AppUsersSlugRouteWithChildren = AppUsersSlugRoute._addFileChildren(
+  AppUsersSlugRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
   AppBuyerRoute: typeof AppBuyerRouteWithChildren
@@ -1445,6 +1517,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppTransportRoute: typeof AppTransportRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
+  AppUsersSlugRoute: typeof AppUsersSlugRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1457,6 +1530,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppTransportRoute: AppTransportRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
+  AppUsersSlugRoute: AppUsersSlugRouteWithChildren,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

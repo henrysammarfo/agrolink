@@ -11,10 +11,12 @@ export function SocialUserList({
   users,
   loading,
   emptyLabel,
+  inApp = false,
 }: {
   users: FollowUser[];
   loading?: boolean;
   emptyLabel: string;
+  inApp?: boolean;
 }) {
   if (loading) {
     return (
@@ -35,17 +37,17 @@ export function SocialUserList({
   return (
     <div className="space-y-2">
       {users.map((u) => (
-        <SocialUserRow key={u.id} user={u} />
+        <SocialUserRow key={u.id} user={u} inApp={inApp} />
       ))}
     </div>
   );
 }
 
-function SocialUserRow({ user }: { user: FollowUser }) {
+function SocialUserRow({ user, inApp }: { user: FollowUser; inApp?: boolean }) {
   const { user: me, profile } = useAuth();
   const qc = useQueryClient();
-  const slug = user.slug ?? user.username ?? user.id;
-  const followKey = user.slug ?? user.username ?? "";
+  const profileSlug = user.username ?? user.slug ?? user.id;
+  const followKey = user.slug ?? user.username ?? user.id;
   const [following, setFollowing] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -55,6 +57,8 @@ function SocialUserRow({ user }: { user: FollowUser }) {
       setChecked(true);
     });
   }
+
+  const profileTo = inApp ? "/app/users/$slug" : "/farmers/$slug";
 
   const onFollow = async () => {
     if (!me?.id || !followKey) return;
@@ -71,17 +75,17 @@ function SocialUserRow({ user }: { user: FollowUser }) {
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-      <Link to="/farmers/$slug" params={{ slug }} className="flex min-w-0 flex-1 items-center gap-3">
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 sm:p-4">
+      <Link to={profileTo} params={{ slug: profileSlug }} className="flex min-w-0 flex-1 items-center gap-3">
         {user.avatar_url ? (
-          <img src={user.avatar_url} alt="" className="h-12 w-12 rounded-full object-cover" />
+          <img src={user.avatar_url} alt="" className="h-11 w-11 sm:h-12 sm:w-12 rounded-full object-cover" />
         ) : (
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-muted font-serif text-lg">
+          <span className="grid h-11 w-11 sm:h-12 sm:w-12 place-items-center rounded-full bg-muted font-serif text-lg">
             {(user.display_name ?? "?")[0]}
           </span>
         )}
         <div className="min-w-0">
-          <div className="truncate font-medium">{user.display_name ?? "User"}</div>
+          <div className="truncate font-medium text-sm sm:text-base">{user.display_name ?? "User"}</div>
           <div className="truncate text-xs text-muted-foreground">
             @{user.username ?? user.slug?.replace(/-/g, "") ?? "user"}
             {user.region ? ` · ${user.region}` : ""}
