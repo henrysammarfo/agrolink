@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { BadgeCheck, Grid3x3, Bookmark, Heart, Settings, Share2, MapPin, LogOut, Play, Loader2, Eye } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
+import { WorkspaceSwitcher } from "@/components/app/WorkspaceSwitcher";
 import { RecommendedSellers } from "@/components/profile/RecommendedSellers";
 import { useAuth } from "@/lib/auth";
 import {
@@ -112,6 +113,10 @@ function Profile() {
           ))}
         </div>
       )}
+
+      <div className="mt-6">
+        <WorkspaceSwitcher compact />
+      </div>
 
       <RecommendedSellers sellers={sellers} excludeUserId={user?.id} />
 

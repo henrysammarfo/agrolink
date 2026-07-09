@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Send, Loader2, Package, ImagePlus } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Package, ImagePlus, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
 import {
   fetchThreadMessages,
@@ -22,14 +22,19 @@ type Props = {
   tripMode?: boolean;
 };
 
-export function ChatThread({ userId, partnerId, partnerName, senderName, orderId, deliveryId, tripMode }: Props) {
+type AttachmentType = "image" | "video" | "audio";
+
+export function ChatThread({ userId, partnerId, partnerName, senderName, orderId, deliveryId }: Props) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     fetchThreadMessages(userId, partnerId)
@@ -54,19 +59,27 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
+  useEffect(() => {
+    return () => {
+      recorderRef.current?.stop();
+    };
+  }, []);
+
   const dispatchSend = async (opts: {
     content: string;
     attachmentUrl?: string;
-    attachmentType?: "image" | "video";
+    attachmentType?: AttachmentType;
   }) => {
     const content = opts.content.trim();
     if (!content && !opts.attachmentUrl) return;
     setSending(true);
+    const fallback =
+      opts.attachmentType === "audio" ? "🎤 Voice note" : opts.attachmentType === "video" ? "🎬 Video" : "📷 Photo";
     const optimistic: MessageRow = {
       id: `opt-${Date.now()}`,
       sender_id: userId,
       receiver_id: partnerId,
-      content: content || "📷 Photo",
+      content: content || fallback,
       read: false,
       created_at: new Date().toISOString(),
       attachment_url: opts.attachmentUrl ?? null,
@@ -108,7 +121,7 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
 
   const onSend = () => void dispatchSend({ content: text });
 
-  const onPickImage = async (file: File) => {
+  const onPickFile = async (file: File) => {
     if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
       toast.error("Images and short videos only");
       return;
@@ -127,6 +140,50 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
+  };
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Microphone not supported on this device");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        if (blob.size < 800) {
+          toast.error("Recording too short");
+          return;
+        }
+        setUploading(true);
+        try {
+          const file = new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" });
+          const { url } = await uploadChatAttachment(file, userId);
+          await dispatchSend({ content: "🎤 Voice note", attachmentUrl: url, attachmentType: "audio" });
+        } catch {
+          toast.error("Could not send voice note");
+        } finally {
+          setUploading(false);
+        }
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      toast.error("Allow microphone access to send voice notes");
+    }
+  };
+
+  const stopRecording = () => {
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+    setRecording(false);
   };
 
   return (
@@ -173,18 +230,19 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
                         src={m.attachment_url}
                         alt="Attachment"
                         className="mb-2 max-h-48 rounded-xl object-cover"
+                        loading="lazy"
                       />
                     </a>
                   )}
                   {m.attachment_url && m.attachment_type === "video" && (
-                    <video
-                      src={m.attachment_url}
-                      controls
-                      className="mb-2 max-h-48 rounded-xl"
-                    />
+                    <video src={m.attachment_url} controls className="mb-2 max-h-48 rounded-xl" />
                   )}
-                  {m.content && m.content !== "📷 Photo" && <div>{m.content}</div>}
-                  {!m.attachment_url && m.content === "📷 Photo" && <div>{m.content}</div>}
+                  {m.attachment_url && m.attachment_type === "audio" && (
+                    <audio src={m.attachment_url} controls className="mb-2 w-full min-w-[12rem]" />
+                  )}
+                  {m.content && !["📷 Photo", "🎤 Voice note", "🎬 Video"].includes(m.content) && (
+                    <div>{m.content}</div>
+                  )}
                   <div className={`mt-1 text-[9px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </div>
@@ -205,28 +263,40 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) void onPickImage(f);
+              if (f) void onPickFile(f);
             }}
           />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            disabled={uploading || sending}
+            disabled={uploading || sending || recording}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border text-muted-foreground hover:border-primary/40 disabled:opacity-45"
             aria-label="Attach photo"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
           </button>
+          <button
+            type="button"
+            onClick={recording ? stopRecording : startRecording}
+            disabled={uploading || sending}
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border disabled:opacity-45 ${
+              recording ? "border-rose-500 bg-rose-500/10 text-rose-600" : "border-border text-muted-foreground hover:border-primary/40"
+            }`}
+            aria-label={recording ? "Stop recording" : "Record voice note"}
+          >
+            {recording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+          </button>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), onSend())}
-            placeholder="Type a message…"
-            className="min-w-0 flex-1 rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary"
+            placeholder={recording ? "Recording…" : "Type a message…"}
+            disabled={recording}
+            className="min-w-0 flex-1 rounded-full border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary disabled:opacity-60"
           />
           <button
             onClick={onSend}
-            disabled={(!text.trim() && !uploading) || sending}
+            disabled={(!text.trim() && !uploading) || sending || recording}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
             aria-label="Send"
           >

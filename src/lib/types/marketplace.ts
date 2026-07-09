@@ -165,6 +165,6 @@ export type MessageRow = {
   read: boolean;
   created_at: string;
   attachment_url?: string | null;
-  attachment_type?: "image" | "video" | null;
+  attachment_type?: "image" | "video" | "audio" | null;
   sender?: { display_name: string | null; avatar_url?: string | null };
 };

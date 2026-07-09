@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
+import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 
 type Pin = { lat: number; lng: number; label: string; kind?: "farm" | "buyer" | "hub" | "driver" };
 
@@ -12,6 +13,7 @@ type Props = {
   height?: string;
   animateDriver?: boolean;
   driverLabel?: string;
+  driverPosition?: { lat: number; lng: number } | null;
   onProgress?: (fraction: number) => void;
   dark?: boolean;
 };
@@ -20,18 +22,23 @@ const COLORS: Record<NonNullable<Pin["kind"]>, string> = {
   farm: "#2f7d32",
   buyer: "#c46a1a",
   hub: "#0b3d2e",
-  driver: "#111827",
+  driver: "#22c55e",
 };
+
+function validPins(pins: Pin[]) {
+  return pins.filter((p) => isValidMapCoord(p.lat, p.lng));
+}
 
 export function CorridorMap({
   pins,
   route,
   className = "",
-  center = [5.65, 0.05],
-  zoom = 10,
+  center,
+  zoom,
   height = "100%",
   animateDriver,
   driverLabel = "Driver",
+  driverPosition,
   onProgress,
   dark = true,
 }: Props) {
@@ -48,13 +55,16 @@ export function CorridorMap({
     if (!ref.current) return;
 
     if (!mapRef.current) {
+      const initialCenter = center ?? ACCRA_CENTER;
+      const initialZoom = zoom ?? DEFAULT_MAP_ZOOM;
       const map = L.map(ref.current, {
         zoomControl: false,
-        scrollWheelZoom: false,
+        scrollWheelZoom: true,
         attributionControl: false,
-      }).setView(center, zoom);
+      }).setView(initialCenter, initialZoom);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapRef.current = map;
+      setTimeout(() => map.invalidateSize(), 120);
     }
 
     const map = mapRef.current;
@@ -80,13 +90,15 @@ export function CorridorMap({
     });
     L.tileLayer(tileUrl, { maxZoom: 19, subdomains: "abcd" }).addTo(map);
 
-    pins.forEach((p) => {
+    const safePins = validPins(pins);
+
+    safePins.forEach((p) => {
       const color = COLORS[p.kind ?? "farm"];
       const icon = L.divIcon({
-        html: `<span style="display:grid;place-items:center;width:24px;height:24px;border-radius:9999px;background:${color};color:#fff;font:600 11px Inter,sans-serif;box-shadow:0 0 0 5px ${color}22, 0 6px 16px -8px ${color}">●</span>`,
+        html: `<span style="display:grid;place-items:center;width:26px;height:26px;border-radius:9999px;background:${color};color:#fff;font:600 11px Inter,sans-serif;box-shadow:0 0 0 5px ${color}33, 0 6px 16px -8px ${color}">●</span>`,
         className: "",
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
       });
       const marker = L.marker([p.lat, p.lng], { icon })
         .bindTooltip(p.label, { direction: "top", offset: [0, -10] })
@@ -94,39 +106,54 @@ export function CorridorMap({
       layers.markers.push(marker);
     });
 
-    if (route && route.length > 1) {
-      const main = L.polyline(route, {
-        color: dark ? "#22c55e" : "#0b3d2e",
-        weight: 4,
-        opacity: 0.85,
+    if (driverPosition && isValidMapCoord(driverPosition.lat, driverPosition.lng)) {
+      const driverIcon = L.divIcon({
+        html: `<div style="position:relative">
+          <span style="position:absolute;left:-12px;top:-12px;width:40px;height:40px;border-radius:9999px;background:#22c55e44;animation:pulse 2s infinite"></span>
+          <span style="position:relative;display:grid;place-items:center;width:32px;height:32px;border-radius:9999px;background:#0b3d2e;color:#fff;font:700 12px Inter,sans-serif;box-shadow:0 8px 24px -6px #0b3d2e">🛻</span>
+        </div>
+        <style>@keyframes pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.4);opacity:0}}</style>`,
+        className: "",
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+      const marker = L.marker([driverPosition.lat, driverPosition.lng], { icon: driverIcon })
+        .bindTooltip(driverLabel, { direction: "top", offset: [0, -14] })
+        .addTo(map);
+      layers.driverMarker = marker;
+    }
+
+    const safeRoute = route?.filter(([lat, lng]) => isValidMapCoord(lat, lng)) ?? [];
+
+    if (safeRoute.length > 1) {
+      const main = L.polyline(safeRoute, {
+        color: dark ? "#3b82f6" : "#0b3d2e",
+        weight: 5,
+        opacity: 0.9,
         lineCap: "round",
       }).addTo(map);
-      const dash = L.polyline(route, {
+      const dash = L.polyline(safeRoute, {
         color: "#ffffff",
         weight: 1.5,
-        opacity: 0.5,
+        opacity: 0.45,
         dashArray: "2 8",
       }).addTo(map);
       layers.routeLines.push(main, dash);
 
-      if (animateDriver) {
+      if (animateDriver && !driverPosition) {
         const driverIcon = L.divIcon({
-          html: `<div style="position:relative">
-            <span style="position:absolute;left:-14px;top:-14px;width:44px;height:44px;border-radius:9999px;background:#22c55e33;animation:pulse 2s infinite"></span>
-            <span style="position:relative;display:grid;place-items:center;width:34px;height:34px;border-radius:9999px;background:#0b3d2e;color:#fff;font:700 13px Inter,sans-serif;box-shadow:0 8px 24px -6px #0b3d2e">🛻</span>
-          </div>
-          <style>@keyframes pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.4);opacity:0}}</style>`,
+          html: `<span style="display:grid;place-items:center;width:32px;height:32px;border-radius:9999px;background:#0b3d2e;color:#fff">🛻</span>`,
           className: "",
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
         });
-        const marker = L.marker(route[0], { icon: driverIcon })
+        const marker = L.marker(safeRoute[0], { icon: driverIcon })
           .bindTooltip(driverLabel, { direction: "top", offset: [0, -14] })
           .addTo(map);
         layers.driverMarker = marker;
 
-        const segs = route.slice(1).map((pt, i) => {
-          const [a, b] = [route[i], pt];
+        const segs = safeRoute.slice(1).map((pt, i) => {
+          const [a, b] = [safeRoute[i], pt];
           return Math.hypot(b[0] - a[0], b[1] - a[1]);
         });
         const total = segs.reduce((s, x) => s + x, 0);
@@ -141,7 +168,7 @@ export function CorridorMap({
             dist -= segs[i];
             i++;
           }
-          const [a, b] = [route[i], route[Math.min(i + 1, route.length - 1)]];
+          const [a, b] = [safeRoute[i], safeRoute[Math.min(i + 1, safeRoute.length - 1)]];
           const f = segs[i] ? dist / segs[i] : 0;
           const lat = a[0] + (b[0] - a[0]) * f;
           const lng = a[1] + (b[1] - a[1]) * f;
@@ -153,14 +180,25 @@ export function CorridorMap({
       }
     }
 
-    if (pins.length > 0) {
-      const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng] as [number, number]));
-      if (route) route.forEach((r) => bounds.extend(r));
-      map.fitBounds(bounds, { padding: [30, 30] });
-    } else {
-      map.setView(center, zoom);
+    const fitPoints: [number, number][] = [
+      ...safePins.map((p) => [p.lat, p.lng] as [number, number]),
+      ...safeRoute,
+    ];
+    if (driverPosition && isValidMapCoord(driverPosition.lat, driverPosition.lng)) {
+      fitPoints.push([driverPosition.lat, driverPosition.lng]);
     }
-  }, [pins, route, center, zoom, animateDriver, driverLabel, onProgress, dark]);
+
+    if (fitPoints.length > 0) {
+      const bounds = L.latLngBounds(fitPoints);
+      map.fitBounds(bounds, { padding: [48, 48], maxZoom: STREET_ZOOM });
+    } else if (center && isValidMapCoord(center[0], center[1])) {
+      map.setView(center, zoom ?? STREET_ZOOM);
+    } else {
+      map.setView(ACCRA_CENTER, DEFAULT_MAP_ZOOM);
+    }
+
+    setTimeout(() => map.invalidateSize(), 80);
+  }, [pins, route, center, zoom, animateDriver, driverLabel, driverPosition, onProgress, dark]);
 
   useEffect(() => {
     return () => {
@@ -170,7 +208,7 @@ export function CorridorMap({
     };
   }, []);
 
-  return <div ref={ref} className={`relative overflow-hidden ${className}`} style={{ height }} />;
+  return <div ref={ref} className={`relative overflow-hidden ${className}`} style={{ height, width: "100%" }} />;
 }
 
 export const CORRIDOR_PINS: Pin[] = [

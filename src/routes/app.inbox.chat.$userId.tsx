@@ -42,7 +42,7 @@ function ChatPage() {
   }
 
   return (
-    <AppShell role="buyer">
+    <AppShell role={resolveAppRole(roles)} compact>
       {!partner && isLoading ? (
         <div className="grid place-items-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />

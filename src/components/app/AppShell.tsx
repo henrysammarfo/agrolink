@@ -42,7 +42,7 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
   ],
 };
 
-const IMMERSIVE_PATHS = ["/app/buyer/feed"];
+const IMMERSIVE_PATHS = ["/app/buyer/feed", "/app/transport"];
 
 export function AppShell({
   role,
