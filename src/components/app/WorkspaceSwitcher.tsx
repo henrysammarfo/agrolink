@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { useAuth, type AppRole } from "@/lib/auth";
 import { useDriverProfile } from "@/hooks/use-marketplace";
 import { isDriverVerified } from "@/lib/api/driver-onboarding";
-import { loadActiveWorkspace, saveActiveWorkspace, roleHome } from "@/lib/active-workspace";
+import { saveActiveWorkspace, roleHome } from "@/lib/active-workspace";
+import { useActiveWorkspace } from "@/hooks/use-active-workspace";
 
 const OPTIONS: {
   role: AppRole;
@@ -27,7 +28,7 @@ export function WorkspaceSwitcher({ compact = false }: Props) {
   const navigate = useNavigate();
   const { user, roles, hasRole } = useAuth();
   const { data: driverProfile } = useDriverProfile(user?.id);
-  const active = user?.id ? loadActiveWorkspace(user.id, roles) : "buyer";
+  const { active, setWorkspace } = useActiveWorkspace(user?.id, roles);
   const visible = OPTIONS.filter((o) => hasRole(o.role));
 
   if (visible.length <= 1) return null;
@@ -38,7 +39,7 @@ export function WorkspaceSwitcher({ compact = false }: Props) {
       navigate({ to: "/app/settings" });
       return;
     }
-    if (user?.id) saveActiveWorkspace(user.id, role);
+    if (user?.id) setWorkspace(role);
     if (role === "transport") {
       navigate({
         to: isDriverVerified(driverProfile ?? null) ? "/app/transport" : "/app/transport/register",

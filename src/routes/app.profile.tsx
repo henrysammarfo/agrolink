@@ -5,6 +5,8 @@ import { AppShell } from "@/components/app/AppShell";
 import { WorkspaceSwitcher } from "@/components/app/WorkspaceSwitcher";
 import { RecommendedSellers } from "@/components/profile/RecommendedSellers";
 import { useAuth } from "@/lib/auth";
+import { useActiveWorkspace } from "@/hooks/use-active-workspace";
+import { resolveAppRole } from "@/lib/app-role";
 import {
   useProfileStats, useUserListings, useUserBookmarks, useUserLikedListings, usePublicSellers,
 } from "@/hooks/use-marketplace";
@@ -17,8 +19,9 @@ export const Route = createFileRoute("/app/profile")({
 
 function Profile() {
   const { profile, user, roles, signOut } = useAuth();
+  const { active: activeWorkspace } = useActiveWorkspace(user?.id, roles);
   const [tab, setTab] = useState<"posts" | "saved" | "liked">("posts");
-  const role = roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
+  const role = roles.includes(activeWorkspace) ? activeWorkspace : resolveAppRole(roles);
   const handle = profile?.username ?? profile?.slug?.replace(/-/g, "") ?? (profile?.display_name ?? user?.email ?? "you").toLowerCase().replace(/[^a-z0-9]/g, "");
   const name = profile?.display_name ?? user?.email?.split("@")[0] ?? "You";
   const publicSlug = profile?.username ?? profile?.slug ?? undefined;

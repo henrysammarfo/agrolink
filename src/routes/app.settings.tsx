@@ -14,6 +14,7 @@ import { apiFetch } from "@/lib/api/fetch-auth";
 import { AvatarCropUpload } from "@/components/profile/AvatarCropUpload";
 import { trackEvent } from "@/lib/analytics";
 import { saveActiveWorkspace, roleHome } from "@/lib/active-workspace";
+import { useActiveWorkspace } from "@/hooks/use-active-workspace";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({ meta: [{ title: "Settings · AgroLink" }] }),
@@ -36,9 +37,11 @@ function Settings() {
   const [profileViewNotifs, setProfileViewNotifs] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const { roles, addRole, profile, user, refresh } = useAuth();
-  const role = roles.includes("admin") ? "admin" : roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer";
+  const { active: activeWorkspace } = useActiveWorkspace(user?.id, roles);
+  const role = roles.includes(activeWorkspace) ? activeWorkspace : (roles.includes("admin") ? "admin" : roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer");
 
   useEffect(() => {
     setDisplayName(profile?.display_name ?? "");
@@ -76,53 +79,73 @@ function Settings() {
   }, [user?.id]);
 
   const persistPref = async (key: "whatsapp" | "push" | "marketing", value: boolean) => {
-    if (!user?.id) return;
+    if (!user?.id) return false;
+    setTogglingKey(key);
     try {
       await saveNotificationPrefs(user.id, { [key]: value });
       trackEvent("notification_pref_updated", { key, value });
+      return true;
     } catch {
       toast.error("Could not save preference");
+      return false;
+    } finally {
+      setTogglingKey(null);
     }
   };
 
   const onWhatsappToggle = async (enabled: boolean) => {
+    const prev = whatsapp;
     setWhatsapp(enabled);
-    await persistPref("whatsapp", enabled);
-    toast.success(enabled ? "Order updates enabled (email + WhatsApp)" : "External order updates off");
+    const ok = await persistPref("whatsapp", enabled);
+    if (!ok) setWhatsapp(prev);
+    else toast.success(enabled ? "Order updates enabled" : "External order updates off");
   };
 
   const onPushToggle = async (enabled: boolean) => {
+    const prev = push;
     setPush(enabled);
-    await persistPref("push", enabled);
+    const ok = await persistPref("push", enabled);
+    if (!ok) {
+      setPush(prev);
+      return;
+    }
     if (enabled && user?.id) {
-      const ok = await registerForPushNotifications(user.id);
-      if (ok) toast.success("Push enabled — you'll get Bolt-style job alerts");
+      const registered = await registerForPushNotifications(user.id);
+      if (registered) toast.success("Push enabled — job alerts on");
       else toast.error("Allow notifications in browser settings");
     }
   };
 
   const onMarketingToggle = async (enabled: boolean) => {
+    const prev = marketing;
     setMarketing(enabled);
-    await persistPref("marketing", enabled);
+    const ok = await persistPref("marketing", enabled);
+    if (!ok) setMarketing(prev);
   };
 
   const persistProfilePrefs = async (patch: { public_bookmarks?: boolean; profile_view_notifications?: boolean }) => {
-    if (!user?.id) return;
+    if (!user?.id) return false;
     try {
       await updateProfile(user.id, patch);
+      return true;
     } catch {
       toast.error("Could not save preference");
+      return false;
     }
   };
 
   const onPublicBookmarksToggle = async (enabled: boolean) => {
+    const prev = publicBookmarks;
     setPublicBookmarks(enabled);
-    await persistProfilePrefs({ public_bookmarks: enabled });
+    const ok = await persistProfilePrefs({ public_bookmarks: enabled });
+    if (!ok) setPublicBookmarks(prev);
   };
 
   const onProfileViewToggle = async (enabled: boolean) => {
+    const prev = profileViewNotifs;
     setProfileViewNotifs(enabled);
-    await persistProfilePrefs({ profile_view_notifications: enabled });
+    const ok = await persistProfilePrefs({ profile_view_notifications: enabled });
+    if (!ok) setProfileViewNotifs(prev);
   };
 
   const saveProfile = async () => {
@@ -262,9 +285,9 @@ function Settings() {
 
         <Card title="Notifications">
           {!prefsLoaded && <p className="text-xs text-muted-foreground">Loading preferences…</p>}
-          <Toggle label="Order updates" desc="Email (Resend, free) + WhatsApp (Meta Cloud API, free tier) + push." value={whatsapp} onChange={onWhatsappToggle} />
-          <Toggle label="Push notifications" desc="Driver job alerts (Bolt/Yango-style ping)." value={push} onChange={onPushToggle} />
-          <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={onMarketingToggle} />
+          <Toggle label="Order updates" desc="Email + WhatsApp + push for orders." value={whatsapp} onChange={onWhatsappToggle} disabled={togglingKey === "whatsapp"} />
+          <Toggle label="Push notifications" desc="Driver job alerts (Bolt-style ping)." value={push} onChange={onPushToggle} disabled={togglingKey === "push"} />
+          <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={onMarketingToggle} disabled={togglingKey === "marketing"} />
         </Card>
 
         <Card title="Payment">
