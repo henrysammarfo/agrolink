@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
 import { useAuth } from "@/lib/auth";
+import { useShellRole } from "@/hooks/use-shell-role";
 import { createListing, uploadListingMedia } from "@/lib/api/listings";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { unitsForCrop } from "@/lib/crop-units";
@@ -33,11 +34,7 @@ const GHANA_LOCATIONS = [
 
 function Create() {
   const { roles, addRole, user, profile } = useAuth();
-  const role = roles.includes("farmer")
-    ? "farmer"
-    : roles.includes("transport")
-      ? "transport"
-      : "buyer";
+  const shellRole = useShellRole();
   const isFarmer = roles.includes("farmer");
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -98,7 +95,7 @@ function Create() {
     };
 
     return (
-      <AppShell role={role}>
+      <AppShell role={shellRole === "admin" || shellRole === "transport" ? "buyer" : shellRole}>
         <PageHeader eyebrow="Create" title="Switch to" italic="Sell" />
         <div className="rounded-3xl border border-border bg-card p-10 text-center">
           <Sparkles className="mx-auto h-8 w-8 text-primary" />
@@ -214,7 +211,7 @@ function Create() {
   };
 
   return (
-    <AppShell role={role}>
+    <AppShell role={shellRole === "admin" || shellRole === "transport" ? "buyer" : shellRole}>
       <PageHeader
         eyebrow="Create"
         title="New"

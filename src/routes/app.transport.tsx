@@ -328,7 +328,8 @@ function TransportOverview() {
   return (
     <VerifiedTransportGate>
       <AppShell role="transport">
-        <div className="absolute inset-0">
+        <div className="relative h-full w-full">
+          <div className="absolute inset-0 z-0">
           <CorridorMap
             pins={mapPins}
             route={routeCoords}
@@ -344,7 +345,9 @@ function TransportOverview() {
             etaLabel={etaMin != null ? `${Math.max(1, Math.round(etaMin))} min` : undefined}
             priceLabel={payoutLabel != null ? `GHS ${Math.round(payoutLabel)}` : undefined}
           />
+          </div>
 
+          <div className="pointer-events-none absolute inset-0 z-10">
           {navDestination && (
             <DriverNavHud
               destinationLabel={navDestination.label}
@@ -443,6 +446,7 @@ function TransportOverview() {
                 )}
               </div>
             )}
+          </div>
           </div>
         </div>
       </AppShell>

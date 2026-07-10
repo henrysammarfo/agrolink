@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { AdminGate } from "@/components/app/RoleGate";
+import { PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api/fetch-auth";
@@ -72,8 +71,7 @@ function AdminPricing() {
   };
 
   return (
-    <AdminGate>
-      <AppShell role="admin" compact>
+    <>
         <PageHeader
           eyebrow="Admin"
           title="Delivery"
@@ -150,7 +148,6 @@ function AdminPricing() {
             </p>
           </div>
         )}
-      </AppShell>
-    </AdminGate>
+    </>
   );
 }

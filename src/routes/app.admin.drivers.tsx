@@ -4,8 +4,7 @@ import {
   Search, Check, X, Loader2, Truck, FileText, ExternalLink, User,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { AdminGate } from "@/components/app/RoleGate";
+import { PageHeader } from "@/components/app/AppShell";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import {
   fetchAdminDrivers,
@@ -90,8 +89,7 @@ function AdminDrivers() {
   };
 
   return (
-    <AdminGate>
-      <AppShell role="admin" compact>
+    <>
         <PageHeader
           eyebrow="Transport"
           title="Driver"
@@ -170,8 +168,7 @@ function AdminDrivers() {
             )}
           </ConfirmDialog>
         )}
-      </AppShell>
-    </AdminGate>
+    </>
   );
 }
 

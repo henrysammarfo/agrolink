@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
-import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, GHANA_MIN_ZOOM, GHANA_NE, GHANA_OVERVIEW_ZOOM, GHANA_SW, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import { getGoogleMapsClientKey } from "@/lib/google-maps-client";
 import { DRIVER_CAR_ICON_ANCHOR, DRIVER_CAR_ICON_HTML, DRIVER_CAR_ICON_SIZE } from "@/lib/map-icons";
 import { GoogleCorridorMap } from "@/components/map/GoogleCorridorMap";
@@ -82,6 +82,9 @@ function LeafletCorridorMap({
       zoomControl: false,
       scrollWheelZoom: true,
       attributionControl: false,
+      minZoom: GHANA_MIN_ZOOM,
+      maxBounds: L.latLngBounds(GHANA_SW, GHANA_NE),
+      maxBoundsViscosity: 1,
     }).setView(initialCenter, zoom ?? DEFAULT_MAP_ZOOM);
     L.control.zoom({ position: "bottomright" }).addTo(map);
     mapRef.current = map;
@@ -251,11 +254,13 @@ function LeafletCorridorMap({
     }
 
     if (shouldFit && fitPoints.length > 0) {
-      map.fitBounds(L.latLngBounds(fitPoints), { padding: [56, 56], maxZoom: STREET_ZOOM });
+      map.fitBounds(L.latLngBounds(fitPoints), { padding: [120, 56], maxZoom: STREET_ZOOM });
+      if ((map.getZoom() ?? 0) < 10) map.setZoom(10);
     } else if (shouldFit && center && isValidMapCoord(center[0], center[1])) {
-      map.setView(center, zoom ?? STREET_ZOOM);
+      map.setView(center, Math.max(zoom ?? STREET_ZOOM, 11));
     } else if (shouldFit) {
-      map.setView(ACCRA_CENTER, DEFAULT_MAP_ZOOM);
+      map.fitBounds(L.latLngBounds(GHANA_SW, GHANA_NE), { padding: [40, 40] });
+      map.setZoom(GHANA_OVERVIEW_ZOOM);
     }
 
     setTimeout(() => map.invalidateSize(), 80);

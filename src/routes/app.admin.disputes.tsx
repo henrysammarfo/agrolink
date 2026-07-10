@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, AlertTriangle, Check, X, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { AdminGate } from "@/components/app/RoleGate";
+import { PageHeader } from "@/components/app/AppShell";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useDisputes } from "@/hooks/use-marketplace";
 import { updateDisputeStatus, appendDisputeNote, type DisputeRow } from "@/lib/api/disputes";
@@ -66,8 +65,7 @@ function AdminDisputes() {
   };
 
   return (
-    <AdminGate>
-      <AppShell role="admin" compact>
+    <>
         <PageHeader eyebrow="Trust & Safety" title="Open" italic="disputes" sub="Live disputes from Supabase — human review within 24h." />
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -114,8 +112,7 @@ function AdminDisputes() {
             <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="Resolution note…" className="mt-2 w-full rounded-lg border border-border p-2 text-sm" />
           </ConfirmDialog>
         )}
-      </AppShell>
-    </AdminGate>
+    </>
   );
 }
 

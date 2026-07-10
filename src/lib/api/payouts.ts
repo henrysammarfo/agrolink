@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api/fetch-auth";
 import { supabase } from "@/integrations/supabase/client";
 
 export async function fetchDriverEarnings(userId: string, days = 7) {
@@ -98,25 +99,17 @@ export type AdminPaymentRow = {
 };
 
 export async function fetchAdminPayments(): Promise<AdminPaymentRow[]> {
-  const { data, error } = await supabase
-    .from("payments")
-    .select(
-      "*, order:orders(id, buyer_id, total_amount, status, items:order_items(seller_id, listing:listings(title)))",
-    )
-    .order("created_at", { ascending: false })
-    .limit(100);
-  if (error) throw error;
-  return (data ?? []) as AdminPaymentRow[];
+  const res = await apiFetch("/api/admin/payments");
+  const json = (await res.json()) as { payments?: AdminPaymentRow[]; error?: string };
+  if (!res.ok) throw new Error(json.error ?? "Failed to load payments");
+  return json.payments ?? [];
 }
 
 export async function updatePaymentStatus(paymentId: string, status: string, note?: string) {
-  const { error } = await supabase
-    .from("payments")
-    .update({
-      status,
-      updated_at: new Date().toISOString(),
-      metadata: note ? { admin_note: note } : undefined,
-    })
-    .eq("id", paymentId);
-  if (error) throw error;
+  const res = await apiFetch("/api/admin/payments", {
+    method: "PATCH",
+    body: JSON.stringify({ paymentId, status, note }),
+  });
+  const json = (await res.json()) as { error?: string };
+  if (!res.ok) throw new Error(json.error ?? "Failed to update payment");
 }
