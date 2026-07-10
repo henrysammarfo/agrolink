@@ -391,7 +391,7 @@ export async function processCheckout(params: {
   });
 
   const siteOrigin = getSiteOrigin() || process.env.SITE_URL || process.env.VITE_SITE_URL || "https://agrolink-omega.vercel.app";
-  const callbackUrl = `${siteOrigin.replace(/\/$/, "")}/app/buyer/orders/${order.id}/payment-callback`;
+  const callbackUrl = `${siteOrigin.replace(/\/$/, "")}/app/buyer/orders/${order.id}/payment-callback?reference=${encodeURIComponent(idempotencyKey)}`;
 
   const init = await initializePaystackTransaction({
     amount: total,
