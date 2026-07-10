@@ -1,85 +1,88 @@
-# AgroLink — Hackathon Submission Guide
+# AgroLink — Official Hackathon Submission
 
-## Links
+## Form fields (copy-paste)
 
-| Item | URL |
+### Brief Description (≤200 words)
+
+AgroLink is a TikTok-style farm-to-city marketplace for Ghana’s Greater Accra corridor. Farmers post photo and video listings of fresh produce; buyers swipe a vertical feed ranked by proximity, freshness, and engagement; verified transport partners deliver with live GPS tracking; and admins operate a control room for orders, payments, and moderation.
+
+One account supports three isolated dashboards: **Market** (buyer + seller), **Transport** (driver map and jobs), and **Admin** (GMV, payouts, disputes). Checkout uses Paystack MoMo. End-to-end flow covers cart → driver matching → live track → proof-of-delivery photo → farmer payout.
+
+Built with React, TanStack Start, Supabase (Auth, Postgres, Storage, Realtime), Google Maps (Ghana-bounded), and OpenAI listing moderation. Seeded with 26+ real produce listings and demo farmer accounts for judges.
+
+**Live:** https://agrolink-omega.vercel.app  
+**Code:** https://github.com/henrysammarfo/agrolink  
+**Demo farmers:** `ama-farm@demo.agrolink.app` / `AgroLinkDemo!2026`
+
+---
+
+### Links checklist
+
+| Field | URL | Status |
+|-------|-----|--------|
+| GitHub Repository | https://github.com/henrysammarfo/agrolink | ⚠️ **Make repo public** before submit (currently private) |
+| Deployed Version | https://agrolink-omega.vercel.app | ✅ Live |
+| Video Demonstration | *(add your YouTube/Loom/Drive link)* | ⚠️ **Required** — record using script below |
+
+### Key URLs for judges (all public, no login)
+
+| Page | URL |
 |------|-----|
-| **Source code** | https://github.com/henrysammarfo/agrolink |
-| **Live app** | https://agrolink-omega.vercel.app |
-| **Demo video** | Record 3–7 min walkthrough using script below |
+| Landing + live stats | https://agrolink-omega.vercel.app |
+| Public market feed | https://agrolink-omega.vercel.app/market |
+| Sign in / sign up | https://agrolink-omega.vercel.app/auth |
+| How it works | https://agrolink-omega.vercel.app/how-it-works |
+| Farmers directory | https://agrolink-omega.vercel.app/farmers |
 
-## Demo accounts
+### Logged-in demo paths
+
+| Role | Path | Credentials |
+|------|------|-------------|
+| Buyer feed | `/app/buyer/feed` | Demo farmer email or Google sign-in |
+| Post listing | `/app/create` | Enable **Sell** in profile first |
+| Cart + delivery map | `/app/buyer/cart` | Add items from feed first |
+| Driver map | `/app/transport` | Register driver → admin approve → Go live |
+| Admin | `/app/admin` | `jasonneil4040@gmail.com` (team owner only) |
+
+### Demo accounts
 
 | Role | Email | Password |
 |------|-------|----------|
-| Demo farmer | `ama-farm@demo.agrolink.app` | `AgroLinkDemo!2026` |
-| Demo farmer | `kofi-farm@demo.agrolink.app` | `AgroLinkDemo!2026` |
-| E2E / admin | `e2e@agrolink.app` | `AgroLinkE2e!2026` |
+| Demo farmer (Ama) | `ama-farm@demo.agrolink.app` | `AgroLinkDemo!2026` |
+| Demo farmer (Kofi) | `kofi-farm@demo.agrolink.app` | `AgroLinkDemo!2026` |
+| More farmers | `*-farm@demo.agrolink.app` | `AgroLinkDemo!2026` |
 
-Run `npm run seed:demo` to populate 24+ produce listings across 6 corridor farmers with **real produce photos** (JPG) uploaded to Supabase Storage.
+---
 
-## Core workflows (for demo video)
+## Video script (5–7 min)
 
-### 1. Farmer registration and produce upload
-- Sign up at `/auth` → enable Sell mode in Profile or `/app/create`
-- Post photo/video listing with price, quantity, location, hashtags
-- AI moderation auto-approves safe listings → appears in feed
-- Edit or delete your listings at `/app/farmer/listings` (TikTok-style)
+1. **0:00** — Landing page: live stats (26 listings, 12+ sellers)
+2. **0:30** — Sign in as demo farmer → `/app/create` → post produce (photo/video)
+3. **1:30** — Buyer feed `/app/buyer/feed` — scroll, like, comment, mute video
+4. **2:30** — Add to cart → delivery map (Greater Accra, live drivers) → MoMo checkout
+5. **3:30** — Order match page → driver accepts (second device or driver account)
+6. **4:30** — Live tracking + inbox chat buyer ↔ driver
+7. **5:30** — Driver: turn-by-turn nav, slide confirm pickup/delivery, POD photo
+8. **6:30** — Admin: orders, payments, listing moderation
 
-### 2. Buyer search and interaction
-- Browse vertical feed at `/app/buyer/feed` (proximity + engagement algorithm)
-- Global search (⌘K): produce, farmers, hashtags
-- Like, comment, save, follow sellers
+Upload to **YouTube (Unlisted)** or **Loom** and paste the link in the form.
 
-### 3. End-to-end marketplace
-- Add to cart → checkout with Paystack MoMo
-- Track order live at `/app/buyer/orders`
-- Payment history at `/app/buyer/payments`
-- Seller fulfills at `/app/farmer/orders`; payouts at `/app/farmer/payouts`
+---
 
-### 4. Transport and delivery
-- Driver registers at `/app/transport/register`
-- Admin approves driver at `/app/admin/drivers`
-- Driver goes live on map → accepts jobs → live GPS tracking for buyer
-- POD photo on delivery complete
+## Additional notes for judges (optional)
 
-### 5. Admin control room
-- `/app/admin` — GMV, orders, listings stats
-- `/app/admin/orders` — platform order audit
-- `/app/admin/payments` — release / refund payments
-- `/app/admin/listings` — approve / reject listings
-- `/app/admin/disputes` — dispute resolution
+- **Corridor focus:** Maps restricted to Ghana / Greater Accra; routing via Google Maps + OSRM fallback.
+- **Real data:** 26 active listings with JPG produce photos; engagement (likes/comments) from live DB, not fake counts.
+- **Payments:** Paystack test mode on demo; MoMo prompt on buyer phone at checkout.
+- **Local setup:** `npm install && npm run db:migrate && npm run seed:demo && npm run dev` (see `.env.example`).
+- **Docs:** `docs/API_KEYS.md`, `docs/QA_CHECKLIST.md`.
 
-## Three dashboards
+---
 
-1. **Market** — buyer + seller (one mode; seller toggle in profile)
-2. **Transport** — driver map, jobs, go live
-3. **Admin** — operations, payments, moderation
+## Before you submit
 
-## Tech stack
-
-- Frontend: React, TanStack Router, Tailwind, Vite
-- Backend: TanStack Start server routes, Supabase (Postgres + Auth + Storage + Realtime)
-- Payments: Paystack MoMo
-- Maps: Google Maps JS + Leaflet fallback, Ghana-bounded corridor
-- AI: OpenAI moderation + price advice
-
-## Setup (judges / local)
-
-```bash
-npm install
-cp .env.example .env
-npm run db:migrate
-npm run seed:demo
-npm run dev
-```
-
-## Suggested demo video script (5 min)
-
-1. 0:00 — Landing page, sign in as demo farmer
-2. 0:45 — Post a new tomato listing (camera + price)
-3. 1:30 — Switch to buyer feed — scroll algorithm-ranked produce
-4. 2:15 — Search, add to cart, MoMo checkout
-5. 3:00 — Live order tracking map
-6. 3:45 — Driver view: go live, accept delivery
-7. 4:30 — Admin: orders + payments audit
+- [ ] Make GitHub repository **public**
+- [ ] Upload demo video and add link to form
+- [ ] Test all three links in an incognito browser
+- [ ] Confirm demo farmer login works
+- [ ] Check off both declaration boxes on the form
