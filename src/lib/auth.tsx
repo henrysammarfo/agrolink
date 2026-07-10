@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
+import { ensureUserProfile } from "@/lib/ensure-profile";
 
 export type AppRole = "buyer" | "farmer" | "transport" | "admin";
 
@@ -65,9 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(false);
 
-  async function loadUserData(uid: string) {
+  async function loadUserData(uid: string, authUser?: User | null) {
     const localRoles = loadLocalRoles(uid);
     try {
+      if (authUser) {
+        try {
+          await ensureUserProfile(authUser);
+        } catch (error) {
+          console.warn("[Auth] Could not auto-create profile.", error);
+        }
+      }
       const [p, r] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid),
@@ -93,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       if (s?.user) {
         setDemoMode(false);
-        setTimeout(() => loadUserData(s.user.id), 0);
+        setTimeout(() => loadUserData(s.user.id, s.user), 0);
       } else if (shouldUseDemoAuth()) {
         loadDemoData();
       } else {
@@ -108,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(data.session);
         if (data.session?.user) {
           setDemoMode(false);
-          loadUserData(data.session.user.id).finally(() => setLoading(false));
+          loadUserData(data.session.user.id, data.session.user).finally(() => setLoading(false));
         } else {
           if (shouldUseDemoAuth()) loadDemoData();
           setLoading(false);
@@ -135,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         hasRole: (r) => roles.includes(r),
         refresh: async () => {
-          if (session?.user) await loadUserData(session.user.id);
+          if (session?.user) await loadUserData(session.user.id, session.user);
           else if (demoMode) loadDemoData();
         },
         addRole: async (r) => {
