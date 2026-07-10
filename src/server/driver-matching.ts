@@ -97,7 +97,7 @@ export async function notifyEligibleDriversForDelivery(deliveryId: string): Prom
       type: "delivery_job",
       title,
       body,
-      link: "/app/transport/jobs",
+      link: "/app/transport",
       whatsappExtras: { pickup: delivery.pickup_address ?? "", fee: String(feeGhs.toFixed(0)) },
     });
   }

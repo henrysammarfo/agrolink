@@ -386,12 +386,12 @@ function TransportOverview() {
           <button
             type="button"
             onClick={toggleOnline}
-            className={`pointer-events-auto absolute right-3 bottom-[calc(var(--agrolink-tab-bar,3.5rem)+env(safe-area-inset-bottom)+5.5rem)] z-30 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold shadow-xl transition active:scale-[0.98] ${
-              online ? "bg-emerald-500 text-white" : "bg-white text-foreground"
+            className={`pointer-events-auto absolute right-3 top-[max(env(safe-area-inset-top),3.5rem)] z-40 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold shadow-xl transition active:scale-[0.98] ${
+              online ? "bg-emerald-500 text-white ring-2 ring-emerald-300" : "bg-foreground text-background"
             }`}
           >
             <Radio className={`h-4 w-4 ${online ? "animate-pulse" : ""}`} />
-            {online ? "Live" : "Go live"}
+            {online ? "You're live" : "Go live"}
           </button>
 
           <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--agrolink-tab-bar,3.5rem)+env(safe-area-inset-bottom))] z-20">
@@ -421,17 +421,26 @@ function TransportOverview() {
                 )}
                 <div className="flex items-center gap-3">
                   <Wallet className="h-8 w-8 shrink-0 text-muted-foreground/50" />
-                  <div className="min-w-0 text-left">
+                  <div className="min-w-0 flex-1 text-left">
                     <p className="font-sans text-sm font-semibold">
-                      {online ? "Waiting for matching jobs…" : "Go live to receive offers"}
+                      {online ? "Waiting for matching jobs…" : "You're offline"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {online
                         ? `You'll only see ${vehicleLabel} deliveries in your area.`
-                        : "Enable GPS and tap Go live on the map."}
+                        : "Tap Go live (top right) or the green Live tab to start receiving jobs."}
                     </p>
                   </div>
                 </div>
+                {!online && (
+                  <button
+                    type="button"
+                    onClick={toggleOnline}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 py-3.5 text-sm font-semibold text-white"
+                  >
+                    <Radio className="h-4 w-4" /> Go live now
+                  </button>
+                )}
               </div>
             )}
           </div>

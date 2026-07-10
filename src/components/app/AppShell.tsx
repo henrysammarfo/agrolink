@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
   ChevronLeft, Bell, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
-  ShieldCheck, AlertTriangle, CreditCard, ListChecks, Zap, Search,
+  ShieldCheck, AlertTriangle, CreditCard, ListChecks, Zap, Search, Radio,
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
@@ -44,6 +44,108 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
 
 const IMMERSIVE_PATHS = ["/app/buyer/feed", "/app/transport"];
 
+type MobileTab = {
+  id: string;
+  to: string;
+  icon: typeof Home;
+  label: string;
+  badge?: number;
+  center?: boolean;
+};
+
+function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number): MobileTab[] {
+  if (role === "buyer") {
+    return [
+      { id: "home", to: "/app/buyer", icon: Home, label: "Home" },
+      { id: "discover", to: "/app/buyer/feed", icon: Sprout, label: "Discover" },
+      { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
+      { id: "cart", to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount },
+      { id: "me", to: "/app/profile", icon: User, label: "Me" },
+    ];
+  }
+  if (role === "transport") {
+    return [
+      { id: "map", to: "/app/transport", icon: MapPin, label: "Map" },
+      { id: "jobs", to: "/app/transport/jobs", icon: Truck, label: "Jobs" },
+      { id: "live", to: "/app/transport", icon: Radio, label: "Live", center: true },
+      { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
+      { id: "me", to: "/app/profile", icon: User, label: "Me" },
+    ];
+  }
+  if (role === "farmer") {
+    return [
+      { id: "home", to: "/app/farmer", icon: Home, label: "Home" },
+      { id: "listings", to: "/app/farmer/listings", icon: ImageIcon, label: "Listings" },
+      { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
+      { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
+      { id: "me", to: "/app/profile", icon: User, label: "Me" },
+    ];
+  }
+  return [
+    { id: "home", to: "/app/admin", icon: Home, label: "Home" },
+    { id: "payments", to: "/app/admin/payments", icon: CreditCard, label: "Payments" },
+    { id: "drivers", to: "/app/admin/drivers", icon: Truck, label: "Drivers", center: true },
+    { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
+    { id: "me", to: "/app/profile", icon: User, label: "Me" },
+  ];
+}
+
+function isMobileTabActive(pathname: string, tab: MobileTab): boolean {
+  if (tab.id === "live") return false;
+  if (tab.id === "jobs" && pathname.startsWith("/app/transport/jobs")) return true;
+  return pathname === tab.to;
+}
+
+function MobileTabLink({
+  tab,
+  active,
+  immersiveDark,
+}: {
+  tab: MobileTab;
+  active: boolean;
+  immersiveDark?: boolean;
+}) {
+  if (tab.center) {
+    const isLive = tab.id === "live";
+    return (
+      <Link key={tab.id} to={tab.to} className="flex items-center justify-center -mt-3">
+        <span
+          className={`grid h-12 w-14 place-items-center rounded-2xl shadow-lg ${
+            isLive
+              ? "bg-emerald-500 text-white shadow-emerald-500/40"
+              : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-primary/30"
+          }`}
+        >
+          <tab.icon className="h-5 w-5" />
+        </span>
+      </Link>
+    );
+  }
+  return (
+    <Link
+      key={tab.id}
+      to={tab.to}
+      className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${
+        active
+          ? immersiveDark
+            ? "text-white"
+            : "text-primary"
+          : immersiveDark
+            ? "text-white/45"
+            : "text-muted-foreground"
+      }`}
+    >
+      <tab.icon className={`h-5 w-5 ${active && immersiveDark ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}`} />
+      {tab.label}
+      {(tab.badge ?? 0) > 0 && (
+        <span className="absolute right-3 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+          {tab.badge! > 9 ? "9+" : tab.badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export function AppShell({
   role,
   children,
@@ -71,23 +173,7 @@ export function AppShell({
   const nav = NAV[role];
   const immersive = IMMERSIVE_PATHS.some((p) => pathname === p);
 
-  const mobileTabs = [
-    { to: mobileHomeTab(role), icon: Home, label: "Home" },
-    {
-      to: mobileDiscoverTab(role),
-      icon: role === "transport" ? Truck : role === "admin" ? ShieldCheck : Sprout,
-      label: role === "transport" ? "Jobs" : role === "admin" ? "Admin" : "Discover",
-    },
-    role === "farmer" || role === "buyer"
-      ? { to: "/app/create", icon: Plus, label: "", center: true }
-      : role === "transport"
-        ? { to: "/app/transport/jobs", icon: Truck, label: "Jobs" }
-        : { to: "/app/admin/drivers", icon: Truck, label: "Drivers" },
-    role === "buyer"
-      ? { to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount }
-      : { to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
-    { to: "/app/profile", icon: User, label: "Me" },
-  ] as const;
+  const mobileTabs = buildMobileTabs(role, cartCount, unreadInbox);
 
   if (immersive) {
     const lightChrome = pathname.startsWith("/app/transport");
@@ -102,42 +188,14 @@ export function AppShell({
             ? "border-border bg-background/95 backdrop-blur-md"
             : "border-white/5 bg-black/55 backdrop-blur-md"
         }`}>
-          {mobileTabs.map((t) => {
-            const active = pathname === t.to;
-            if ("center" in t && t.center) {
-              return (
-                <Link key="create" to={t.to} className="flex items-center justify-center -mt-3">
-                  <span className="grid h-12 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/30">
-                    <Plus className="h-5 w-5" />
-                  </span>
-                </Link>
-              );
-            }
-            const badge = "badge" in t ? t.badge : 0;
-            return (
-              <Link
-                key={t.to}
-                to={t.to}
-                className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${
-                  active
-                    ? lightChrome
-                      ? "text-primary"
-                      : "text-white"
-                    : lightChrome
-                      ? "text-muted-foreground"
-                      : "text-white/45"
-                }`}
-              >
-                <t.icon className={`h-5 w-5 ${active ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}`} />
-                {t.label}
-                {badge > 0 && (
-                  <span className="absolute right-3 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
-                    {badge > 9 ? "9+" : badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {mobileTabs.map((t) => (
+            <MobileTabLink
+              key={t.id}
+              tab={t}
+              active={isMobileTabActive(pathname, t)}
+              immersiveDark={!lightChrome}
+            />
+          ))}
         </nav>
       </div>
     );
@@ -275,34 +333,9 @@ export function AppShell({
 
         {!hideMobileNav && (
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur pb-[max(env(safe-area-inset-bottom),0px)]">
-          {mobileTabs.map((t) => {
-            const active = pathname === t.to;
-            if ("center" in t && t.center) {
-              return (
-                <Link key="create" to={t.to} className="flex items-center justify-center -mt-3">
-                  <span className="grid h-12 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg">
-                    <Plus className="h-5 w-5" />
-                  </span>
-                </Link>
-              );
-            }
-            const badge = "badge" in t ? t.badge : 0;
-            return (
-              <Link
-                key={t.to}
-                to={t.to}
-                className={`relative flex flex-col items-center gap-1 py-2.5 text-[10px] ${active ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <t.icon className="h-5 w-5" />
-                {t.label}
-                {badge > 0 && (
-                  <span className="absolute right-3 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
-                    {badge > 9 ? "9+" : badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {mobileTabs.map((t) => (
+            <MobileTabLink key={t.id} tab={t} active={isMobileTabActive(pathname, t)} />
+          ))}
         </nav>
         )}
       </div>
@@ -312,21 +345,6 @@ export function AppShell({
 
 function roleHome(r: AppRole) {
   return (r === "farmer" ? "/app/farmer" : r === "transport" ? "/app/transport" : r === "admin" ? "/app/admin" : "/app/buyer") as "/app/buyer";
-}
-
-/** Bottom tab: Home — primary workspace entry (feed for buyers). */
-function mobileHomeTab(r: AppRole) {
-  if (r === "buyer") return "/app/buyer/feed";
-  return roleHome(r);
-}
-
-/** Bottom tab: Discover — secondary hub (overview, listings, jobs). */
-function mobileDiscoverTab(r: AppRole) {
-  if (r === "buyer") return "/app/buyer";
-  if (r === "farmer") return "/app/farmer/listings";
-  if (r === "transport") return "/app/transport/jobs";
-  if (r === "admin") return "/app/admin/payments";
-  return "/app/buyer";
 }
 
 export function PageHeader({ eyebrow, title, italic, sub, action }: {

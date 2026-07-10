@@ -141,13 +141,14 @@ function Inbox() {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : (
-            <ul className="divide-y divide-border rounded-3xl border border-border bg-card overflow-hidden">
+            <ul className="relative z-10 divide-y divide-border rounded-3xl border border-border bg-card overflow-hidden isolate">
               {notifications.map((n) => {
                 const Icon = ICON_MAP[n.type] ?? ICON_MAP.default;
+                const isJob = n.type === "delivery_job";
                 return (
                   <li
                     key={n.id}
-                    className={`flex items-center gap-4 px-5 py-4 ${n.read ? "opacity-70" : "bg-primary/5"}`}
+                    className={`relative flex items-center gap-4 px-5 py-4 bg-card ${n.read ? "opacity-80" : "bg-muted/40"}`}
                   >
                     <span className="grid h-10 w-10 place-items-center rounded-full bg-muted text-primary">
                       <Icon className="h-4 w-4" />
@@ -180,7 +181,7 @@ function Inbox() {
                         }
                         return (
                           <Link to={target.to} onClick={onRead} className="text-xs text-primary shrink-0">
-                            View
+                            {isJob ? "View job" : "View"}
                           </Link>
                         );
                       })()
