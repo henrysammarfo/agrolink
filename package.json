@@ -15,7 +15,7 @@
     "seed:demo": "node scripts/seed-demo-listings.mjs",
     "grant:admin": "node scripts/grant-admin.mjs",
     "upload:media": "node scripts/upload-listing-media.mjs",
-    "stress:comms": "node scripts/stress-comms.mjs",
+    "stress:order-flow": "node --experimental-strip-types scripts/stress-order-flow.mjs",
     "db:migrate": "node scripts/apply-migrations.mjs",
     "cron:configure": "node scripts/configure-cron.mjs",
     "icons:generate": "node scripts/generate-brand-icons.mjs",

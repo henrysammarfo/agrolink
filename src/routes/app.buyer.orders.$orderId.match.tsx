@@ -9,6 +9,14 @@ import { useAuth } from "@/lib/auth";
 import { LiveTrackCard } from "@/components/track/LiveTrackCard";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { ACCRA_CENTER, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { LifecycleStepper } from "@/components/order/LifecycleStepper";
+import {
+  BUYER_ORDER_PIPELINE,
+  PAYMENT_TRACKING_STEPS,
+  getBuyerPipelineStep,
+  getPaymentTrackingStep,
+  pipelineStepHint,
+} from "@/lib/order-lifecycle";
 
 export const Route = createFileRoute("/app/buyer/orders/$orderId/match")({
   head: () => ({ meta: [{ title: "Finding driver · AgroLink" }] }),
@@ -117,11 +125,31 @@ function DriverMatchPage() {
 
   if (matched && delivery) {
     const driverUserId = delivery.driver?.user_id;
+    const pipelineStep = getBuyerPipelineStep(order);
+    const paymentStep = getPaymentTrackingStep(order.payment_status);
     return (
       <AppShell role="buyer">
         <div className="mx-auto max-w-2xl px-4 py-6">
           <h1 className="font-serif text-2xl">Driver matched</h1>
           <p className="mt-1 text-sm text-muted-foreground">Track your delivery live below.</p>
+          <div className="mt-4 space-y-4 rounded-2xl border border-border bg-card p-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Payment tracking</p>
+              <div className="mt-2">
+                <LifecycleStepper steps={PAYMENT_TRACKING_STEPS} currentStepId={paymentStep} />
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Order pipeline</p>
+              <div className="mt-2">
+                <LifecycleStepper
+                  steps={BUYER_ORDER_PIPELINE.filter((s) => !["cart", "delivery_setup", "payment_checkout"].includes(s.id))}
+                  currentStepId={pipelineStep}
+                  hint={(id) => pipelineStepHint(order, id as typeof pipelineStep)}
+                />
+              </div>
+            </div>
+          </div>
           <div className="mt-6">
             <LiveTrackCard order={order} />
           </div>
@@ -152,6 +180,9 @@ function DriverMatchPage() {
   const radius = (delivery as { search_radius_km?: number })?.search_radius_km ?? 20;
   const round = (delivery as { offer_round?: number })?.offer_round ?? 1;
 
+  const pipelineStep = getBuyerPipelineStep(order);
+  const paymentStep = getPaymentTrackingStep(order.payment_status);
+
   return (
     <AppShell role="buyer" hideMobileNav>
       <div className="relative -mx-6 -mt-6 h-[100dvh] min-h-[500px] md:-mx-10 md:-mt-10">
@@ -166,6 +197,21 @@ function DriverMatchPage() {
         />
         <div className="absolute inset-x-0 bottom-0 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
           <div className="mx-auto max-w-lg rounded-3xl border border-border bg-background/95 p-6 shadow-2xl backdrop-blur">
+            <div className="mb-4 space-y-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Payment tracking</p>
+                <LifecycleStepper steps={PAYMENT_TRACKING_STEPS} currentStepId={paymentStep} compact />
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Order pipeline</p>
+                <LifecycleStepper
+                  steps={BUYER_ORDER_PIPELINE.filter((s) => !["cart", "delivery_setup", "payment_checkout"].includes(s.id))}
+                  currentStepId={pipelineStep}
+                  hint={(id) => pipelineStepHint(order, id as typeof pipelineStep)}
+                  compact
+                />
+              </div>
+            </div>
             <div className="flex items-center gap-3">
               <span className={`grid h-12 w-12 place-items-center rounded-full bg-primary/15 ${pulse % 2 === 0 ? "scale-100" : "scale-110"} transition-transform`}>
                 <MapPin className="h-6 w-6 text-primary animate-pulse" />

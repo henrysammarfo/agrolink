@@ -22,6 +22,12 @@ import { FULFILLMENT_OPTIONS, type FulfillmentMode } from "@/lib/fulfillment";
 import type { MapLocation } from "@/lib/api/maps";
 import { DeliveryVehiclePicker, mapQuoteVehicle } from "@/components/checkout/DeliveryVehiclePicker";
 import { ACCRA_CENTER, isInGreaterAccra, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { LifecycleStepper } from "@/components/order/LifecycleStepper";
+import {
+  CHECKOUT_MAIN_STEPS,
+  DELIVERY_SETUP_SUBSTEPS,
+  getDeliverySetupSubstep,
+} from "@/lib/order-lifecycle";
 
 const DEFAULT_DELIVERY: MapLocation = GHANA_LOCATIONS[0];
 
@@ -318,6 +324,14 @@ function Cart() {
     }
   }
 
+  const deliverySubstep = getDeliverySetupSubstep({
+    fulfillmentMode,
+    hasAddress: isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng),
+    hasVehicle: !!selectedVehicle,
+    hasQuote: !!deliveryQuote,
+    driversNearby,
+  });
+
   if (isLoading) {
     return (
       <AppShell role="buyer" compact>
@@ -341,7 +355,10 @@ function Cart() {
             </button>
           </div>
           <PageHeader eyebrow="Checkout" title="Your" italic="order" />
-          <CheckoutSteps step={step} />
+          <LifecycleStepper
+            steps={CHECKOUT_MAIN_STEPS}
+            currentStepId={step === 1 ? "cart" : step === 2 ? "delivery" : "payment"}
+          />
         </>
       )}
 
@@ -404,7 +421,11 @@ function Cart() {
               </div>
 
               <div className="relative z-10 -mt-6 rounded-t-3xl border border-border bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-4 shadow-[0_-8px_30px_rgba(0,0,0,.08)]">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your trip</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Delivery setup</p>
+                <div className="mt-2">
+                  <LifecycleStepper steps={DELIVERY_SETUP_SUBSTEPS} currentStepId={deliverySubstep} compact />
+                </div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mt-4">Your trip</p>
                 <div className="mt-3 flex gap-2 overflow-x-auto">
                   {FULFILLMENT_OPTIONS.map((opt) => (
                     <button
@@ -554,6 +575,7 @@ function Cart() {
           <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-4 w-4" /> Back to delivery
           </button>
+          <LifecycleStepper steps={CHECKOUT_MAIN_STEPS} currentStepId="payment" />
           {DEMO_MODE && (
             <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
               <Wallet className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
@@ -597,32 +619,6 @@ function Cart() {
         </div>
       )}
     </AppShell>
-  );
-}
-
-function CheckoutSteps({ step }: { step: 1 | 2 | 3 }) {
-  const labels = ["Cart", "Delivery", "Payment"] as const;
-  return (
-    <div className="mb-6 flex items-center gap-2">
-      {labels.map((label, i) => {
-        const n = (i + 1) as 1 | 2 | 3;
-        const active = step === n;
-        const done = step > n;
-        return (
-          <div key={label} className="flex flex-1 items-center gap-2">
-            <span
-              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-medium ${
-                active ? "bg-foreground text-background" : done ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {n}
-            </span>
-            <span className={`text-xs sm:text-sm ${active ? "font-medium text-foreground" : "text-muted-foreground"}`}>{label}</span>
-            {i < 2 && <div className="h-px flex-1 bg-border" />}
-          </div>
-        );
-      })}
-    </div>
   );
 }
 
