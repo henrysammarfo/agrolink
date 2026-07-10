@@ -3,6 +3,7 @@ import { optionalAuth } from "@/server/api-auth";
 import { haversineKm, radiusForOfferRound, vehicleToFilterBucket } from "@/lib/vehicle-types";
 import { computeDeliveryQuote } from "@/server/delivery-quote";
 import { fetchDistanceMatrix, getGoogleMapsApiKey, type MatrixElement } from "@/server/google-maps";
+import { discreetCoverageNearPickup } from "@/lib/driver-privacy";
 
 const BUYER_OPTIONS = [
   { type: "bicycle" as const, label: "Bicycle", icon: "🚲" },
@@ -163,16 +164,16 @@ export const Route = createFileRoute("/api/delivery/availability")({
           }),
         );
 
+        const driversNearby = nearby.length;
+        const coverageZone = discreetCoverageNearPickup(pickupLat, pickupLng, driversNearby);
+
         return Response.json({
           options,
           radiusKm,
           routeEtaMin: routeEtaMin != null ? Math.round(routeEtaMin) : null,
           etaSource: routeEtaMin != null ? "google_matrix" : null,
-          liveDrivers: nearby.map((d) => ({
-            lat: d.current_lat as number,
-            lng: d.current_lng as number,
-            vehicleType: vehicleToFilterBucket(d.vehicle_type),
-          })),
+          driversNearby,
+          coverageZone,
         });
       },
     },

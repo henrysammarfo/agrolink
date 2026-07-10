@@ -67,6 +67,9 @@ export function DeliveryVehiclePicker({
   }
 
   const baseEta = etaMin ?? options.find((o) => o.type === value)?.etaMin ?? 10;
+  const availableCount = options.filter((o) => o.status === "available").length;
+  const onlyMotor =
+    availableCount === 1 && options.find((o) => o.status === "available")?.type === "motorcycle";
 
   if (horizontal) {
     return (
@@ -99,6 +102,7 @@ export function DeliveryVehiclePicker({
         </div>
         <p className="text-xs text-muted-foreground">
           You&apos;ve chosen {options.find((o) => o.type === value)?.label ?? "delivery"}. Tap to change.
+          {onlyMotor && " Only motorbike couriers are nearby right now."}
         </p>
       </div>
     );

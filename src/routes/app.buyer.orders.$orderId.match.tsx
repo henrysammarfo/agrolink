@@ -17,7 +17,7 @@ export const Route = createFileRoute("/app/buyer/orders/$orderId/match")({
 function DriverMatchPage() {
   const { orderId } = Route.useParams();
   const [pulse, setPulse] = useState(0);
-  const [liveDrivers, setLiveDrivers] = useState<{ lat: number; lng: number }[]>([]);
+  const [driversNearby, setDriversNearby] = useState(0);
 
   const { data: order, refetch, isLoading } = useQuery({
     queryKey: ["order-match", orderId],
@@ -29,6 +29,7 @@ function DriverMatchPage() {
   const delivery = order?.delivery;
   const searching = delivery?.status === "requested" && !delivery?.driver_id;
   const matched = !!delivery?.driver_id;
+  const paymentPending = order?.payment_status !== "paid";
 
   useEffect(() => {
     const t = setInterval(() => setPulse((p) => p + 1), 2000);
@@ -38,6 +39,24 @@ function DriverMatchPage() {
   useEffect(() => {
     if (matched) void refetch();
   }, [matched, refetch]);
+
+  useEffect(() => {
+    if (!paymentPending || !order) return;
+    const tryVerify = () => {
+      apiFetch("/api/orders/verify-payment", {
+        method: "POST",
+        body: JSON.stringify({ orderId }),
+      })
+        .then((r) => r.json())
+        .then((j: { ok?: boolean }) => {
+          if (j.ok) void refetch();
+        })
+        .catch(() => undefined);
+    };
+    tryVerify();
+    const interval = setInterval(tryVerify, 8000);
+    return () => clearInterval(interval);
+  }, [paymentPending, order, orderId, refetch]);
 
   useEffect(() => {
     if (!delivery || matched) return;
@@ -51,10 +70,8 @@ function DriverMatchPage() {
       });
       apiFetch(`/api/delivery/availability?${params}`)
         .then((r) => r.json())
-        .then((j: { liveDrivers?: { lat: number; lng: number }[] }) => {
-          setLiveDrivers((j.liveDrivers ?? []).filter((d) => isValidMapCoord(d.lat, d.lng)));
-        })
-        .catch(() => setLiveDrivers([]));
+        .then((j: { driversNearby?: number }) => setDriversNearby(j.driversNearby ?? 0))
+        .catch(() => setDriversNearby(0));
     };
     load();
     const interval = setInterval(load, 15_000);
@@ -70,11 +87,8 @@ function DriverMatchPage() {
     if (isValidMapCoord(delivery.delivery_lat, delivery.delivery_lng)) {
       list.push({ lat: delivery.delivery_lat, lng: delivery.delivery_lng, label: "You", kind: "buyer" });
     }
-    for (const d of liveDrivers) {
-      list.push({ lat: d.lat, lng: d.lng, label: "Driver", kind: "driver" });
-    }
     return list;
-  }, [delivery, liveDrivers]);
+  }, [delivery]);
 
   const mapCenter = useMemo((): [number, number] => {
     if (!pins.length) return ACCRA_CENTER;
@@ -135,7 +149,7 @@ function DriverMatchPage() {
       <div className="relative -mx-6 -mt-6 h-[100dvh] min-h-[500px] md:-mx-10 md:-mt-10">
         <CorridorMap
           pins={pins}
-          fitKey={`${orderId}-${liveDrivers.length}`}
+          fitKey={`${orderId}-${driversNearby}`}
           center={mapCenter}
           zoom={STREET_ZOOM}
           corridorOnly
@@ -152,14 +166,14 @@ function DriverMatchPage() {
                 <h1 className="font-serif text-xl">Searching for drivers</h1>
                 <p className="text-xs text-muted-foreground">
                   Round {round} · within {radius} km
-                  {liveDrivers.length > 0 && ` · ${liveDrivers.length} live nearby`}
+                  {driversNearby > 0 && " · couriers in area"}
                 </p>
               </div>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
               {order.payment_status === "paid"
                 ? "Nearby verified drivers are being notified. You'll see your driver here once they accept."
-                : "Approve MoMo payment on your phone — drivers are notified after payment confirms."}
+                : "Complete payment on Paystack — drivers are notified after payment confirms."}
             </p>
             {delivery && (
               <div className="mt-3 text-xs text-muted-foreground">
@@ -172,6 +186,12 @@ function DriverMatchPage() {
               className="mt-5 block text-center text-xs text-primary hover:underline"
             >
               View tracking page
+            </Link>
+            <Link
+              to="/app/buyer/orders"
+              className="mt-2 block text-center text-xs text-muted-foreground hover:underline"
+            >
+              View all orders
             </Link>
           </div>
         </div>

@@ -62,8 +62,10 @@ import { Route as ApiSearchGlobalRouteImport } from './routes/api/search/global'
 import { Route as ApiPushRegisterRouteImport } from './routes/api/push/register'
 import { Route as ApiProfileViewRouteImport } from './routes/api/profile/view'
 import { Route as ApiProfileUsernameCheckRouteImport } from './routes/api/profile/username-check'
+import { Route as ApiPaymentsVerifyRouteImport } from './routes/api/payments/verify'
 import { Route as ApiOtpVerifyRouteImport } from './routes/api/otp/verify'
 import { Route as ApiOtpSendRouteImport } from './routes/api/otp/send'
+import { Route as ApiOrdersVerifyPaymentRouteImport } from './routes/api/orders/verify-payment'
 import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
 import { Route as ApiDeliveryAvailabilityRouteImport } from './routes/api/delivery/availability'
 import { Route as ApiDeliveriesReassignExpiredRouteImport } from './routes/api/deliveries/reassign-expired'
@@ -84,6 +86,7 @@ import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.
 import { Route as AppFarmerListingsListingIdEditRouteImport } from './routes/app.farmer.listings.$listingId.edit'
 import { Route as AppBuyerOrdersOrderIdTrackRouteImport } from './routes/app.buyer.orders.$orderId.track'
 import { Route as AppBuyerOrdersOrderIdSuccessRouteImport } from './routes/app.buyer.orders.$orderId.success'
+import { Route as AppBuyerOrdersOrderIdPaymentCallbackRouteImport } from './routes/app.buyer.orders.$orderId.payment-callback'
 import { Route as AppBuyerOrdersOrderIdMatchRouteImport } from './routes/app.buyer.orders.$orderId.match'
 
 const PricingRoute = PricingRouteImport.update({
@@ -352,6 +355,11 @@ const ApiProfileUsernameCheckRoute = ApiProfileUsernameCheckRouteImport.update({
   path: '/api/profile/username-check',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPaymentsVerifyRoute = ApiPaymentsVerifyRouteImport.update({
+  id: '/api/payments/verify',
+  path: '/api/payments/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOtpVerifyRoute = ApiOtpVerifyRouteImport.update({
   id: '/api/otp/verify',
   path: '/api/otp/verify',
@@ -360,6 +368,11 @@ const ApiOtpVerifyRoute = ApiOtpVerifyRouteImport.update({
 const ApiOtpSendRoute = ApiOtpSendRouteImport.update({
   id: '/api/otp/send',
   path: '/api/otp/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrdersVerifyPaymentRoute = ApiOrdersVerifyPaymentRouteImport.update({
+  id: '/api/orders/verify-payment',
+  path: '/api/orders/verify-payment',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDeliveryQuoteRoute = ApiDeliveryQuoteRouteImport.update({
@@ -466,6 +479,12 @@ const AppBuyerOrdersOrderIdSuccessRoute =
     path: '/$orderId/success',
     getParentRoute: () => AppBuyerOrdersRoute,
   } as any)
+const AppBuyerOrdersOrderIdPaymentCallbackRoute =
+  AppBuyerOrdersOrderIdPaymentCallbackRouteImport.update({
+    id: '/$orderId/payment-callback',
+    path: '/$orderId/payment-callback',
+    getParentRoute: () => AppBuyerOrdersRoute,
+  } as any)
 const AppBuyerOrdersOrderIdMatchRoute =
   AppBuyerOrdersOrderIdMatchRouteImport.update({
     id: '/$orderId/match',
@@ -512,8 +531,10 @@ export interface FileRoutesByFullPath {
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/payments/verify': typeof ApiPaymentsVerifyRoute
   '/api/profile/username-check': typeof ApiProfileUsernameCheckRoute
   '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
@@ -547,6 +568,7 @@ export interface FileRoutesByFullPath {
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
   '/app/users/$slug/followers': typeof AppUsersSlugFollowersRoute
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
+  '/app/buyer/orders/$orderId/payment-callback': typeof AppBuyerOrdersOrderIdPaymentCallbackRoute
   '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
   '/app/farmer/listings/$listingId/edit': typeof AppFarmerListingsListingIdEditRoute
@@ -589,8 +611,10 @@ export interface FileRoutesByTo {
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/payments/verify': typeof ApiPaymentsVerifyRoute
   '/api/profile/username-check': typeof ApiProfileUsernameCheckRoute
   '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
@@ -624,6 +648,7 @@ export interface FileRoutesByTo {
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
   '/app/users/$slug/followers': typeof AppUsersSlugFollowersRoute
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
+  '/app/buyer/orders/$orderId/payment-callback': typeof AppBuyerOrdersOrderIdPaymentCallbackRoute
   '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
   '/app/farmer/listings/$listingId/edit': typeof AppFarmerListingsListingIdEditRoute
@@ -668,8 +693,10 @@ export interface FileRoutesById {
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
+  '/api/payments/verify': typeof ApiPaymentsVerifyRoute
   '/api/profile/username-check': typeof ApiProfileUsernameCheckRoute
   '/api/profile/view': typeof ApiProfileViewRoute
   '/api/push/register': typeof ApiPushRegisterRoute
@@ -703,6 +730,7 @@ export interface FileRoutesById {
   '/app/inbox/chat/$userId': typeof AppInboxChatUserIdRoute
   '/app/users/$slug/followers': typeof AppUsersSlugFollowersRoute
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
+  '/app/buyer/orders/$orderId/payment-callback': typeof AppBuyerOrdersOrderIdPaymentCallbackRoute
   '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
   '/app/farmer/listings/$listingId/edit': typeof AppFarmerListingsListingIdEditRoute
@@ -748,8 +776,10 @@ export interface FileRouteTypes {
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/availability'
     | '/api/delivery/quote'
+    | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/payments/verify'
     | '/api/profile/username-check'
     | '/api/profile/view'
     | '/api/push/register'
@@ -783,6 +813,7 @@ export interface FileRouteTypes {
     | '/app/inbox/chat/$userId'
     | '/app/users/$slug/followers'
     | '/app/buyer/orders/$orderId/match'
+    | '/app/buyer/orders/$orderId/payment-callback'
     | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
     | '/app/farmer/listings/$listingId/edit'
@@ -825,8 +856,10 @@ export interface FileRouteTypes {
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/availability'
     | '/api/delivery/quote'
+    | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/payments/verify'
     | '/api/profile/username-check'
     | '/api/profile/view'
     | '/api/push/register'
@@ -860,6 +893,7 @@ export interface FileRouteTypes {
     | '/app/inbox/chat/$userId'
     | '/app/users/$slug/followers'
     | '/app/buyer/orders/$orderId/match'
+    | '/app/buyer/orders/$orderId/payment-callback'
     | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
     | '/app/farmer/listings/$listingId/edit'
@@ -903,8 +937,10 @@ export interface FileRouteTypes {
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/availability'
     | '/api/delivery/quote'
+    | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
+    | '/api/payments/verify'
     | '/api/profile/username-check'
     | '/api/profile/view'
     | '/api/push/register'
@@ -938,6 +974,7 @@ export interface FileRouteTypes {
     | '/app/inbox/chat/$userId'
     | '/app/users/$slug/followers'
     | '/app/buyer/orders/$orderId/match'
+    | '/app/buyer/orders/$orderId/payment-callback'
     | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
     | '/app/farmer/listings/$listingId/edit'
@@ -972,8 +1009,10 @@ export interface RootRouteChildren {
   ApiDeliveriesReassignExpiredRoute: typeof ApiDeliveriesReassignExpiredRoute
   ApiDeliveryAvailabilityRoute: typeof ApiDeliveryAvailabilityRoute
   ApiDeliveryQuoteRoute: typeof ApiDeliveryQuoteRoute
+  ApiOrdersVerifyPaymentRoute: typeof ApiOrdersVerifyPaymentRoute
   ApiOtpSendRoute: typeof ApiOtpSendRoute
   ApiOtpVerifyRoute: typeof ApiOtpVerifyRoute
+  ApiPaymentsVerifyRoute: typeof ApiPaymentsVerifyRoute
   ApiProfileUsernameCheckRoute: typeof ApiProfileUsernameCheckRoute
   ApiProfileViewRoute: typeof ApiProfileViewRoute
   ApiPushRegisterRoute: typeof ApiPushRegisterRoute
@@ -1359,6 +1398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProfileUsernameCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/payments/verify': {
+      id: '/api/payments/verify'
+      path: '/api/payments/verify'
+      fullPath: '/api/payments/verify'
+      preLoaderRoute: typeof ApiPaymentsVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/otp/verify': {
       id: '/api/otp/verify'
       path: '/api/otp/verify'
@@ -1371,6 +1417,13 @@ declare module '@tanstack/react-router' {
       path: '/api/otp/send'
       fullPath: '/api/otp/send'
       preLoaderRoute: typeof ApiOtpSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/orders/verify-payment': {
+      id: '/api/orders/verify-payment'
+      path: '/api/orders/verify-payment'
+      fullPath: '/api/orders/verify-payment'
+      preLoaderRoute: typeof ApiOrdersVerifyPaymentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/delivery/quote': {
@@ -1513,6 +1566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBuyerOrdersOrderIdSuccessRouteImport
       parentRoute: typeof AppBuyerOrdersRoute
     }
+    '/app/buyer/orders/$orderId/payment-callback': {
+      id: '/app/buyer/orders/$orderId/payment-callback'
+      path: '/$orderId/payment-callback'
+      fullPath: '/app/buyer/orders/$orderId/payment-callback'
+      preLoaderRoute: typeof AppBuyerOrdersOrderIdPaymentCallbackRouteImport
+      parentRoute: typeof AppBuyerOrdersRoute
+    }
     '/app/buyer/orders/$orderId/match': {
       id: '/app/buyer/orders/$orderId/match'
       path: '/$orderId/match'
@@ -1547,12 +1607,15 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
 
 interface AppBuyerOrdersRouteChildren {
   AppBuyerOrdersOrderIdMatchRoute: typeof AppBuyerOrdersOrderIdMatchRoute
+  AppBuyerOrdersOrderIdPaymentCallbackRoute: typeof AppBuyerOrdersOrderIdPaymentCallbackRoute
   AppBuyerOrdersOrderIdSuccessRoute: typeof AppBuyerOrdersOrderIdSuccessRoute
   AppBuyerOrdersOrderIdTrackRoute: typeof AppBuyerOrdersOrderIdTrackRoute
 }
 
 const AppBuyerOrdersRouteChildren: AppBuyerOrdersRouteChildren = {
   AppBuyerOrdersOrderIdMatchRoute: AppBuyerOrdersOrderIdMatchRoute,
+  AppBuyerOrdersOrderIdPaymentCallbackRoute:
+    AppBuyerOrdersOrderIdPaymentCallbackRoute,
   AppBuyerOrdersOrderIdSuccessRoute: AppBuyerOrdersOrderIdSuccessRoute,
   AppBuyerOrdersOrderIdTrackRoute: AppBuyerOrdersOrderIdTrackRoute,
 }
@@ -1740,8 +1803,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeliveriesReassignExpiredRoute: ApiDeliveriesReassignExpiredRoute,
   ApiDeliveryAvailabilityRoute: ApiDeliveryAvailabilityRoute,
   ApiDeliveryQuoteRoute: ApiDeliveryQuoteRoute,
+  ApiOrdersVerifyPaymentRoute: ApiOrdersVerifyPaymentRoute,
   ApiOtpSendRoute: ApiOtpSendRoute,
   ApiOtpVerifyRoute: ApiOtpVerifyRoute,
+  ApiPaymentsVerifyRoute: ApiPaymentsVerifyRoute,
   ApiProfileUsernameCheckRoute: ApiProfileUsernameCheckRoute,
   ApiProfileViewRoute: ApiProfileViewRoute,
   ApiPushRegisterRoute: ApiPushRegisterRoute,

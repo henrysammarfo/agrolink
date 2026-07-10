@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { getSiteOrigin } from "@/lib/auth-redirect";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 
@@ -11,6 +12,63 @@ export type PaystackChargeResult = {
     display_text?: string;
   };
 };
+
+export type PaystackInitResult = {
+  status: boolean;
+  message: string;
+  data?: {
+    authorization_url: string;
+    access_code: string;
+    reference: string;
+  };
+};
+
+export async function initializePaystackTransaction(params: {
+  amount: number;
+  email: string;
+  reference: string;
+  callbackUrl: string;
+  subaccount?: string;
+  transactionChargeGhs?: number;
+}): Promise<PaystackInitResult> {
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  if (!secret) {
+    return {
+      status: true,
+      message: "Demo mode",
+      data: {
+        authorization_url: params.callbackUrl,
+        access_code: "demo",
+        reference: params.reference,
+      },
+    };
+  }
+
+  const res = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: Math.round(params.amount * 100),
+      email: params.email,
+      currency: "GHS",
+      reference: params.reference,
+      callback_url: params.callbackUrl,
+      channels: ["mobile_money", "card"],
+      ...(params.subaccount
+        ? {
+            subaccount: params.subaccount,
+            transaction_charge: Math.round((params.transactionChargeGhs ?? 0) * 100),
+            bearer: "account",
+          }
+        : {}),
+    }),
+  });
+
+  return res.json() as Promise<PaystackInitResult>;
+}
 
 export async function initiatePaystackMoMoCharge(params: {
   amount: number;
@@ -90,7 +148,14 @@ export async function processCheckout(params: {
   fulfillmentMode?: "platform_delivery" | "farm_pickup" | "own_driver";
   otpVerified?: boolean;
   vehicleType?: "bicycle" | "motorcycle" | "car";
-}): Promise<{ orderId: string; paymentReference: string; displayText?: string }> {
+}): Promise<{
+  orderId: string;
+  paymentReference: string;
+  authorizationUrl?: string;
+  displayText?: string;
+  demoMode?: boolean;
+  paymentConfirmed?: boolean;
+}> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   const { data: cart } = await supabaseAdmin
@@ -325,12 +390,14 @@ export async function processCheckout(params: {
       : null,
   });
 
-  const charge = await initiatePaystackMoMoCharge({
+  const siteOrigin = getSiteOrigin() || process.env.SITE_URL || process.env.VITE_SITE_URL || "https://agrolink-omega.vercel.app";
+  const callbackUrl = `${siteOrigin.replace(/\/$/, "")}/app/buyer/orders/${order.id}/payment-callback`;
+
+  const init = await initializePaystackTransaction({
     amount: total,
     email: params.email,
-    phone: params.phone,
-    provider: params.momoProvider,
-    idempotencyKey,
+    reference: idempotencyKey,
+    callbackUrl,
     subaccount: escrowSplit?.subaccountCode,
     transactionChargeGhs: escrowSplit
       ? escrowSplit.platformShareGhs + deliveryFee + platformFee
@@ -339,32 +406,28 @@ export async function processCheckout(params: {
 
   await supabaseAdmin.from("cart_items").delete().eq("cart_id", cart.id);
 
+  const demoMode = !process.env.PAYSTACK_SECRET_KEY;
+  let paymentConfirmed = false;
+
+  if (demoMode) {
+    const confirmed = await confirmOrderPayment(idempotencyKey);
+    paymentConfirmed = confirmed.ok;
+  }
+
   return {
     orderId: order.id,
     paymentReference: idempotencyKey,
-    displayText: charge.data?.display_text,
+    authorizationUrl: init.data?.authorization_url,
+    displayText: demoMode
+      ? "Demo payment confirmed — finding your driver."
+      : "Complete payment on Paystack to confirm your order.",
+    demoMode,
+    paymentConfirmed,
   };
 }
 
-export async function handlePaystackWebhook(
-  rawBody: string,
-  signature: string | null,
-): Promise<{ ok: boolean; message: string }> {
-  if (!verifyPaystackSignature(rawBody, signature)) {
-    return { ok: false, message: "Invalid signature" };
-  }
-
-  const event = JSON.parse(rawBody) as {
-    event: string;
-    data: { reference: string; status: string; amount: number };
-  };
-
-  if (event.event !== "charge.success") {
-    return { ok: true, message: "Ignored event" };
-  }
-
+export async function confirmOrderPayment(reference: string): Promise<{ ok: boolean; message: string; orderId?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const reference = event.data.reference;
 
   const { data: payment } = await supabaseAdmin
     .from("payments")
@@ -373,7 +436,9 @@ export async function handlePaystackWebhook(
     .maybeSingle();
 
   if (!payment) return { ok: false, message: "Payment not found" };
-  if (payment.status === "paid") return { ok: true, message: "Already processed" };
+  if (payment.status === "paid") {
+    return { ok: true, message: "Already processed", orderId: payment.order_id };
+  }
 
   await supabaseAdmin
     .from("payments")
@@ -400,7 +465,7 @@ export async function handlePaystackWebhook(
     action: "payment_confirmed",
     entity_type: "payment",
     entity_id: payment.id,
-    metadata: { reference, amount: event.data.amount },
+    metadata: { reference },
   });
 
   const { data: delivery } = await supabaseAdmin
@@ -420,5 +485,41 @@ export async function handlePaystackWebhook(
     );
   }
 
-  return { ok: true, message: "Payment processed" };
+  return { ok: true, message: "Payment processed", orderId: payment.order_id };
+}
+
+export async function verifyAndConfirmPayment(reference: string): Promise<{ ok: boolean; message: string; orderId?: string }> {
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  if (!secret) {
+    return confirmOrderPayment(reference);
+  }
+
+  const verify = await verifyPaystackTransaction(reference);
+  const status = (verify as { data?: { status?: string } }).data?.status;
+  if (status !== "success") {
+    return { ok: false, message: "Payment not completed yet" };
+  }
+
+  return confirmOrderPayment(reference);
+}
+
+export async function handlePaystackWebhook(
+  rawBody: string,
+  signature: string | null,
+): Promise<{ ok: boolean; message: string }> {
+  if (!verifyPaystackSignature(rawBody, signature)) {
+    return { ok: false, message: "Invalid signature" };
+  }
+
+  const event = JSON.parse(rawBody) as {
+    event: string;
+    data: { reference: string; status: string; amount: number };
+  };
+
+  if (event.event !== "charge.success") {
+    return { ok: true, message: "Ignored event" };
+  }
+
+  const result = await confirmOrderPayment(event.data.reference);
+  return { ok: result.ok, message: result.message };
 }
