@@ -37,8 +37,8 @@ const DEMO_FARMERS = [
 ];
 
 async function uploadDemoMedia() {
-  const files = (await readdir(DEMO_DIR)).filter((f) => /\.(jpe?g|png|webp|svg)$/i.test(f));
-  const map = {};
+  const files = (await readdir(DEMO_DIR)).filter((f) => /\.(jpe?g|png|webp|svg|mp4|webm)$/i.test(f));
+  const map = { videos: {} };
   const prefer = (baseName) => {
     const jpg = files.find((f) => f.toLowerCase() === `${baseName}.jpg`);
     const jpeg = files.find((f) => f.toLowerCase() === `${baseName}.jpeg`);
@@ -81,12 +81,33 @@ async function uploadDemoMedia() {
     map[keyName] = `${base}/storage/v1/object/public/listing-images/${storagePath}`;
     console.log("Uploaded:", keyName, `(${name})`);
   }
+
+  const videoFiles = [
+    ["tomato_harvest", "tomato-harvest.mp4"],
+    ["pepper_farm", "pepper-farm.mp4"],
+  ];
+  for (const [keyName, fileName] of videoFiles) {
+    const filePath = path.join(DEMO_DIR, fileName);
+    try {
+      const buf = await readFile(filePath);
+      const storagePath = `demo/${fileName}`;
+      const { error } = await admin.storage.from("listing-videos").upload(storagePath, buf, {
+        upsert: true,
+        contentType: "video/mp4",
+      });
+      if (error) throw error;
+      map.videos[keyName] = `${base}/storage/v1/object/public/listing-videos/${storagePath}`;
+      console.log("Uploaded video:", keyName);
+    } catch (err) {
+      console.warn("Video upload skipped:", fileName, err.message ?? err);
+    }
+  }
   return map;
 }
 
 /** 24 corridor produce listings — varied engagement for feed algorithm demo */
 function buildListings(media) {
-  const L = (sellerIdx, title, crop, price, unit, qty, loc, lat, lng, mediaKey, tags, organic, hoursAgo, views, likes, comments, saves) => ({
+  const L = (sellerIdx, title, crop, price, unit, qty, loc, lat, lng, mediaKey, tags, organic, hoursAgo, views, likes, comments, saves, videoKey = null) => ({
     seller_id: DEMO_FARMERS[sellerIdx].id,
     title,
     crop_type: crop,
@@ -97,7 +118,7 @@ function buildListings(media) {
     lat,
     lng,
     image_url: media[mediaKey] ?? media.tomato,
-    video_url: null,
+    video_url: videoKey ? media.videos?.[videoKey] ?? null : null,
     organic,
     hashtags: tags,
     description: `Fresh ${crop.replace(/_/g, " ")} from ${loc}. Harvested for the Accra corridor.`,
@@ -109,7 +130,7 @@ function buildListings(media) {
   });
 
   return [
-    L(0, "Vine-ripe Dodowa tomatoes", "tomato", 12.5, "kg", 120, "Dodowa", 5.883, -0.089, "tomato", ["tomato", "organic", "dodowa"], true, 2, 842, 156, 23, 41),
+    L(0, "Vine-ripe Dodowa tomatoes", "tomato", 12.5, "kg", 120, "Dodowa", 5.883, -0.089, "tomato", ["tomato", "organic", "dodowa"], true, 2, 842, 156, 23, 41, "tomato_harvest"),
     L(0, "Cherry tomatoes — restaurant pack", "tomato", 18, "kg", 40, "Dodowa", 5.885, -0.091, "tomato", ["tomato", "chef"], true, 6, 312, 67, 9, 18),
     L(0, "Roma tomatoes bulk", "tomato", 10, "kg", 200, "Ningo", 5.789, -0.201, "tomato", ["tomato", "bulk"], false, 14, 445, 89, 12, 25),
     L(0, "Sun-dried tomato halves", "tomato", 22, "kg", 25, "Dodowa", 5.88, -0.085, "tomato", ["tomato", "valueadd"], true, 28, 198, 44, 6, 11),
@@ -117,7 +138,7 @@ function buildListings(media) {
     L(1, "Baby okra for soup", "okra", 14, "kg", 35, "Afienya", 5.715, 0.02, "okra", ["okra", "soup"], false, 10, 267, 54, 7, 14),
     L(1, "Garden eggs — white & purple", "garden_egg", 8, "kg", 90, "Ada Foah", 5.786, 0.633, "garden_egg", ["garden_egg", "ada"], true, 12, 298, 67, 9, 15),
     L(1, "Small garden egg heaps", "garden_egg", 6, "heap", 150, "Ada Foah", 5.79, 0.63, "garden_egg", ["garden_egg", "heap"], true, 20, 189, 38, 5, 9),
-    L(2, "Shito pepper blend", "pepper", 15, "kg", 45, "Tema Community 25", 5.669, -0.017, "pepper", ["pepper", "shito"], true, 8, 1204, 312, 47, 88),
+    L(2, "Shito pepper blend", "pepper", 15, "kg", 45, "Tema Community 25", 5.669, -0.017, "pepper", ["pepper", "shito"], true, 8, 1204, 312, 47, 88, "pepper_farm"),
     L(2, "Scotch bonnet — extra hot", "pepper", 20, "kg", 30, "Tema", 5.67, -0.02, "pepper", ["pepper", "hot"], true, 16, 678, 145, 22, 35),
     L(2, "Kpakpo shito peppers", "pepper", 12, "kg", 55, "Ashaiman", 5.692, -0.029, "pepper", ["pepper", "kpakpo"], false, 24, 534, 98, 14, 28),
     L(2, "Dried cayenne flakes", "pepper", 25, "kg", 20, "Tema", 5.665, -0.015, "pepper", ["pepper", "dried"], false, 36, 401, 76, 10, 19),

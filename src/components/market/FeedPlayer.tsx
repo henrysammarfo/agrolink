@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle } from "react";
-import { VerticalFeed, type VerticalFeedRef, type VideoItem } from "react-vertical-feed";
 import "@/styles/riyils-overrides.css";
 import {
   Heart,
@@ -59,8 +58,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
   const [muted, setMuted] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
   const [category, setCategory] = useState("all");
-  const feedRef = useRef<VerticalFeedRef>(null);
-  const photoFeedRef = useRef<{ scrollToItem: (i: number, behavior?: ScrollBehavior) => void }>(null);
+  const feedRef = useRef<{ scrollToItem: (i: number, behavior?: ScrollBehavior) => void }>(null);
 
   const filteredListings = useMemo(
     () => filterByCategory(rankedListings, category),
@@ -74,24 +72,11 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
     trackEvent("feed_view");
   }, []);
 
-  const hasVideoListings = filteredListings.some((l) => !!l.video_url);
-
   useEffect(() => {
-    if (!filteredListings.length) return;
-    if (hasVideoListings) feedRef.current?.scrollToItem(initialIndex, "auto");
-    else photoFeedRef.current?.scrollToItem(initialIndex, "auto");
-  }, [initialIndex, filteredListings.length, hasVideoListings]);
-
-  const feedItems: VideoItem[] = filteredListings.map((l) => ({
-    id: l.id,
-    src: l.video_url ?? "",
-    poster: l.image_url ?? undefined,
-    muted,
-    autoPlay: true,
-    loop: true,
-    playsInline: true,
-    metadata: { listing: l },
-  }));
+    if (filteredListings.length) {
+      feedRef.current?.scrollToItem(initialIndex, "auto");
+    }
+  }, [initialIndex, filteredListings.length]);
 
   const wrapperClass = fullscreen
     ? `h-full w-full bg-black${inAppFeed ? " agrolink-tiktok-feed" : ""}`
@@ -144,8 +129,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
             onClick={() => {
               setShowGrid(false);
               setActive(i);
-              if (hasVideoListings) feedRef.current?.scrollToItem(i, "smooth");
-              else photoFeedRef.current?.scrollToItem(i, "smooth");
+              feedRef.current?.scrollToItem(i, "smooth");
             }}
             className="relative aspect-[9/16] overflow-hidden rounded-2xl"
           >
@@ -168,64 +152,20 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
     </div>
   ) : null;
 
-  if (!hasVideoListings) {
-    return (
-      <div className={wrapperClass}>
-        <PhotoSnapFeed
-          ref={photoFeedRef}
-          listings={filteredListings}
-          active={active}
-          onActiveChange={setActive}
-          inAppFeed={inAppFeed}
-          muted={muted}
-          onToggleMute={() => setMuted((m) => !m)}
-          onOpenGrid={() => setShowGrid(true)}
-          category={category}
-          onCategoryChange={setCategory}
-        />
-        <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex z-20">
-          {filteredListings.map((_, i) => (
-            <span
-              key={i}
-              className={`block h-6 w-1 rounded-full transition-all ${i === active ? "bg-white" : "bg-white/30"}`}
-            />
-          ))}
-        </div>
-        {gridOverlay}
-      </div>
-    );
-  }
-
   return (
     <div className={wrapperClass}>
-      <VerticalFeed
+      <ProduceSnapFeed
         ref={feedRef}
-        items={feedItems}
-        className="h-full w-full"
-        style={{ height: "100%", scrollSnapType: "y mandatory" }}
-        threshold={0.75}
-        onCurrentItemChange={setActive}
-        onVideoError={() => {}}
-        renderItemOverlay={(item, i) => {
-          const listing = (item.metadata as { listing: FeedListing }).listing;
-          return (
-            <FeedCardOverlay
-              item={listing}
-              isActive={i === active}
-              muted={muted}
-              onToggleMute={() => setMuted((m) => !m)}
-              onOpenGrid={() => setShowGrid(true)}
-              progress={`${i + 1} / ${filteredListings.length}`}
-              showImageOnly={!listing.video_url}
-              inAppFeed={inAppFeed}
-              category={category}
-              onCategoryChange={setCategory}
-              showCategories={i === 0}
-            />
-          );
-        }}
+        listings={filteredListings}
+        active={active}
+        onActiveChange={setActive}
+        inAppFeed={inAppFeed}
+        muted={muted}
+        onToggleMute={() => setMuted((m) => !m)}
+        onOpenGrid={() => setShowGrid(true)}
+        category={category}
+        onCategoryChange={setCategory}
       />
-
       <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex z-20">
         {filteredListings.map((_, i) => (
           <span
@@ -234,34 +174,34 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
           />
         ))}
       </div>
-
       {gridOverlay}
     </div>
   );
 }
 
-type PhotoSnapFeedProps = {
+type ProduceSnapFeedProps = {
   listings: FeedListing[];
   active: number;
   onActiveChange: (i: number) => void;
   inAppFeed: boolean;
   muted: boolean;
-  onToggleMute: () => void;
+  onToggleMute: (e: React.MouseEvent) => void;
   onOpenGrid: () => void;
   category: string;
   onCategoryChange: (c: string) => void;
 };
 
-const PhotoSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: ScrollBehavior) => void }, PhotoSnapFeedProps>(
-  function PhotoSnapFeed(
+const ProduceSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: ScrollBehavior) => void }, ProduceSnapFeedProps>(
+  function ProduceSnapFeed(
     { listings, active, onActiveChange, inAppFeed, muted, onToggleMute, onOpenGrid, category, onCategoryChange },
     ref,
   ) {
     const containerRef = useRef<HTMLDivElement>(null);
+    const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
     useImperativeHandle(ref, () => ({
       scrollToItem: (index, behavior = "smooth") => {
-        const el = containerRef.current?.querySelector(`[data-photo-index="${index}"]`);
+        const el = containerRef.current?.querySelector(`[data-feed-index="${index}"]`);
         el?.scrollIntoView({ behavior, block: "start" });
       },
     }));
@@ -273,16 +213,44 @@ const PhotoSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: ScrollBe
         (entries) => {
           for (const entry of entries) {
             if (entry.isIntersecting) {
-              const idx = Number(entry.target.getAttribute("data-photo-index"));
+              const idx = Number(entry.target.getAttribute("data-feed-index"));
               if (!Number.isNaN(idx)) onActiveChange(idx);
             }
           }
         },
         { threshold: 0.6, root },
       );
-      root.querySelectorAll("[data-photo-index]").forEach((el) => observer.observe(el));
+      root.querySelectorAll("[data-feed-index]").forEach((el) => observer.observe(el));
       return () => observer.disconnect();
     }, [listings.length, onActiveChange]);
+
+    useEffect(() => {
+      videoRefs.current.length = listings.length;
+    }, [listings.length]);
+
+    // Sync mute + play/pause for video listings
+    useEffect(() => {
+      videoRefs.current.forEach((video, idx) => {
+        if (!video) return;
+        video.muted = muted;
+        if (idx === active) {
+          void video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    }, [active, muted, listings]);
+
+    const handleToggleMute = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const nextMuted = !muted;
+      onToggleMute();
+      const video = videoRefs.current[active];
+      if (video) {
+        video.muted = nextMuted;
+        if (!nextMuted) void video.play().catch(() => {});
+      }
+    };
 
     return (
       <div
@@ -292,33 +260,51 @@ const PhotoSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: ScrollBe
         className="h-full w-full overflow-y-auto snap-y snap-mandatory overscroll-y-contain"
         style={{ scrollSnapType: "y mandatory" }}
       >
-        {listings.map((listing, i) => (
-          <div
-            key={listing.id}
-            data-photo-index={i}
-            className="relative h-[100dvh] min-h-[100dvh] w-full shrink-0 snap-start snap-always"
-          >
-            <img
-              src={listing.image_url ?? "/media/demo/tomato.jpg"}
-              alt={listing.title}
-              className="absolute inset-0 h-full w-full object-cover"
-              loading={i <= 2 ? "eager" : "lazy"}
-            />
-            <FeedCardOverlay
-              item={listing}
-              isActive={i === active}
-              muted={muted}
-              onToggleMute={onToggleMute}
-              onOpenGrid={onOpenGrid}
-              progress={`${i + 1} / ${listings.length}`}
-              showImageOnly={false}
-              inAppFeed={inAppFeed}
-              category={category}
-              onCategoryChange={onCategoryChange}
-              showCategories={i === 0}
-            />
-          </div>
-        ))}
+        {listings.map((listing, i) => {
+          const isVideo = !!listing.video_url;
+          return (
+            <div
+              key={listing.id}
+              data-feed-index={i}
+              className="relative h-[100dvh] min-h-[100dvh] w-full shrink-0 snap-start snap-always bg-black"
+            >
+              {isVideo ? (
+                <video
+                  ref={(el) => {
+                    videoRefs.current[i] = el;
+                  }}
+                  src={listing.video_url!}
+                  poster={listing.image_url ?? undefined}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  playsInline
+                  loop
+                  muted={muted}
+                  preload="metadata"
+                />
+              ) : (
+                <img
+                  src={listing.image_url ?? "/media/demo/tomato.jpg"}
+                  alt={listing.title}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading={i <= 2 ? "eager" : "lazy"}
+                />
+              )}
+              <FeedCardOverlay
+                item={listing}
+                isActive={i === active}
+                muted={muted}
+                onToggleMute={handleToggleMute}
+                onOpenGrid={onOpenGrid}
+                progress={`${i + 1} / ${listings.length}`}
+                hasVideo={isVideo}
+                inAppFeed={inAppFeed}
+                category={category}
+                onCategoryChange={onCategoryChange}
+                showCategories={i === 0}
+              />
+            </div>
+          );
+        })}
       </div>
     );
   },
@@ -331,7 +317,7 @@ function FeedCardOverlay({
   onToggleMute,
   onOpenGrid,
   progress,
-  showImageOnly,
+  hasVideo = false,
   inAppFeed = false,
   category = "all",
   onCategoryChange,
@@ -340,10 +326,10 @@ function FeedCardOverlay({
   item: FeedListing;
   isActive: boolean;
   muted: boolean;
-  onToggleMute: () => void;
+  onToggleMute: (e: React.MouseEvent) => void;
   onOpenGrid: () => void;
   progress: string;
-  showImageOnly?: boolean;
+  hasVideo?: boolean;
   inAppFeed?: boolean;
   category?: string;
   onCategoryChange?: (id: string) => void;
@@ -589,13 +575,6 @@ function FeedCardOverlay({
         onClick={onDoubleTap}
         aria-hidden
       />
-      {showImageOnly && (
-        <img
-          src={item.image_url ?? "/media/demo/tomato.jpg"}
-          alt={item.title}
-          className={`feed-pass-through pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
-        />
-      )}
       {showLikeBurst && (
         <div className="feed-pass-through pointer-events-none absolute inset-0 z-30 grid place-items-center">
           <Heart className="h-24 w-24 animate-ping fill-rose-500 text-rose-500 opacity-90" />
@@ -610,13 +589,16 @@ function FeedCardOverlay({
             <CategoryChips active={category} onChange={onCategoryChange} inAppFeed />
           )}
           <div className="flex items-center justify-end px-3 pb-1">
-            <button
-              onClick={onToggleMute}
-              className="grid h-9 w-9 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition active:scale-95"
-              aria-label={muted ? "Unmute" : "Mute"}
-            >
-              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            </button>
+            {hasVideo && (
+              <button
+                type="button"
+                onClick={(e) => onToggleMute(e)}
+                className="grid h-9 w-9 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition active:scale-95"
+                aria-label={muted ? "Unmute" : "Mute"}
+              >
+                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -631,13 +613,18 @@ function FeedCardOverlay({
           <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-white/80 backdrop-blur-sm">
             {progress}
           </span>
-          <button
-            onClick={onToggleMute}
-            className="grid h-10 w-10 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition active:scale-95"
-            aria-label={muted ? "Unmute" : "Mute"}
-          >
-            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </button>
+          {hasVideo ? (
+            <button
+              type="button"
+              onClick={(e) => onToggleMute(e)}
+              className="grid h-10 w-10 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition active:scale-95"
+              aria-label={muted ? "Unmute" : "Mute"}
+            >
+              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
+          ) : (
+            <span className="h-10 w-10" aria-hidden />
+          )}
         </div>
       )}
 
