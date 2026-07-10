@@ -44,16 +44,18 @@ export async function recordProfileView(
   if (profile?.profile_view_notifications !== false && !recent) {
     const { data: viewer } = await supabaseAdmin
       .from("profiles")
-      .select("display_name")
+      .select("display_name, slug, username")
       .eq("id", viewerId)
       .maybeSingle();
+
+    const viewerHandle = viewer?.username ?? viewer?.slug ?? null;
 
     const { notifyUser } = await import("@/server/comms");
     await notifyUser(profileId, {
       type: "profile_view",
       title: `${viewer?.display_name ?? "Someone"} viewed your profile`,
       body: `You have ${viewCount} profile view${viewCount === 1 ? "" : "s"}`,
-      link: "/app/profile/views",
+      link: viewerHandle ? `/app/users/${viewerHandle}` : "/app/profile/views",
     });
     notified = true;
   }
@@ -65,7 +67,7 @@ export async function fetchProfileViewers(profileId: string, limit = 50) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("profile_views")
-    .select("id, viewed_at, viewer:profiles!profile_views_viewer_id_fkey(id, display_name, avatar_url, slug)")
+    .select("id, viewed_at, viewer:profiles!profile_views_viewer_id_fkey(id, display_name, avatar_url, slug, username)")
     .eq("profile_id", profileId)
     .order("viewed_at", { ascending: false })
     .limit(limit);

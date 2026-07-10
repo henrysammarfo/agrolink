@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Eye } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
 import { fetchProfileViewers } from "@/lib/api/profile-views";
+import { profileHandle } from "@/lib/profile-links";
 
 export const Route = createFileRoute("/app/profile/views")({
   head: () => ({ meta: [{ title: "Profile views · AgroLink" }] }),
@@ -37,8 +38,10 @@ function ProfileViews() {
               display_name?: string | null;
               avatar_url?: string | null;
               slug?: string | null;
+              username?: string | null;
             } | null;
             if (!viewer?.id) return null;
+            const handle = profileHandle(viewer);
             return (
               <li key={v.id} className="flex items-center gap-4 px-5 py-4">
                 {viewer.avatar_url ? (
@@ -55,10 +58,10 @@ function ProfileViews() {
                     {new Date(v.viewed_at).toLocaleString()}
                   </div>
                 </div>
-                {viewer.slug ? (
+                {handle ? (
                   <Link
-                    to="/farmers/$slug"
-                    params={{ slug: viewer.slug }}
+                    to="/app/users/$slug"
+                    params={{ slug: handle }}
                     className="text-xs text-primary shrink-0"
                   >
                     View profile

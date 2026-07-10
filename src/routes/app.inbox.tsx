@@ -18,6 +18,7 @@ import {
 } from "@/lib/api/notifications";
 import { showLocalNotification } from "@/lib/push-client";
 import { fetchMessageRequests, respondToMessageRequest } from "@/lib/api/message-requests";
+import { parseNotificationTarget, profileHandle } from "@/lib/profile-links";
 import { useQuery } from "@tanstack/react-query";
 
 const ICON_MAP: Record<string, typeof Heart> = {
@@ -159,16 +160,30 @@ function Inbox() {
                       </div>
                     </div>
                     {n.link ? (
-                      <Link
-                        to={n.link}
-                        onClick={() => {
+                      (() => {
+                        const target = parseNotificationTarget(n.link);
+                        const onRead = () => {
                           markNotificationRead(n.id);
                           qc.invalidateQueries({ queryKey: ["notifications", user?.id] });
-                        }}
-                        className="text-xs text-primary shrink-0"
-                      >
-                        View
-                      </Link>
+                        };
+                        if (target.params) {
+                          return (
+                            <Link
+                              to={target.to}
+                              params={target.params}
+                              onClick={onRead}
+                              className="text-xs text-primary shrink-0"
+                            >
+                              View profile
+                            </Link>
+                          );
+                        }
+                        return (
+                          <Link to={target.to} onClick={onRead} className="text-xs text-primary shrink-0">
+                            View
+                          </Link>
+                        );
+                      })()
                     ) : (
                       <button
                         onClick={() => {
