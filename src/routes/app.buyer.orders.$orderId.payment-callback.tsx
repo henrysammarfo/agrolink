@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app/AppShell";
+import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { fetchOrderById } from "@/lib/api/orders";
 
@@ -17,6 +19,8 @@ function PaymentCallbackPage() {
   const { orderId } = Route.useParams();
   const { reference } = Route.useSearch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [status, setStatus] = useState<"verifying" | "success" | "failed">("verifying");
   const [message, setMessage] = useState("Verifying your payment…");
 
@@ -41,6 +45,11 @@ function PaymentCallbackPage() {
         if (data.ok) {
           setStatus("success");
           setMessage("Payment confirmed!");
+          if (user?.id) {
+            await queryClient.invalidateQueries({ queryKey: ["buyer-orders", user.id] });
+            await queryClient.invalidateQueries({ queryKey: ["order-match", orderId] });
+            await queryClient.invalidateQueries({ queryKey: ["order-success", orderId] });
+          }
           const order = await fetchOrderById(orderId);
           const hasDelivery = !!order?.delivery;
           setTimeout(() => {

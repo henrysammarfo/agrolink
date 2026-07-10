@@ -443,7 +443,12 @@ function FeedCardOverlay({
 
   useEffect(() => {
     if (panel !== "comments" || isDemoListing) return;
-    fetchComments(item.id).then(setComments);
+    fetchComments(item.id)
+      .then(setComments)
+      .catch(() => {
+        setComments([]);
+        toast.error("Could not load comments");
+      });
   }, [panel, item.id, isDemoListing]);
 
   const handleLike = async () => {
@@ -521,17 +526,9 @@ function FeedCardOverlay({
         listingTitle: item.title,
         actorName: profile?.display_name ?? "You",
       });
-      setComments((c) => [
-        {
-          id: `new-${Date.now()}`,
-          user_id: user.id,
-          author: profile?.display_name ?? "You",
-          content: text,
-          created_at: new Date().toISOString(),
-        },
-        ...c,
-      ]);
-      setCommentCount((n) => n + 1);
+      const refreshed = await fetchComments(item.id);
+      setComments(refreshed);
+      setCommentCount(refreshed.length);
       setCommentText("");
       trackEvent("feed_comment", { listing_id: item.id });
     } catch (err) {

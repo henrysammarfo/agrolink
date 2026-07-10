@@ -4,7 +4,8 @@ import { Loader2, MapPin, MessageCircle } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { fetchOrderById } from "@/lib/api/orders";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
 import { LiveTrackCard } from "@/components/track/LiveTrackCard";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { ACCRA_CENTER, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/app/buyer/orders/$orderId/match")({
 
 function DriverMatchPage() {
   const { orderId } = Route.useParams();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [pulse, setPulse] = useState(0);
   const [driversNearby, setDriversNearby] = useState(0);
 
@@ -49,14 +52,19 @@ function DriverMatchPage() {
       })
         .then((r) => r.json())
         .then((j: { ok?: boolean }) => {
-          if (j.ok) void refetch();
+          if (j.ok) {
+            if (user?.id) {
+              void queryClient.invalidateQueries({ queryKey: ["buyer-orders", user.id] });
+            }
+            void refetch();
+          }
         })
         .catch(() => undefined);
     };
     tryVerify();
     const interval = setInterval(tryVerify, 8000);
     return () => clearInterval(interval);
-  }, [paymentPending, order, orderId, refetch]);
+  }, [paymentPending, order, orderId, refetch, user?.id, queryClient]);
 
   useEffect(() => {
     if (!delivery || matched) return;

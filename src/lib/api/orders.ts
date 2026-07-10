@@ -4,19 +4,10 @@ import { apiFetch } from "@/lib/api/fetch-auth";
 import { fetchOpenDeliveries, fetchDriverActiveDeliveries, loadTransportJobs } from "@/lib/api/transport-jobs";
 
 export async function fetchBuyerOrders(buyerId: string): Promise<OrderRow[]> {
-  const { data, error } = await supabase
-    .from("orders")
-    .select(
-      `
-      *,
-      items:order_items(*, listing:listings(title, image_url)),
-      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone, slug, username)))
-    `,
-    )
-    .eq("buyer_id", buyerId)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as OrderRow[];
+  const res = await apiFetch("/api/buyer/orders");
+  const json = (await res.json()) as { orders?: OrderRow[]; error?: string };
+  if (!res.ok) throw new Error(json.error ?? "Failed to load orders");
+  return json.orders ?? [];
 }
 
 export async function fetchSellerOrders(sellerId: string): Promise<OrderRow[]> {
@@ -55,19 +46,11 @@ export async function fetchAdminOrders(): Promise<AdminOrderRow[]> {
 }
 
 export async function fetchOrderById(orderId: string): Promise<OrderRow | null> {
-  const { data, error } = await supabase
-    .from("orders")
-    .select(
-      `
-      *,
-      items:order_items(*, listing:listings(title, image_url)),
-      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone, slug, username)))
-    `,
-    )
-    .eq("id", orderId)
-    .maybeSingle();
-  if (error) throw error;
-  return data as OrderRow | null;
+  const res = await apiFetch(`/api/buyer/orders?orderId=${encodeURIComponent(orderId)}`);
+  const json = (await res.json()) as { order?: OrderRow; error?: string };
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(json.error ?? "Failed to load order");
+  return (json.order ?? null) as OrderRow | null;
 }
 
 export async function updateOrderStatus(orderId: string, status: string) {

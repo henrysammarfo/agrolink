@@ -1,10 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { AppShell } from "@/components/app/AppShell";
+import { useQuery } from "@tanstack/react-query";
 import { LiveTrackCard } from "@/components/track/LiveTrackCard";
 import { OrderTracker } from "@/components/order/OrderTracker";
-import { useAuth } from "@/lib/auth";
-import { useBuyerOrders } from "@/hooks/use-marketplace";
+import { fetchOrderById } from "@/lib/api/orders";
 import { buildTrackedOrder } from "@/lib/types/fulfillment";
 
 export const Route = createFileRoute("/app/buyer/orders/$orderId/track")({
@@ -14,9 +13,12 @@ export const Route = createFileRoute("/app/buyer/orders/$orderId/track")({
 
 function FullscreenTrack() {
   const { orderId } = Route.useParams();
-  const { user } = useAuth();
-  const { data: orders = [], isLoading } = useBuyerOrders(user?.id);
-  const order = orders.find((o) => o.id === orderId);
+  const { data: order, isLoading, isError } = useQuery({
+    queryKey: ["order-track", orderId],
+    queryFn: () => fetchOrderById(orderId),
+    enabled: !!orderId,
+    refetchInterval: 5000,
+  });
 
   return (
     <div className="relative min-h-[100dvh] bg-black">
@@ -32,7 +34,7 @@ function FullscreenTrack() {
         <div className="grid min-h-[100dvh] place-items-center">
           <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
-      ) : !order ? (
+      ) : isError || !order ? (
         <div className="grid min-h-[100dvh] place-items-center p-8 text-center text-white">
           <p className="font-sans text-lg">Order not found</p>
           <Link to="/app/buyer/orders" className="mt-4 text-primary underline">Back to orders</Link>
