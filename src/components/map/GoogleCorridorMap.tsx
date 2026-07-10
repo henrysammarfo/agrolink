@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, GHANA_BOUNDS, GHANA_CENTER, GHANA_MIN_ZOOM, GHANA_NE, GHANA_OVERVIEW_ZOOM, GHANA_SW, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, GHANA_BOUNDS, GHANA_CENTER, GHANA_MIN_ZOOM, GHANA_NE, GHANA_OVERVIEW_ZOOM, GHANA_SW, GREATER_ACCRA_BOUNDS, GREATER_ACCRA_NE, GREATER_ACCRA_SW, GREATER_ACCRA_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import {
   GOOGLE_MAP_DARK_STYLES,
   GOOGLE_MAP_LIGHT_STYLES,
@@ -26,6 +26,8 @@ type Props = {
   etaLabel?: string;
   priceLabel?: string;
   onLoadError?: () => void;
+  /** When true, restrict/fit to Greater Accra corridor */
+  corridorOnly?: boolean;
 };
 
 const COLORS: Record<NonNullable<Pin["kind"]>, string> = {
@@ -56,6 +58,7 @@ export function GoogleCorridorMap({
   etaLabel,
   priceLabel,
   onLoadError,
+  corridorOnly = false,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -76,6 +79,7 @@ export function GoogleCorridorMap({
       .then((google) => {
         if (cancelled || !ref.current) return;
         const initialCenter = center ?? ACCRA_CENTER;
+        const bounds = corridorOnly ? GREATER_ACCRA_BOUNDS : GHANA_BOUNDS;
         mapRef.current = new google.maps.Map(ref.current, {
           center: { lat: initialCenter[0], lng: initialCenter[1] },
           zoom: zoom ?? DEFAULT_MAP_ZOOM,
@@ -85,13 +89,13 @@ export function GoogleCorridorMap({
           gestureHandling: "greedy",
           styles: dark ? GOOGLE_MAP_DARK_STYLES : GOOGLE_MAP_LIGHT_STYLES,
           clickableIcons: false,
-          minZoom: GHANA_MIN_ZOOM,
+          minZoom: corridorOnly ? GREATER_ACCRA_ZOOM : GHANA_MIN_ZOOM,
           restriction: {
             latLngBounds: {
-              north: GHANA_BOUNDS.north,
-              south: GHANA_BOUNDS.south,
-              east: GHANA_BOUNDS.east,
-              west: GHANA_BOUNDS.west,
+              north: bounds.north,
+              south: bounds.south,
+              east: bounds.east,
+              west: bounds.west,
             },
             strictBounds: false,
           },
@@ -107,6 +111,19 @@ export function GoogleCorridorMap({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       mapRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const map = mapRef.current;
+      if (map && typeof google !== "undefined") {
+        google.maps.event.trigger(map, "resize");
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
@@ -241,40 +258,6 @@ export function GoogleCorridorMap({
       rafRef.current = requestAnimationFrame(tick);
     }
 
-    if (etaLabel && allRouteCoords.length > 0) {
-      const dest = allRouteCoords[allRouteCoords.length - 1];
-      layers.overlays.push(
-        new google.maps.Marker({
-          map,
-          position: { lat: dest[0], lng: dest[1] },
-          clickable: false,
-          icon: {
-            url: `data:image/svg+xml,${encodeURIComponent(
-              `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="32"><rect width="120" height="32" rx="10" fill="#ef4444"/><text x="60" y="21" text-anchor="middle" fill="#fff" font-family="Inter,sans-serif" font-size="12" font-weight="700">${etaLabel}</text></svg>`,
-            )}`,
-            anchor: new google.maps.Point(-8, 20),
-          },
-        }),
-      );
-    }
-
-    if (priceLabel && !driverPosition) {
-      const anchor = center && isValidMapCoord(center[0], center[1]) ? center : ACCRA_CENTER;
-      layers.overlays.push(
-        new google.maps.Marker({
-          map,
-          position: { lat: anchor[0] + 0.006, lng: anchor[1] + 0.01 },
-          clickable: false,
-          icon: {
-            url: `data:image/svg+xml,${encodeURIComponent(
-              `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="36"><rect width="100" height="36" rx="18" fill="#ef4444"/><text x="50" y="23" text-anchor="middle" fill="#fff" font-family="Inter,sans-serif" font-size="13" font-weight="700">${priceLabel}</text></svg>`,
-            )}`,
-            anchor: new google.maps.Point(0, 0),
-          },
-        }),
-      );
-    }
-
     const shouldFit = fitKey !== lastFitKey.current;
     if (shouldFit) lastFitKey.current = fitKey;
 
@@ -292,24 +275,26 @@ export function GoogleCorridorMap({
       map.fitBounds(bounds, { top: 120, right: 56, bottom: 280, left: 56 });
       const listener = google.maps.event.addListenerOnce(map, "idle", () => {
         const z = map.getZoom();
+        const minZ = corridorOnly ? GREATER_ACCRA_ZOOM : 10;
         if (z != null && z > STREET_ZOOM) map.setZoom(STREET_ZOOM);
-        if (z != null && z < 10) map.setZoom(10);
+        if (z != null && z < minZ) map.setZoom(minZ);
       });
       void listener;
     } else if (shouldFit && center && isValidMapCoord(center[0], center[1])) {
       map.setCenter({ lat: center[0], lng: center[1] });
-      map.setZoom(Math.max(zoom ?? STREET_ZOOM, 11));
+      map.setZoom(Math.max(zoom ?? STREET_ZOOM, corridorOnly ? GREATER_ACCRA_ZOOM : 11));
     } else if (shouldFit) {
+      const b = corridorOnly ? GREATER_ACCRA_BOUNDS : GHANA_BOUNDS;
       map.fitBounds(
         new google.maps.LatLngBounds(
-          { lat: GHANA_BOUNDS.south, lng: GHANA_BOUNDS.west },
-          { lat: GHANA_BOUNDS.north, lng: GHANA_BOUNDS.east },
+          { lat: b.south, lng: b.west },
+          { lat: b.north, lng: b.east },
         ),
         40,
       );
-      map.setZoom(GHANA_OVERVIEW_ZOOM);
+      map.setZoom(corridorOnly ? GREATER_ACCRA_ZOOM : GHANA_OVERVIEW_ZOOM);
     }
-  }, [pins, route, routeSegments, fitKey, animateDriver, driverLabel, onProgress, etaLabel, priceLabel, center, zoom]);
+  }, [pins, route, routeSegments, fitKey, animateDriver, driverLabel, onProgress, center, zoom, corridorOnly]);
 
   useEffect(() => {
     const layers = layersRef.current;
@@ -339,7 +324,12 @@ export function GoogleCorridorMap({
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ height, width: "100%" }}>
       <div ref={ref} className="absolute inset-0" />
-      {priceLabel && driverPosition && (
+      {etaLabel && (
+        <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl bg-black/75 px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm">
+          {etaLabel}
+        </div>
+      )}
+      {priceLabel && (
         <div className="pointer-events-none absolute right-3 top-3 z-[500] rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-lg">
           {priceLabel}
         </div>

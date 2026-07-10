@@ -41,7 +41,7 @@ export function TransportTripSheet({
       : "Go live to receive offers";
 
   return (
-    <div className="pointer-events-auto mx-auto max-w-lg overflow-hidden rounded-t-3xl border border-border/80 bg-background shadow-2xl">
+    <div className="pointer-events-auto mx-auto max-w-lg max-h-[min(48dvh,420px)] overflow-y-auto rounded-t-3xl border border-border/80 bg-background shadow-2xl">
       <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-border" />
 
       {jobsError && (

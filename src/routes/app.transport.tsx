@@ -127,7 +127,9 @@ function TransportOverview() {
     [routeCoords, routeMeta?.steps],
   );
 
-  const routeFitKey = featured?.id ? `${featured.id}-${featured.status}` : "idle";
+  const routeFitKey = featured?.id
+    ? `${featured.id}-${featured.status}-${routeCoords.length}`
+    : "idle";
 
   useEffect(() => {
     if (!featured || !isIndex) {
@@ -337,13 +339,14 @@ function TransportOverview() {
             fitKey={routeFitKey}
             center={driverCenter}
             zoom={online ? STREET_ZOOM : DEFAULT_MAP_ZOOM}
+            corridorOnly
             driverPosition={livePos ?? (driverProfile?.current_lat != null && driverProfile.current_lng != null ? { lat: driverProfile.current_lat, lng: driverProfile.current_lng } : null)}
             animateDriver={false}
             driverLabel="You"
             dark={false}
             height="100%"
-            etaLabel={etaMin != null ? `${Math.max(1, Math.round(etaMin))} min` : undefined}
-            priceLabel={payoutLabel != null ? `GHS ${Math.round(payoutLabel)}` : undefined}
+            etaLabel={etaMin != null && !active ? `${Math.max(1, Math.round(etaMin))} min` : undefined}
+            priceLabel={payoutLabel != null && !active ? `GHS ${Math.round(payoutLabel)}` : undefined}
           />
           </div>
 
@@ -361,11 +364,12 @@ function TransportOverview() {
               enabled={!!active}
               muted={navMuted}
               onToggleMute={() => setNavMuted((m) => !m)}
+              placement="above-sheet"
             />
           )}
 
           <div className="pointer-events-none absolute left-3 top-[max(env(safe-area-inset-top),10px)] z-20 flex flex-col gap-2">
-            {earnings && (
+            {earnings && !active && (
               <div className="pointer-events-auto grid w-[10.5rem] grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/65 p-2 text-white backdrop-blur-md">
                 <div className="text-center">
                   <div className="text-[9px] uppercase text-white/55">Today</div>
@@ -389,9 +393,9 @@ function TransportOverview() {
           <button
             type="button"
             onClick={toggleOnline}
-            className={`pointer-events-auto absolute right-3 top-[max(env(safe-area-inset-top),3.5rem)] z-40 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold shadow-xl transition active:scale-[0.98] ${
-              online ? "bg-emerald-500 text-white ring-2 ring-emerald-300" : "bg-foreground text-background"
-            }`}
+            className={`pointer-events-auto absolute right-3 z-40 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold shadow-xl transition active:scale-[0.98] ${
+              active ? "top-[max(env(safe-area-inset-top),10px)] px-3 py-2 text-xs" : "top-[max(env(safe-area-inset-top),3.5rem)]"
+            } ${online ? "bg-emerald-500 text-white ring-2 ring-emerald-300" : "bg-foreground text-background"}`}
           >
             <Radio className={`h-4 w-4 ${online ? "animate-pulse" : ""}`} />
             {online ? "You're live" : "Go live"}
@@ -414,6 +418,11 @@ function TransportOverview() {
                 jobsError={jobsError}
                 onAdvance={() => advance(featured)}
                 onMessage={() => messageBuyer(featured)}
+                onCall={() => {
+                  const phone = (featured.order as { buyer_phone?: string } | undefined)?.buyer_phone;
+                  if (phone) window.location.href = `tel:${phone}`;
+                  else toast.error("Buyer phone not available — use chat");
+                }}
               />
             ) : (
               <div className="pointer-events-auto mx-auto max-w-lg rounded-t-3xl border border-border/80 bg-background p-5 shadow-2xl">
