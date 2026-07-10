@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { BadgeCheck, Grid3x3, Bookmark, Heart, Settings, Share2, MapPin, LogOut, Play, Loader2, Eye } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { WorkspaceSwitcher } from "@/components/app/WorkspaceSwitcher";
 import { RecommendedSellers } from "@/components/profile/RecommendedSellers";
 import { useAuth } from "@/lib/auth";
-import { useActiveWorkspace } from "@/hooks/use-active-workspace";
 import { useShellRole } from "@/hooks/use-shell-role";
 import {
   useProfileStats, useUserListings, useUserBookmarks, useUserLikedListings, usePublicSellers,
@@ -32,6 +32,22 @@ function Profile() {
   const { data: sellers = [] } = usePublicSellers(8);
 
   const gridItems = tab === "posts" ? posts : tab === "saved" ? saved : liked;
+
+  const shareProfile = async () => {
+    const url = publicSlug
+      ? `${window.location.origin}/app/users/${publicSlug}`
+      : `${window.location.origin}/app/profile`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${name} on AgroLink`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Profile link copied");
+      }
+    } catch {
+      /* user cancelled share */
+    }
+  };
 
   return (
     <AppShell role={role} compact>
@@ -88,7 +104,12 @@ function Profile() {
           >
             <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Views
           </Link>
-          <button className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border sm:h-10 sm:w-10" aria-label="Share profile">
+          <button
+            type="button"
+            onClick={() => void shareProfile()}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border sm:h-10 sm:w-10"
+            aria-label="Share profile"
+          >
             <Share2 className="h-4 w-4" />
           </button>
         </div>

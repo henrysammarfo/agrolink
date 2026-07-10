@@ -13,6 +13,9 @@ type Profile = {
   phone: string | null;
   region: string | null;
   slug: string | null;
+  username?: string | null;
+  public_bookmarks?: boolean;
+  profile_view_notifications?: boolean;
 };
 
 type Ctx = {
@@ -149,25 +152,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         addRole: async (r) => {
           const uid = session?.user?.id ?? (demoMode || shouldUseDemoAuth() ? DEMO_UID : null);
           if (!uid) throw new Error("Sign in first");
-          saveLocalRole(uid, r);
-          setRoles((curr) => uniqueRoles([...curr, r]));
-          if (session?.user) {
-            try {
-              const { error } = await supabase
-                .from("user_roles")
-                .insert({ user_id: session.user.id, role: r });
-              if (error && !error.message.toLowerCase().includes("duplicate")) throw error;
-            } catch (error) {
-              console.warn(
-                "[Auth] Remote role save failed; kept local role for this device.",
-                error,
-              );
-            }
-            await loadUserData(session.user.id);
-          } else {
+          if (demoMode || uid === DEMO_UID) {
+            saveLocalRole(uid, r);
+            setRoles((curr) => uniqueRoles([...curr, r]));
             setDemoMode(true);
             setProfile(DEMO_PROFILE);
+            return;
           }
+          const { error } = await supabase.from("user_roles").insert({ user_id: session!.user.id, role: r });
+          if (error && !error.message.toLowerCase().includes("duplicate")) {
+            throw new Error(error.message);
+          }
+          saveLocalRole(uid, r);
+          await loadUserData(session!.user.id, session!.user);
         },
         signOut: async () => {
           setDemoMode(false);

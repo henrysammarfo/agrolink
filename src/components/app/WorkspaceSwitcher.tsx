@@ -1,21 +1,16 @@
 import { ShoppingBag, Truck, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
-import { useNavigate } from "@tanstack/react-router";
 import { useAuth, type AppRole } from "@/lib/auth";
-import { useDriverProfile } from "@/hooks/use-marketplace";
-import { isDriverVerified } from "@/lib/api/driver-onboarding";
-import { saveActiveWorkspace, roleHome, normalizeWorkspace } from "@/lib/active-workspace";
-import { useActiveWorkspace } from "@/hooks/use-active-workspace";
+import { normalizeWorkspace } from "@/lib/active-workspace";
+import { useWorkspaceSwitch } from "@/hooks/use-workspace-switch";
 
 const OPTIONS: {
   role: AppRole;
   label: string;
   desc: string;
   icon: typeof ShoppingBag;
-  needsVerification?: boolean;
 }[] = [
   { role: "buyer", label: "Market", desc: "Shop, sell & orders", icon: ShoppingBag },
-  { role: "transport", label: "Drive", desc: "Map & deliveries", icon: Truck, needsVerification: true },
+  { role: "transport", label: "Drive", desc: "Map & deliveries", icon: Truck },
   { role: "admin", label: "Admin", desc: "Operations panel", icon: ShieldCheck },
 ];
 
@@ -24,10 +19,8 @@ type Props = {
 };
 
 export function WorkspaceSwitcher({ compact = false }: Props) {
-  const navigate = useNavigate();
-  const { user, roles, hasRole } = useAuth();
-  const { data: driverProfile } = useDriverProfile(user?.id);
-  const { active, setWorkspace } = useActiveWorkspace(user?.id, roles);
+  const { roles, hasRole } = useAuth();
+  const { activeNorm, switchTo } = useWorkspaceSwitch();
 
   const visible = OPTIONS.filter((o) => {
     if (o.role === "buyer") return hasRole("buyer") || hasRole("farmer");
@@ -35,29 +28,6 @@ export function WorkspaceSwitcher({ compact = false }: Props) {
   });
 
   if (visible.length <= 1) return null;
-
-  const switchTo = (role: AppRole) => {
-    if (role === "buyer" && !hasRole("buyer") && !hasRole("farmer")) {
-      toast.error("Enable this workspace in Settings first");
-      navigate({ to: "/app/settings" });
-      return;
-    }
-    if (role !== "buyer" && !hasRole(role)) {
-      toast.error("Enable this workspace in Settings first");
-      navigate({ to: "/app/settings" });
-      return;
-    }
-    if (user?.id) setWorkspace(role);
-    if (role === "transport") {
-      navigate({
-        to: isDriverVerified(driverProfile ?? null) ? "/app/transport" : "/app/transport/register",
-      });
-      return;
-    }
-    navigate({ to: roleHome(role) as "/app/buyer" });
-  };
-
-  const activeNorm = normalizeWorkspace(active);
 
   return (
     <div className={compact ? "space-y-2" : "space-y-3"}>

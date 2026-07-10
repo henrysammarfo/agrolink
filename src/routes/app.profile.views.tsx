@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Eye } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
+import { useShellRole } from "@/hooks/use-shell-role";
 import { fetchProfileViewers } from "@/lib/api/profile-views";
 import { profileHandle } from "@/lib/profile-links";
 
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/app/profile/views")({
 
 function ProfileViews() {
   const { user } = useAuth();
+  const shellRole = useShellRole();
   const { data: viewers = [], isLoading } = useQuery({
     queryKey: ["profile-viewers", user?.id],
     queryFn: () => fetchProfileViewers(user!.id),
@@ -20,7 +22,7 @@ function ProfileViews() {
   });
 
   return (
-    <AppShell role="buyer">
+    <AppShell role={shellRole}>
       <PageHeader eyebrow="Profile" title="Who viewed" italic="you" />
       <Link to="/app/profile" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
         <ArrowLeft className="h-4 w-4" /> Back to profile
