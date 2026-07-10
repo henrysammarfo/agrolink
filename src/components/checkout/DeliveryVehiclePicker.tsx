@@ -9,6 +9,7 @@ export type VehicleOption = {
   price: number;
   status: "available" | "unavailable" | "busy";
   driversNearby: number;
+  etaMin?: number;
 };
 
 type Props = {
@@ -65,7 +66,7 @@ export function DeliveryVehiclePicker({
     );
   }
 
-  const baseEta = etaMin ?? 10;
+  const baseEta = etaMin ?? options.find((o) => o.type === value)?.etaMin ?? 10;
 
   if (horizontal) {
     return (
@@ -75,7 +76,7 @@ export function DeliveryVehiclePicker({
           {options.map((opt) => {
             const selected = value === opt.type;
             const disabled = opt.status !== "available";
-            const mins = Math.max(3, Math.round(baseEta * ETA_FACTOR[opt.type]));
+            const mins = Math.max(3, Math.round(opt.etaMin ?? baseEta * ETA_FACTOR[opt.type]));
             return (
               <button
                 key={opt.type}

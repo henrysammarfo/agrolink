@@ -1,7 +1,54 @@
 import { supabase } from "@/integrations/supabase/client";
 import { watchDriverPosition } from "@/lib/native-geolocation";
-import { fetchDrivingRoute as fetchGoogleRoute, type DrivingRoute, type RouteStep } from "@/lib/api/maps";
+import {
+  fetchDrivingRoute as fetchGoogleRoute,
+  snapGpsToRoads,
+  type DrivingRoute,
+  type RouteStep,
+} from "@/lib/api/maps";
 import type { DriverProfile } from "@/lib/types/marketplace";
+
+const SNAP_MIN_INTERVAL_MS = 8_000;
+const SNAP_MIN_MOVE_M = 25;
+
+function haversineM(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371000;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+async function publishDriverLocation(
+  userId: string,
+  lat: number,
+  lng: number,
+  onUpdate: (lat: number, lng: number) => void,
+  snapState: { lastSnapAt: number; lastSnap: { lat: number; lng: number } | null },
+) {
+  let publishLat = lat;
+  let publishLng = lng;
+  const now = Date.now();
+  const moved =
+    !snapState.lastSnap || haversineM(snapState.lastSnap, { lat, lng }) >= SNAP_MIN_MOVE_M;
+
+  if (moved && now - snapState.lastSnapAt >= SNAP_MIN_INTERVAL_MS) {
+    const snapped = await snapGpsToRoads(lat, lng);
+    if (snapped) {
+      publishLat = snapped.lat;
+      publishLng = snapped.lng;
+      snapState.lastSnapAt = now;
+      snapState.lastSnap = snapped;
+    }
+  }
+
+  onUpdate(publishLat, publishLng);
+  await updateDriverLocation(userId, publishLat, publishLng);
+}
 
 export async function getOrCreateDriverProfile(userId: string): Promise<DriverProfile> {
   const { data: existing } = await supabase
@@ -113,7 +160,8 @@ export async function goOnlineWithLocation(userId: string): Promise<boolean> {
   await requestLocationPermission();
   const pos = await getCurrentPosition();
   if (!pos) return false;
-  await updateDriverLocation(userId, pos.lat, pos.lng);
+  const snapped = (await snapGpsToRoads(pos.lat, pos.lng)) ?? pos;
+  await updateDriverLocation(userId, snapped.lat, snapped.lng);
   await updateDriverAvailability(userId, true);
   return true;
 }
@@ -122,10 +170,11 @@ export function startDriverLocationWatch(
   userId: string,
   onUpdate: (lat: number, lng: number) => void,
 ) {
+  const snapState = { lastSnapAt: 0, lastSnap: null as { lat: number; lng: number } | null };
+
   return watchDriverPosition(
     ({ lat, lng }) => {
-      onUpdate(lat, lng);
-      updateDriverLocation(userId, lat, lng).catch(console.error);
+      publishDriverLocation(userId, lat, lng, onUpdate, snapState).catch(console.error);
     },
     (msg) => console.warn("[Driver] Geolocation error:", msg),
   );

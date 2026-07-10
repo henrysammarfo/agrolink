@@ -6,6 +6,8 @@ import {
   placeAutocomplete,
   placeDetails,
   fetchGoogleDirections,
+  fetchDistanceMatrix,
+  snapToRoads,
   getGoogleMapsApiKey,
 } from "@/server/google-maps";
 
@@ -22,7 +24,14 @@ export const Route = createFileRoute("/api/maps")({
           }
 
           const body = (await request.json()) as {
-            action: "geocode" | "reverse" | "autocomplete" | "place" | "directions";
+            action:
+              | "geocode"
+              | "reverse"
+              | "autocomplete"
+              | "place"
+              | "directions"
+              | "matrix"
+              | "snap";
             address?: string;
             lat?: number;
             lng?: number;
@@ -30,7 +39,11 @@ export const Route = createFileRoute("/api/maps")({
             placeId?: string;
             origin?: { lat: number; lng: number };
             destination?: { lat: number; lng: number };
+            origins?: { lat: number; lng: number }[];
+            destinations?: { lat: number; lng: number }[];
+            mode?: "driving" | "bicycling";
             waypoints?: { lat: number; lng: number }[];
+            path?: { lat: number; lng: number }[];
           };
 
           switch (body.action) {
@@ -73,6 +86,27 @@ export const Route = createFileRoute("/api/maps")({
               );
               if (!route) return Response.json({ error: "No route found" }, { status: 404 });
               return Response.json(route);
+            }
+            case "matrix": {
+              const origins = body.origins ?? (body.origin ? [body.origin] : []);
+              const destinations =
+                body.destinations ?? (body.destination ? [body.destination] : []);
+              if (!origins.length || !destinations.length) {
+                return Response.json(
+                  { error: "origins and destinations required" },
+                  { status: 400 },
+                );
+              }
+              const rows = await fetchDistanceMatrix(origins, destinations, body.mode ?? "driving");
+              return Response.json({ rows });
+            }
+            case "snap": {
+              const path = body.path ?? [];
+              if (!path.length) {
+                return Response.json({ error: "path required" }, { status: 400 });
+              }
+              const points = await snapToRoads(path);
+              return Response.json({ points });
             }
             default:
               return Response.json({ error: "Unknown action" }, { status: 400 });
