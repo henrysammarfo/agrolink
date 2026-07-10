@@ -27,7 +27,9 @@ import {
   CHECKOUT_MAIN_STEPS,
   DELIVERY_SETUP_SUBSTEPS,
   getDeliverySetupSubstep,
+  isDeliveryReadyForPayment,
 } from "@/lib/order-lifecycle";
+import type { VehicleOption } from "@/components/checkout/DeliveryVehiclePicker";
 
 const DEFAULT_DELIVERY: MapLocation = GHANA_LOCATIONS[0];
 
@@ -69,12 +71,21 @@ function Cart() {
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [routeEtaMin, setRouteEtaMin] = useState<number | null>(null);
   const [driversNearby, setDriversNearby] = useState(0);
+  const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
 
   const subtotal = items.reduce(
     (s, i) => s + Number(i.listing?.price_per_unit ?? 0) * Number(i.quantity),
     0,
   );
   const needsDelivery = fulfillmentMode === "platform_delivery";
+  const driversForVehicle =
+    vehicleOptions.find((o) => o.type === selectedVehicle)?.driversNearby ?? 0;
+  const hasDriverForVehicle = !needsDelivery || driversForVehicle > 0;
+  const deliveryReady = isDeliveryReadyForPayment({
+    fulfillmentMode,
+    hasQuote: !!deliveryQuote,
+    driversForVehicle,
+  });
   const delivery = needsDelivery ? (deliveryQuote?.total ?? 0) : 0;
   const platformFee = Math.round(subtotal * 0.06 * 100) / 100;
   const total = subtotal + delivery + platformFee;
@@ -82,10 +93,10 @@ function Cart() {
   const canPay =
     items.length > 0 &&
     !quoteLoading &&
-    (needsDelivery ? !!deliveryQuote : true) &&
+    deliveryReady &&
     (!needsOtp || otpVerified);
   const canContinueStep2 =
-    items.length > 0 && (needsDelivery ? !!deliveryQuote && !quoteLoading : true);
+    items.length > 0 && (needsDelivery ? deliveryReady && !quoteLoading : true);
 
   const pickupStops = useMemo(() => {
     const stops = items
@@ -268,7 +279,11 @@ function Cart() {
       return;
     }
     if (!canPay) {
-      toast.error("Complete delivery and verification first");
+      if (needsDelivery && !hasDriverForVehicle) {
+        toast.error("No couriers available for your vehicle — wait for a driver or change vehicle.");
+      } else {
+        toast.error("Complete delivery and verification first");
+      }
       return;
     }
     setPaying(true);
@@ -315,6 +330,9 @@ function Cart() {
         const dest = needsDelivery
           ? "/app/buyer/orders/$orderId/match"
           : "/app/buyer/orders/$orderId/success";
+        if (user.id) {
+          void queryClient.refetchQueries({ queryKey: ["buyer-orders", user.id] });
+        }
         await navigate({ to: dest, params: { orderId: data.orderId }, replace: true });
         return;
       }
@@ -332,7 +350,7 @@ function Cart() {
     hasAddress: isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng),
     hasVehicle: !!selectedVehicle,
     hasQuote: !!deliveryQuote,
-    driversNearby,
+    driversForVehicle,
   });
 
   if (isLoading) {
@@ -482,15 +500,19 @@ function Cart() {
                       weightKg={items.reduce((s, i) => s + Number(i.quantity), 0)}
                       value={selectedVehicle}
                       onChange={setSelectedVehicle}
+                      onAvailabilityChange={(opts) => {
+                        setVehicleOptions(opts);
+                        setDriversNearby(opts.reduce((s, o) => s + o.driversNearby, 0));
+                      }}
                       etaMin={routeEtaMin ?? undefined}
                     />
-                    {driversNearby > 0 ? (
+                    {hasDriverForVehicle ? (
                       <p className="mt-2 text-xs text-emerald-600">
-                        Couriers available in this area — exact locations stay private until you pay.
+                        {driversForVehicle} {selectedVehicle} courier{driversForVehicle === 1 ? "" : "s"} nearby — you can continue to payment.
                       </p>
                     ) : (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        No drivers online nearby — you can still checkout; we&apos;ll search when you pay.
+                      <p className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
+                        No {selectedVehicle} couriers online nearby right now. Change vehicle or wait — payment unlocks once a driver is available.
                       </p>
                     )}
                   </div>
@@ -527,10 +549,16 @@ function Cart() {
                   <button
                     type="button"
                     disabled={!canContinueStep2}
-                    onClick={() => setStep(3)}
+                    onClick={() => {
+                      if (needsDelivery && !hasDriverForVehicle) {
+                        toast.error("Wait for a nearby courier before continuing to payment.");
+                        return;
+                      }
+                      setStep(3);
+                    }}
                     className="inline-flex flex-[1.4] items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                   >
-                    {quoteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
+                    {quoteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : hasDriverForVehicle ? "Continue to payment" : "Waiting for driver…"}
                   </button>
                 </div>
               </div>

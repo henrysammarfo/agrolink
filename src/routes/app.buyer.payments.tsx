@@ -19,8 +19,8 @@ const PAYMENT_TONE: Record<string, string> = {
 };
 
 function BuyerPayments() {
-  const { user } = useAuth();
-  const { data: orders = [], isLoading } = useBuyerOrders(user?.id);
+  const { user, loading: authLoading } = useAuth();
+  const { data: orders = [], isLoading, isError, error, refetch } = useBuyerOrders(user?.id);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | "paid" | "pending" | "failed" | "refunded">("all");
 
@@ -96,9 +96,22 @@ function BuyerPayments() {
         </div>
       </div>
 
-      {isLoading ? (
+      {authLoading || isLoading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : isError ? (
+        <div className="rounded-3xl border border-rose-500/30 bg-rose-500/5 p-8 text-center">
+          <p className="text-sm text-rose-700 dark:text-rose-300">
+            {error instanceof Error ? error.message : "Could not load payments"}
+          </p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="mt-4 rounded-full bg-foreground px-5 py-2 text-sm text-background"
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <div className="overflow-hidden rounded-3xl border border-border bg-card">

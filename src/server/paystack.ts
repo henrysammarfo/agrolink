@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { getSiteOrigin } from "@/lib/auth-redirect";
+import { buyerVehicleToRequired } from "@/lib/vehicle-types";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 
@@ -337,18 +338,7 @@ export async function processCheckout(params: {
   if (needsDelivery) {
     const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
     const { radiusForOfferRound } = await import("@/lib/vehicle-types");
-    const vehicleType =
-      params.vehicleType === "bicycle"
-        ? "bicycle"
-        : params.vehicleType === "car"
-          ? "pickup"
-          : weightKg > 80
-            ? "truck"
-            : weightKg > 40
-              ? "pickup"
-              : weightKg > 15
-                ? "motorcycle"
-                : "bicycle";
+    const vehicleType = buyerVehicleToRequired(params.vehicleType);
     await supabaseAdmin.from("deliveries").insert({
       order_id: order.id,
       pickup_lat: firstListing.lat,
@@ -429,11 +419,21 @@ export async function processCheckout(params: {
 export async function confirmOrderPayment(reference: string): Promise<{ ok: boolean; message: string; orderId?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const { data: payment } = await supabaseAdmin
+  const { data: paymentByKey } = await supabaseAdmin
     .from("payments")
     .select("*, order:orders(*)")
     .eq("idempotency_key", reference)
     .maybeSingle();
+
+  let payment = paymentByKey;
+  if (!payment) {
+    const { data: paymentByRef } = await supabaseAdmin
+      .from("payments")
+      .select("*, order:orders(*)")
+      .eq("provider_reference", reference)
+      .maybeSingle();
+    payment = paymentByRef;
+  }
 
   if (!payment) return { ok: false, message: "Payment not found" };
   if (payment.status === "paid") {
@@ -472,6 +472,10 @@ export async function confirmOrderPayment(reference: string): Promise<{ ok: bool
   await maybeNotifyDriversForPaidOrder(payment.order_id);
 
   return { ok: true, message: "Payment processed", orderId: payment.order_id };
+}
+
+export async function notifyDriversForPaidOrder(orderId: string) {
+  return maybeNotifyDriversForPaidOrder(orderId);
 }
 
 async function maybeNotifyDriversForPaidOrder(orderId: string) {

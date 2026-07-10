@@ -18,8 +18,8 @@ export const Route = createFileRoute("/app/buyer/orders")({
 });
 
 function Orders() {
-  const { user } = useAuth();
-  const { data: orders = [], isLoading } = useBuyerOrders(user?.id);
+  const { user, loading: authLoading } = useAuth();
+  const { data: orders = [], isLoading, isError, error, refetch } = useBuyerOrders(user?.id);
   const reorder = useReorderCart();
   const [tab, setTab] = useState<"active" | "history">("active");
   const [q, setQ] = useState("");
@@ -84,8 +84,21 @@ function Orders() {
         )}
       </div>
 
-      {isLoading ? (
+      {authLoading || isLoading ? (
         <FeedSkeleton />
+      ) : isError ? (
+        <div className="rounded-3xl border border-rose-500/30 bg-rose-500/5 p-8 text-center">
+          <p className="text-sm text-rose-700 dark:text-rose-300">
+            {error instanceof Error ? error.message : "Could not load orders"}
+          </p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="mt-4 rounded-full bg-foreground px-5 py-2 text-sm text-background"
+          >
+            Retry
+          </button>
+        </div>
       ) : tab === "active" ? (
         <div className="space-y-6">
           {activeOrders.map((o) => (
@@ -104,7 +117,7 @@ function Orders() {
           ))}
           {activeOrders.length === 0 && (
             <div className="rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-              No active orders — head to the feed to grab something fresh.
+              No active orders — new checkouts appear here under the Active tab.
             </div>
           )}
         </div>

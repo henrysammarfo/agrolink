@@ -48,6 +48,12 @@ function DriverMatchPage() {
   }, []);
 
   useEffect(() => {
+    if (user?.id) {
+      void queryClient.refetchQueries({ queryKey: ["buyer-orders", user.id] });
+    }
+  }, [user?.id, orderId, queryClient]);
+
+  useEffect(() => {
     if (matched) void refetch();
   }, [matched, refetch]);
 
