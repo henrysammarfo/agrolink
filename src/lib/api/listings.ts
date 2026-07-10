@@ -173,6 +173,45 @@ export async function createListing(input: CreateListingInput, sellerId: string)
   return data;
 }
 
+export type UpdateListingInput = Partial<CreateListingInput> & {
+  status?: ListingStatus;
+};
+
+export async function updateListing(listingId: string, sellerId: string, input: UpdateListingInput) {
+  const { data, error } = await supabase
+    .from("listings")
+    .update({
+      ...input,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", listingId)
+    .eq("seller_id", sellerId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteListing(listingId: string, sellerId: string) {
+  const { error } = await supabase
+    .from("listings")
+    .delete()
+    .eq("id", listingId)
+    .eq("seller_id", sellerId);
+  if (error) throw error;
+}
+
+export async function fetchListingForEdit(listingId: string, sellerId: string) {
+  const { data, error } = await supabase
+    .from("listings")
+    .select("*")
+    .eq("id", listingId)
+    .eq("seller_id", sellerId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as FeedListing | null;
+}
+
 export async function activateListing(listingId: string) {
   const { error } = await supabase
     .from("listings")
@@ -229,10 +268,10 @@ export async function uploadListingMedia(
 }
 
 export async function incrementViewCount(listingId: string) {
+  if (listingId.startsWith("seed-listing-")) return;
   await supabase
     .rpc("increment_listing_views" as never, { listing_id: listingId } as never)
     .catch(() => {
-      // fallback if RPC not deployed
-      supabase.from("listings").update({ view_count: 1 }).eq("id", listingId);
+      supabase.rpc("increment_listing_views" as never, { listing_id: listingId } as never);
     });
 }

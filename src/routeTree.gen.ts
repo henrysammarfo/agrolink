@@ -76,9 +76,11 @@ import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAdminPaymentsRouteImport } from './routes/api/admin/payments'
 import { Route as ApiAdminOrdersRouteImport } from './routes/api/admin/orders'
+import { Route as ApiAdminListingsRouteImport } from './routes/api/admin/listings'
 import { Route as ApiAdminDriversRouteImport } from './routes/api/admin/drivers'
 import { Route as AppUsersSlugFollowersRouteImport } from './routes/app.users.$slug.followers'
 import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.$userId'
+import { Route as AppFarmerListingsListingIdEditRouteImport } from './routes/app.farmer.listings.$listingId.edit'
 import { Route as AppBuyerOrdersOrderIdTrackRouteImport } from './routes/app.buyer.orders.$orderId.track'
 import { Route as AppBuyerOrdersOrderIdSuccessRouteImport } from './routes/app.buyer.orders.$orderId.success'
 import { Route as AppBuyerOrdersOrderIdMatchRouteImport } from './routes/app.buyer.orders.$orderId.match'
@@ -420,6 +422,11 @@ const ApiAdminOrdersRoute = ApiAdminOrdersRouteImport.update({
   path: '/api/admin/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminListingsRoute = ApiAdminListingsRouteImport.update({
+  id: '/api/admin/listings',
+  path: '/api/admin/listings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminDriversRoute = ApiAdminDriversRouteImport.update({
   id: '/api/admin/drivers',
   path: '/api/admin/drivers',
@@ -435,6 +442,12 @@ const AppInboxChatUserIdRoute = AppInboxChatUserIdRouteImport.update({
   path: '/chat/$userId',
   getParentRoute: () => AppInboxRoute,
 } as any)
+const AppFarmerListingsListingIdEditRoute =
+  AppFarmerListingsListingIdEditRouteImport.update({
+    id: '/$listingId/edit',
+    path: '/$listingId/edit',
+    getParentRoute: () => AppFarmerListingsRoute,
+  } as any)
 const AppBuyerOrdersOrderIdTrackRoute =
   AppBuyerOrdersOrderIdTrackRouteImport.update({
     id: '/$orderId/track',
@@ -479,6 +492,7 @@ export interface FileRoutesByFullPath {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/listings': typeof ApiAdminListingsRoute
   '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -513,7 +527,7 @@ export interface FileRoutesByFullPath {
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
   '/app/buyer/payments': typeof AppBuyerPaymentsRoute
-  '/app/farmer/listings': typeof AppFarmerListingsRoute
+  '/app/farmer/listings': typeof AppFarmerListingsRouteWithChildren
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/profile/followers': typeof AppProfileFollowersRoute
@@ -528,6 +542,7 @@ export interface FileRoutesByFullPath {
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
   '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
+  '/app/farmer/listings/$listingId/edit': typeof AppFarmerListingsListingIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -553,6 +568,7 @@ export interface FileRoutesByTo {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/listings': typeof ApiAdminListingsRoute
   '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -587,7 +603,7 @@ export interface FileRoutesByTo {
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
   '/app/buyer/payments': typeof AppBuyerPaymentsRoute
-  '/app/farmer/listings': typeof AppFarmerListingsRoute
+  '/app/farmer/listings': typeof AppFarmerListingsRouteWithChildren
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/profile/followers': typeof AppProfileFollowersRoute
@@ -602,6 +618,7 @@ export interface FileRoutesByTo {
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
   '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
+  '/app/farmer/listings/$listingId/edit': typeof AppFarmerListingsListingIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -629,6 +646,7 @@ export interface FileRoutesById {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/listings': typeof ApiAdminListingsRoute
   '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -663,7 +681,7 @@ export interface FileRoutesById {
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
   '/app/buyer/payments': typeof AppBuyerPaymentsRoute
-  '/app/farmer/listings': typeof AppFarmerListingsRoute
+  '/app/farmer/listings': typeof AppFarmerListingsRouteWithChildren
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
   '/app/profile/followers': typeof AppProfileFollowersRoute
@@ -678,6 +696,7 @@ export interface FileRoutesById {
   '/app/buyer/orders/$orderId/match': typeof AppBuyerOrdersOrderIdMatchRoute
   '/app/buyer/orders/$orderId/success': typeof AppBuyerOrdersOrderIdSuccessRoute
   '/app/buyer/orders/$orderId/track': typeof AppBuyerOrdersOrderIdTrackRoute
+  '/app/farmer/listings/$listingId/edit': typeof AppFarmerListingsListingIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -706,6 +725,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/admin/drivers'
+    | '/api/admin/listings'
     | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
@@ -755,6 +775,7 @@ export interface FileRouteTypes {
     | '/app/buyer/orders/$orderId/match'
     | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
+    | '/app/farmer/listings/$listingId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -780,6 +801,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app'
     | '/api/admin/drivers'
+    | '/api/admin/listings'
     | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
@@ -829,6 +851,7 @@ export interface FileRouteTypes {
     | '/app/buyer/orders/$orderId/match'
     | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
+    | '/app/farmer/listings/$listingId/edit'
   id:
     | '__root__'
     | '/'
@@ -855,6 +878,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/admin/drivers'
+    | '/api/admin/listings'
     | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
@@ -904,6 +928,7 @@ export interface FileRouteTypes {
     | '/app/buyer/orders/$orderId/match'
     | '/app/buyer/orders/$orderId/success'
     | '/app/buyer/orders/$orderId/track'
+    | '/app/farmer/listings/$listingId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -921,6 +946,7 @@ export interface RootRouteChildren {
   ApiMapsRoute: typeof ApiMapsRoute
   ApiModerateRoute: typeof ApiModerateRoute
   ApiAdminDriversRoute: typeof ApiAdminDriversRoute
+  ApiAdminListingsRoute: typeof ApiAdminListingsRoute
   ApiAdminOrdersRoute: typeof ApiAdminOrdersRoute
   ApiAdminPaymentsRoute: typeof ApiAdminPaymentsRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
@@ -1418,6 +1444,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/listings': {
+      id: '/api/admin/listings'
+      path: '/api/admin/listings'
+      fullPath: '/api/admin/listings'
+      preLoaderRoute: typeof ApiAdminListingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/drivers': {
       id: '/api/admin/drivers'
       path: '/api/admin/drivers'
@@ -1438,6 +1471,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/inbox/chat/$userId'
       preLoaderRoute: typeof AppInboxChatUserIdRouteImport
       parentRoute: typeof AppInboxRoute
+    }
+    '/app/farmer/listings/$listingId/edit': {
+      id: '/app/farmer/listings/$listingId/edit'
+      path: '/$listingId/edit'
+      fullPath: '/app/farmer/listings/$listingId/edit'
+      preLoaderRoute: typeof AppFarmerListingsListingIdEditRouteImport
+      parentRoute: typeof AppFarmerListingsRoute
     }
     '/app/buyer/orders/$orderId/track': {
       id: '/app/buyer/orders/$orderId/track'
@@ -1519,14 +1559,25 @@ const AppBuyerRouteWithChildren = AppBuyerRoute._addFileChildren(
   AppBuyerRouteChildren,
 )
 
+interface AppFarmerListingsRouteChildren {
+  AppFarmerListingsListingIdEditRoute: typeof AppFarmerListingsListingIdEditRoute
+}
+
+const AppFarmerListingsRouteChildren: AppFarmerListingsRouteChildren = {
+  AppFarmerListingsListingIdEditRoute: AppFarmerListingsListingIdEditRoute,
+}
+
+const AppFarmerListingsRouteWithChildren =
+  AppFarmerListingsRoute._addFileChildren(AppFarmerListingsRouteChildren)
+
 interface AppFarmerRouteChildren {
-  AppFarmerListingsRoute: typeof AppFarmerListingsRoute
+  AppFarmerListingsRoute: typeof AppFarmerListingsRouteWithChildren
   AppFarmerOrdersRoute: typeof AppFarmerOrdersRoute
   AppFarmerPayoutsRoute: typeof AppFarmerPayoutsRoute
 }
 
 const AppFarmerRouteChildren: AppFarmerRouteChildren = {
-  AppFarmerListingsRoute: AppFarmerListingsRoute,
+  AppFarmerListingsRoute: AppFarmerListingsRouteWithChildren,
   AppFarmerOrdersRoute: AppFarmerOrdersRoute,
   AppFarmerPayoutsRoute: AppFarmerPayoutsRoute,
 }
@@ -1655,6 +1706,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMapsRoute: ApiMapsRoute,
   ApiModerateRoute: ApiModerateRoute,
   ApiAdminDriversRoute: ApiAdminDriversRoute,
+  ApiAdminListingsRoute: ApiAdminListingsRoute,
   ApiAdminOrdersRoute: ApiAdminOrdersRoute,
   ApiAdminPaymentsRoute: ApiAdminPaymentsRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,

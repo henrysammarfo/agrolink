@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, Trash2, Eye, Heart, MessageCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Plus, Trash2, Pencil, Eye, Heart, MessageCircle, Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { FarmerGate } from "@/components/app/RoleGate";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useAuth } from "@/lib/auth";
 import { useSellerListings } from "@/hooks/use-marketplace";
-import { supabase } from "@/integrations/supabase/client";
+import { deleteListing } from "@/lib/api/listings";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/farmer/listings")({
@@ -15,6 +17,7 @@ export const Route = createFileRoute("/app/farmer/listings")({
 function Listings() {
   const { user } = useAuth();
   const { data: items = [], isLoading, refetch } = useSellerListings(user?.id);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const totals = {
     views: items.reduce((s, l) => s + (l.view_count ?? 0), 0),
@@ -22,14 +25,17 @@ function Listings() {
     comments: items.reduce((s, l) => s + (l.comment_count ?? 0), 0),
   };
 
-  const remove = async (id: string) => {
-    const { error } = await supabase.from("listings").update({ status: "inactive" }).eq("id", id);
-    if (error) {
-      toast.error("Could not remove listing");
-      return;
+  const confirmDelete = async () => {
+    if (!pendingDelete || !user?.id) return;
+    try {
+      await deleteListing(pendingDelete, user.id);
+      toast.success("Listing deleted");
+      setPendingDelete(null);
+      refetch();
+    } catch {
+      toast.error("Could not delete listing");
+      throw new Error("delete failed");
     }
-    toast.success("Listing removed");
-    refetch();
   };
 
   return (
@@ -39,7 +45,7 @@ function Listings() {
           eyebrow="Catalog"
           title="Your"
           italic="listings"
-          sub="Edit prices, restock, or pull listings out of the feed."
+          sub="Edit, delete, or post new produce — just like TikTok."
           action={
             <Link
               to="/app/create"
@@ -52,11 +58,7 @@ function Listings() {
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
           <MiniStat icon={Eye} label="Views" value={totals.views.toLocaleString()} />
           <MiniStat icon={Heart} label="Likes" value={totals.likes.toLocaleString()} />
-          <MiniStat
-            icon={MessageCircle}
-            label="Comments"
-            value={totals.comments.toLocaleString()}
-          />
+          <MiniStat icon={MessageCircle} label="Comments" value={totals.comments.toLocaleString()} />
         </div>
         {isLoading ? (
           <div className="grid place-items-center py-16">
@@ -65,17 +67,10 @@ function Listings() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((l) => (
-              <article
-                key={l.id}
-                className="overflow-hidden rounded-3xl border border-border bg-card"
-              >
+              <article key={l.id} className="overflow-hidden rounded-3xl border border-border bg-card">
                 <div className="aspect-[4/5] relative bg-muted">
                   {l.image_url && (
-                    <img
-                      src={l.image_url}
-                      alt={l.title}
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
+                    <img src={l.image_url} alt={l.title} className="absolute inset-0 h-full w-full object-cover" />
                   )}
                   <span className="absolute left-3 top-3 rounded-full bg-background/90 px-2 py-0.5 text-[10px] uppercase tracking-widest">
                     {l.status}
@@ -88,12 +83,19 @@ function Listings() {
                     {l.unit}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">{l.location_name}</p>
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Link
+                      to="/app/farmer/listings/$listingId/edit"
+                      params={{ listingId: l.id }}
+                      className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs hover:border-primary/40"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Link>
                     <button
-                      onClick={() => remove(l.id)}
+                      onClick={() => setPendingDelete(l.id)}
                       className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-destructive hover:bg-destructive/5"
                     >
-                      <Trash2 className="h-3 w-3" /> Remove
+                      <Trash2 className="h-3 w-3" /> Delete
                     </button>
                   </div>
                 </div>
@@ -105,6 +107,18 @@ function Listings() {
               </div>
             )}
           </div>
+        )}
+
+        {pendingDelete && (
+          <ConfirmDialog
+            open={!!pendingDelete}
+            onOpenChange={(v) => !v && setPendingDelete(null)}
+            title="Delete this listing?"
+            description="It will be removed from your profile and the feed. This cannot be undone."
+            confirmLabel="Delete"
+            tone="danger"
+            onConfirm={confirmDelete}
+          />
         )}
       </AppShell>
     </FarmerGate>
