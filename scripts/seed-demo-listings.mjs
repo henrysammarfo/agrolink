@@ -37,19 +37,49 @@ const DEMO_FARMERS = [
 ];
 
 async function uploadDemoMedia() {
-  const files = (await readdir(DEMO_DIR)).filter((f) => f.endsWith(".svg"));
+  const files = (await readdir(DEMO_DIR)).filter((f) => /\.(jpe?g|png|webp|svg)$/i.test(f));
   const map = {};
-  for (const name of files) {
+  const prefer = (baseName) => {
+    const jpg = files.find((f) => f.toLowerCase() === `${baseName}.jpg`);
+    const jpeg = files.find((f) => f.toLowerCase() === `${baseName}.jpeg`);
+    const png = files.find((f) => f.toLowerCase() === `${baseName}.png`);
+    const svg = files.find((f) => f.toLowerCase() === `${baseName}.svg`);
+    return jpg ?? jpeg ?? png ?? svg;
+  };
+
+  const cropFiles = [
+    ["tomato", "tomato"],
+    ["okra", "okra"],
+    ["pepper", "pepper"],
+    ["garden_egg", "garden-egg"],
+    ["leafy_greens", "greens"],
+    ["onion", "onion"],
+  ];
+
+  for (const [keyName, fileBase] of cropFiles) {
+    const name = prefer(fileBase);
+    if (!name) {
+      console.warn("Missing media for", keyName);
+      continue;
+    }
     const buf = await readFile(path.join(DEMO_DIR, name));
-    const storagePath = `demo/${name}`;
+    const ext = path.extname(name).toLowerCase();
+    const storagePath = `demo/${fileBase}${ext}`;
+    const contentType =
+      ext === ".svg"
+        ? "image/svg+xml"
+        : ext === ".png"
+          ? "image/png"
+          : ext === ".webp"
+            ? "image/webp"
+            : "image/jpeg";
     const { error } = await admin.storage.from("listing-images").upload(storagePath, buf, {
       upsert: true,
-      contentType: "image/svg+xml",
+      contentType,
     });
     if (error) throw error;
-    const keyName = name.replace(".svg", "").replace("garden-egg", "garden_egg").replace("greens", "leafy_greens");
     map[keyName] = `${base}/storage/v1/object/public/listing-images/${storagePath}`;
-    console.log("Uploaded:", keyName);
+    console.log("Uploaded:", keyName, `(${name})`);
   }
   return map;
 }
