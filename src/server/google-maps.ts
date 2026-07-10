@@ -285,6 +285,84 @@ export async function fetchGoogleDirections(
   };
 }
 
+export type MatrixElement = {
+  duration_min: number;
+  duration_in_traffic_min?: number;
+  distance_km: number;
+  status: string;
+};
+
+/** Batch ETA/distance — one request for many origin×destination pairs. */
+export async function fetchDistanceMatrix(
+  origins: { lat: number; lng: number }[],
+  destinations: { lat: number; lng: number }[],
+  mode: "driving" | "bicycling" = "driving",
+): Promise<MatrixElement[][]> {
+  if (!origins.length || !destinations.length) return [];
+
+  const params: Record<string, string> = {
+    origins: origins.map((o) => `${o.lat},${o.lng}`).join("|"),
+    destinations: destinations.map((d) => `${d.lat},${d.lng}`).join("|"),
+    mode,
+    region: "gh",
+    departure_time: "now",
+    traffic_model: "best_guess",
+  };
+
+  const json = await googleFetch<{
+    rows?: {
+      elements?: {
+        status: string;
+        distance?: { value: number };
+        duration?: { value: number };
+        duration_in_traffic?: { value: number };
+      }[];
+    }[];
+  }>("distancematrix/json", params);
+
+  return (json.rows ?? []).map((row) =>
+    (row.elements ?? []).map((el) => ({
+      status: el.status,
+      distance_km: (el.distance?.value ?? 0) / 1000,
+      duration_min: (el.duration?.value ?? 0) / 60,
+      duration_in_traffic_min: el.duration_in_traffic
+        ? el.duration_in_traffic.value / 60
+        : undefined,
+    })),
+  );
+}
+
+/** Snap raw GPS points onto the road network (Roads API). */
+export async function snapToRoads(
+  points: { lat: number; lng: number }[],
+): Promise<{ lat: number; lng: number }[]> {
+  const key = getGoogleMapsApiKey();
+  if (!key || points.length === 0) return points;
+
+  const path = points.map((p) => `${p.lat},${p.lng}`).join("|");
+  const qs = new URLSearchParams({
+    path,
+    interpolate: points.length > 1 ? "true" : "false",
+    key,
+  });
+
+  const res = await fetch(`https://roads.googleapis.com/v1/snapToRoads?${qs}`);
+  const json = (await res.json()) as {
+    snappedPoints?: { location: { latitude: number; longitude: number } }[];
+    error?: { message?: string };
+  };
+
+  if (!json.snappedPoints?.length) {
+    if (json.error?.message) throw new Error(json.error.message);
+    return points;
+  }
+
+  return json.snappedPoints.map((s) => ({
+    lat: s.location.latitude,
+    lng: s.location.longitude,
+  }));
+}
+
 export async function fetchDrivingDistanceKm(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },

@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { getGoogleMapsClientKey } from "@/lib/google-maps-client";
 import { DRIVER_CAR_ICON_ANCHOR, DRIVER_CAR_ICON_HTML, DRIVER_CAR_ICON_SIZE } from "@/lib/map-icons";
+import { GoogleCorridorMap } from "@/components/map/GoogleCorridorMap";
 import type { RouteSegment } from "@/lib/route-display";
 
 type Pin = { lat: number; lng: number; label: string; kind?: "farm" | "buyer" | "hub" | "driver" };
@@ -36,7 +38,14 @@ function validPins(pins: Pin[]) {
   return pins.filter((p) => isValidMapCoord(p.lat, p.lng));
 }
 
-export function CorridorMap({
+export function CorridorMap(props: Props) {
+  if (getGoogleMapsClientKey()) {
+    return <GoogleCorridorMap {...props} />;
+  }
+  return <LeafletCorridorMap {...props} />;
+}
+
+function LeafletCorridorMap({
   pins,
   route,
   routeSegments,

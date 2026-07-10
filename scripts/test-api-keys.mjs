@@ -232,6 +232,42 @@ async function testGoogleMaps() {
       ? `Directions OK — ${stepCount} steps, ${pointCount} step polylines (Accra → East Legon)`
       : `${dirJson.status ?? dirRes.status}: ${dirJson.error_message ?? "enable Directions API"}`,
   );
+
+  const matrixRes = await fetch(
+    `https://maps.googleapis.com/maps/api/distancematrix/json?${new URLSearchParams({
+      origins: "5.6037,-0.187",
+      destinations: "5.6500,-0.1664",
+      mode: "driving",
+      departure_time: "now",
+      traffic_model: "best_guess",
+      key,
+    })}`,
+  );
+  const matrixJson = await matrixRes.json().catch(() => ({}));
+  const matrixEl = matrixJson.rows?.[0]?.elements?.[0];
+  record(
+    "Google Maps distance matrix",
+    matrixJson.status === "OK" && matrixEl?.status === "OK",
+    matrixJson.status === "OK" && matrixEl?.status === "OK"
+      ? `Matrix OK — ${matrixEl.duration_in_traffic?.text ?? matrixEl.duration?.text ?? "ETA"} (traffic)`
+      : `${matrixJson.status ?? matrixRes.status}: ${matrixJson.error_message ?? matrixEl?.status ?? "enable Distance Matrix API"}`,
+  );
+
+  const roadsRes = await fetch(
+    `https://roads.googleapis.com/v1/snapToRoads?${new URLSearchParams({
+      path: "5.6037,-0.187|5.6040,-0.186",
+      interpolate: "true",
+      key,
+    })}`,
+  );
+  const roadsJson = await roadsRes.json().catch(() => ({}));
+  record(
+    "Google Roads snap",
+    !!roadsJson.snappedPoints?.length,
+    roadsJson.snappedPoints?.length
+      ? `Roads OK — ${roadsJson.snappedPoints.length} snapped points`
+      : `${roadsJson.error?.message ?? roadsRes.status}: enable Roads API`,
+  );
 }
 
 async function testWhatsAppSend() {

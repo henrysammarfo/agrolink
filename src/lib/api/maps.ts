@@ -74,3 +74,39 @@ export async function fetchDrivingRoute(
     return null;
   }
 }
+
+export type MatrixElement = {
+  duration_min: number;
+  duration_in_traffic_min?: number;
+  distance_km: number;
+  status: string;
+};
+
+export async function fetchDistanceMatrix(
+  origins: { lat: number; lng: number }[],
+  destinations: { lat: number; lng: number }[],
+  mode: "driving" | "bicycling" = "driving",
+): Promise<MatrixElement[][]> {
+  const json = await mapsPost<{ rows: MatrixElement[][] }>({
+    action: "matrix",
+    origins,
+    destinations,
+    mode,
+  });
+  return json.rows ?? [];
+}
+
+export async function snapGpsToRoads(
+  lat: number,
+  lng: number,
+): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const json = await mapsPost<{ points: { lat: number; lng: number }[] }>({
+      action: "snap",
+      path: [{ lat, lng }],
+    });
+    return json.points?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
