@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, GHANA_BOUNDS, GHANA_CENTER, GHANA_MIN_ZOOM, GHANA_NE, GHANA_OVERVIEW_ZOOM, GHANA_SW, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import {
   GOOGLE_MAP_DARK_STYLES,
   GOOGLE_MAP_LIGHT_STYLES,
@@ -85,6 +85,16 @@ export function GoogleCorridorMap({
           gestureHandling: "greedy",
           styles: dark ? GOOGLE_MAP_DARK_STYLES : GOOGLE_MAP_LIGHT_STYLES,
           clickableIcons: false,
+          minZoom: GHANA_MIN_ZOOM,
+          restriction: {
+            latLngBounds: {
+              north: GHANA_BOUNDS.north,
+              south: GHANA_BOUNDS.south,
+              east: GHANA_BOUNDS.east,
+              west: GHANA_BOUNDS.west,
+            },
+            strictBounds: false,
+          },
         });
       })
       .catch((err) => {
@@ -279,18 +289,25 @@ export function GoogleCorridorMap({
     if (shouldFit && fitPoints.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       fitPoints.forEach((p) => bounds.extend(p));
-      map.fitBounds(bounds, 56);
+      map.fitBounds(bounds, { top: 120, right: 56, bottom: 280, left: 56 });
       const listener = google.maps.event.addListenerOnce(map, "idle", () => {
         const z = map.getZoom();
         if (z != null && z > STREET_ZOOM) map.setZoom(STREET_ZOOM);
+        if (z != null && z < 10) map.setZoom(10);
       });
       void listener;
     } else if (shouldFit && center && isValidMapCoord(center[0], center[1])) {
       map.setCenter({ lat: center[0], lng: center[1] });
-      map.setZoom(zoom ?? STREET_ZOOM);
+      map.setZoom(Math.max(zoom ?? STREET_ZOOM, 11));
     } else if (shouldFit) {
-      map.setCenter({ lat: ACCRA_CENTER[0], lng: ACCRA_CENTER[1] });
-      map.setZoom(DEFAULT_MAP_ZOOM);
+      map.fitBounds(
+        new google.maps.LatLngBounds(
+          { lat: GHANA_BOUNDS.south, lng: GHANA_BOUNDS.west },
+          { lat: GHANA_BOUNDS.north, lng: GHANA_BOUNDS.east },
+        ),
+        40,
+      );
+      map.setZoom(GHANA_OVERVIEW_ZOOM);
     }
   }, [pins, route, routeSegments, fitKey, animateDriver, driverLabel, onProgress, etaLabel, priceLabel, center, zoom]);
 

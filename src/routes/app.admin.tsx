@@ -9,19 +9,30 @@ import {
   Loader2,
   Truck,
 } from "lucide-react";
-import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
-import { AdminGate } from "@/components/app/RoleGate";
+import { PageHeader, StatCard } from "@/components/app/AppShell";
+import { AdminPageLayout } from "@/components/admin/AdminPageLayout";
 import { fetchAdminStats } from "@/lib/api/notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api/fetch-auth";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin · AgroLink" }] }),
-  component: AdminOverview,
+  component: AdminLayout,
 });
 
-function AdminOverview() {
+function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/app/admin") {
+    return (
+      <AdminPageLayout>
+        <Outlet />
+      </AdminPageLayout>
+    );
+  }
+  return <AdminOverview />;
+}
+
+function AdminOverview() {
   const [stats, setStats] = useState({
     gmv: 0,
     orderCount: 0,
@@ -38,11 +49,8 @@ function AdminOverview() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (pathname !== "/app/admin") return <Outlet />;
-
   return (
-    <AdminGate>
-      <AppShell role="admin" compact>
+    <AdminPageLayout>
         <PageHeader
           eyebrow="Operations"
           title="Admin"
@@ -138,8 +146,7 @@ function AdminOverview() {
             </button>
           </>
         )}
-      </AppShell>
-    </AdminGate>
+    </AdminPageLayout>
   );
 }
 

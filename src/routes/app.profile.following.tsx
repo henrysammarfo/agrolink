@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
-import { resolveAppRole } from "@/lib/app-role";
+import { useShellRole } from "@/hooks/use-shell-role";
 import { fetchFollowingList } from "@/lib/api/engagement";
 import { SocialUserList } from "@/components/social/SocialUserList";
 
@@ -13,7 +13,8 @@ export const Route = createFileRoute("/app/profile/following")({
 });
 
 function FollowingPage() {
-  const { user, roles } = useAuth();
+  const { user } = useAuth();
+  const shellRole = useShellRole();
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["following", user?.id],
     queryFn: fetchFollowingList,
@@ -21,7 +22,7 @@ function FollowingPage() {
   });
 
   return (
-    <AppShell role={resolveAppRole(roles)} compact>
+    <AppShell role={shellRole} compact>
       <Link to="/app/profile" className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Profile
       </Link>

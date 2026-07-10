@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app/AppShell";
 import { FarmerProfileView } from "@/components/farmer/FarmerProfileView";
 import { useAuth } from "@/lib/auth";
-import { resolveAppRole } from "@/lib/app-role";
+import { useShellRole } from "@/hooks/use-shell-role";
 
 export const Route = createFileRoute("/app/users/$slug")({
   head: () => ({ meta: [{ title: "Profile · AgroLink" }] }),
@@ -11,10 +11,10 @@ export const Route = createFileRoute("/app/users/$slug")({
 
 function InAppUserProfile() {
   const { slug } = Route.useParams();
-  const { roles } = useAuth();
+  const shellRole = useShellRole();
 
   return (
-    <AppShell role={resolveAppRole(roles)}>
+    <AppShell role={shellRole}>
       <FarmerProfileView slug={slug} inApp />
     </AppShell>
   );

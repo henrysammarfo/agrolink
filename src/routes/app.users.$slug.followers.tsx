@@ -6,7 +6,7 @@ import { fetchFollowersList } from "@/lib/api/engagement";
 import { fetchListingsBySlug } from "@/lib/api/listings";
 import { SocialUserList } from "@/components/social/SocialUserList";
 import { useAuth } from "@/lib/auth";
-import { resolveAppRole } from "@/lib/app-role";
+import { useShellRole } from "@/hooks/use-shell-role";
 
 export const Route = createFileRoute("/app/users/$slug/followers")({
   head: () => ({ meta: [{ title: "Followers · AgroLink" }] }),
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/app/users/$slug/followers")({
 
 function UserFollowers() {
   const { slug } = Route.useParams();
-  const { roles } = useAuth();
+  const shellRole = useShellRole();
 
   const { data: profileData } = useQuery({
     queryKey: ["farmer-profile", slug],
@@ -30,7 +30,7 @@ function UserFollowers() {
   });
 
   return (
-    <AppShell role={resolveAppRole(roles)}>
+    <AppShell role={shellRole}>
       <div className="mx-auto max-w-lg">
         <Link to="/app/users/$slug" params={{ slug }} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> {name}

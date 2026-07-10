@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Search, Check, Trash2, Loader2 } from "lucide-react";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { AdminGate } from "@/components/app/RoleGate";
+import { PageHeader } from "@/components/app/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -52,8 +51,7 @@ function AdminListings() {
   };
 
   return (
-    <AdminGate>
-      <AppShell role="admin" compact>
+    <>
         <PageHeader
           eyebrow="Moderation"
           title="Listing"
@@ -122,7 +120,6 @@ function AdminListings() {
             )}
           </div>
         )}
-      </AppShell>
-    </AdminGate>
+    </>
   );
 }

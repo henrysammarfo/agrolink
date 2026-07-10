@@ -72,6 +72,7 @@ import { Route as ApiCommsNotifyRouteImport } from './routes/api/comms/notify'
 import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
 import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
+import { Route as ApiAdminPaymentsRouteImport } from './routes/api/admin/payments'
 import { Route as ApiAdminDriversRouteImport } from './routes/api/admin/drivers'
 import { Route as AppUsersSlugFollowersRouteImport } from './routes/app.users.$slug.followers'
 import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.$userId'
@@ -396,6 +397,11 @@ const ApiAdminPricingRoute = ApiAdminPricingRouteImport.update({
   path: '/api/admin/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminPaymentsRoute = ApiAdminPaymentsRouteImport.update({
+  id: '/api/admin/payments',
+  path: '/api/admin/payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminDriversRoute = ApiAdminDriversRouteImport.update({
   id: '/api/admin/drivers',
   path: '/api/admin/drivers',
@@ -455,6 +461,7 @@ export interface FileRoutesByFullPath {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
@@ -525,6 +532,7 @@ export interface FileRoutesByTo {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
@@ -597,6 +605,7 @@ export interface FileRoutesById {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
@@ -670,6 +679,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/admin/drivers'
+    | '/api/admin/payments'
     | '/api/admin/pricing'
     | '/api/chat/request'
     | '/api/chat/send'
@@ -740,6 +750,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app'
     | '/api/admin/drivers'
+    | '/api/admin/payments'
     | '/api/admin/pricing'
     | '/api/chat/request'
     | '/api/chat/send'
@@ -811,6 +822,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/admin/drivers'
+    | '/api/admin/payments'
     | '/api/admin/pricing'
     | '/api/chat/request'
     | '/api/chat/send'
@@ -873,6 +885,7 @@ export interface RootRouteChildren {
   ApiMapsRoute: typeof ApiMapsRoute
   ApiModerateRoute: typeof ApiModerateRoute
   ApiAdminDriversRoute: typeof ApiAdminDriversRoute
+  ApiAdminPaymentsRoute: typeof ApiAdminPaymentsRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiChatRequestRoute: typeof ApiChatRequestRoute
   ApiChatSendRoute: typeof ApiChatSendRoute
@@ -1340,6 +1353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminPricingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/payments': {
+      id: '/api/admin/payments'
+      path: '/api/admin/payments'
+      fullPath: '/api/admin/payments'
+      preLoaderRoute: typeof ApiAdminPaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/drivers': {
       id: '/api/admin/drivers'
       path: '/api/admin/drivers'
@@ -1573,6 +1593,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMapsRoute: ApiMapsRoute,
   ApiModerateRoute: ApiModerateRoute,
   ApiAdminDriversRoute: ApiAdminDriversRoute,
+  ApiAdminPaymentsRoute: ApiAdminPaymentsRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiChatRequestRoute: ApiChatRequestRoute,
   ApiChatSendRoute: ApiChatSendRoute,

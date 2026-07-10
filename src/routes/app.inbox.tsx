@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { ConversationList } from "@/components/chat/ConversationList";
 import { useAuth } from "@/lib/auth";
-import { resolveAppRole } from "@/lib/app-role";
+import { useShellRole } from "@/hooks/use-shell-role";
 import {
   useNotifications,
   useConversations,
@@ -51,7 +51,8 @@ export const Route = createFileRoute("/app/inbox")({
 });
 
 function Inbox() {
-  const { user, roles } = useAuth();
+  const shellRole = useShellRole();
+  const { user } = useAuth();
   const { tab: initialTab } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -80,7 +81,7 @@ function Inbox() {
   const pendingRequests = requests.length;
 
   return (
-    <AppShell role={resolveAppRole(roles)} unreadInbox={(unreadNotis ?? 0) + (unreadMsgs ?? 0)} compact>
+    <AppShell role={shellRole} unreadInbox={(unreadNotis ?? 0) + (unreadMsgs ?? 0)} compact>
       <PageHeader
         eyebrow="Inbox"
         title="Your"

@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Filter, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { AdminGate } from "@/components/app/RoleGate";
+import { PageHeader } from "@/components/app/AppShell";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useAdminPayments } from "@/hooks/use-marketplace";
 import { updatePaymentStatus } from "@/lib/api/payouts";
@@ -90,8 +89,7 @@ function AdminPayments() {
   };
 
   return (
-    <AdminGate>
-      <AppShell role="admin" compact>
+    <>
         <PageHeader
           eyebrow="Finance"
           title="All"
@@ -184,7 +182,6 @@ function AdminPayments() {
               className="mt-2 w-full rounded-lg border border-border bg-background p-2 text-sm" />
           </ConfirmDialog>
         )}
-      </AppShell>
-    </AdminGate>
+    </>
   );
 }

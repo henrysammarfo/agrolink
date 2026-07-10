@@ -1,4 +1,4 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
@@ -9,24 +9,27 @@ import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
 import { useUnreadCounts, useCart } from "@/hooks/use-marketplace";
 import { GlobalSearch, SearchTrigger } from "@/components/app/GlobalSearch";
+import { roleHome, saveActiveWorkspace, normalizeWorkspace } from "@/lib/active-workspace";
 
 export type AppRole = AuthRole;
 
+const MARKET_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
+  { to: "/app/buyer", label: "Overview", icon: Heart },
+  { to: "/app/buyer/feed", label: "Feed", icon: Sprout },
+  { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
+  { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket },
+  { to: "/app/inbox", label: "Inbox", icon: Inbox },
+];
+
+const SELLER_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
+  { to: "/app/farmer/listings", label: "My listings", icon: ImageIcon },
+  { to: "/app/farmer/payouts", label: "Payouts", icon: Wallet },
+  { to: "/app/farmer/orders", label: "Sales", icon: Tractor },
+];
+
 const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]> = {
-  buyer: [
-    { to: "/app/buyer", label: "Overview", icon: Heart },
-    { to: "/app/buyer/feed", label: "Feed", icon: Sprout },
-    { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
-    { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket },
-    { to: "/app/inbox", label: "Inbox", icon: Inbox },
-  ],
-  farmer: [
-    { to: "/app/farmer", label: "Studio", icon: Sprout },
-    { to: "/app/farmer/listings", label: "Listings", icon: ImageIcon },
-    { to: "/app/farmer/orders", label: "Orders", icon: Tractor },
-    { to: "/app/farmer/payouts", label: "Payouts", icon: Wallet },
-    { to: "/app/inbox", label: "Inbox", icon: Inbox },
-  ],
+  buyer: MARKET_NAV,
+  farmer: MARKET_NAV,
   transport: [
     { to: "/app/transport", label: "Map", icon: MapPin },
     { to: "/app/transport/jobs", label: "Jobs", icon: Truck },
@@ -54,7 +57,7 @@ type MobileTab = {
 };
 
 function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number): MobileTab[] {
-  if (role === "buyer") {
+  if (role === "buyer" || role === "farmer") {
     return [
       { id: "home", to: "/app/buyer", icon: Home, label: "Home" },
       { id: "discover", to: "/app/buyer/feed", icon: Sprout, label: "Discover" },
@@ -72,20 +75,20 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number):
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
     ];
   }
-  if (role === "farmer") {
+  if (role === "admin") {
     return [
-      { id: "home", to: "/app/farmer", icon: Home, label: "Home" },
-      { id: "listings", to: "/app/farmer/listings", icon: ImageIcon, label: "Listings" },
-      { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
-      { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
+      { id: "home", to: "/app/admin", icon: Home, label: "Home" },
+      { id: "payments", to: "/app/admin/payments", icon: CreditCard, label: "Payments" },
+      { id: "disputes", to: "/app/admin/disputes", icon: AlertTriangle, label: "Disputes", center: true },
+      { id: "listings", to: "/app/admin/listings", icon: ListChecks, label: "Listings" },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
     ];
   }
   return [
-    { id: "home", to: "/app/admin", icon: Home, label: "Home" },
-    { id: "payments", to: "/app/admin/payments", icon: CreditCard, label: "Payments" },
-    { id: "drivers", to: "/app/admin/drivers", icon: Truck, label: "Drivers", center: true },
-    { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
+    { id: "home", to: "/app/buyer", icon: Home, label: "Home" },
+    { id: "discover", to: "/app/buyer/feed", icon: Sprout, label: "Discover" },
+    { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
+    { id: "cart", to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount },
     { id: "me", to: "/app/profile", icon: User, label: "Me" },
   ];
 }
@@ -164,14 +167,31 @@ export function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const { profile, roles, signOut, user } = useAuth();
   const { data: unread } = useUnreadCounts(user?.id);
   const { data: cartItems = [] } = useCart(user?.id);
   const cartCount = cartItems.reduce((sum, item) => sum + Number(item.quantity), 0);
   const unreadInbox =
     unreadOverride ?? (unread ? unread.notifications + unread.messages : 0);
-  const nav = NAV[role];
+  const nav = [
+    ...NAV[role === "farmer" ? "buyer" : role],
+    ...(roles.includes("farmer") && role === "buyer" ? SELLER_NAV : []),
+  ];
   const immersive = IMMERSIVE_PATHS.some((p) => pathname === p);
+
+  const workspaceRoles = [
+    ...(roles.includes("buyer") || roles.includes("farmer") ? (["buyer"] as AppRole[]) : []),
+    ...(roles.includes("transport") ? (["transport"] as AppRole[]) : []),
+    ...(roles.includes("admin") ? (["admin"] as AppRole[]) : []),
+  ];
+
+  const switchWorkspace = (r: AppRole) => {
+    if (!user?.id) return;
+    const normalized = normalizeWorkspace(r);
+    saveActiveWorkspace(user.id, normalized);
+    navigate({ to: roleHome(normalized) as "/app/buyer" });
+  };
 
   const mobileTabs = buildMobileTabs(role, cartCount, unreadInbox);
 
@@ -219,24 +239,27 @@ export function AppShell({
           </button>
         </div>
 
-        {!collapsed && roles.length > 1 && (
+        {!collapsed && workspaceRoles.length > 1 && (
           <div className="px-3 pb-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-            Switch surface
+            Switch dashboard
           </div>
         )}
-        {roles.length > 1 && (
+        {workspaceRoles.length > 1 && (
           <div className="px-3">
-            <div className={`grid gap-1 ${collapsed ? "" : "grid-cols-2"}`}>
-              {roles.map((r) => (
-                <Link
+            <div className={`grid gap-1 ${collapsed ? "" : "grid-cols-3"}`}>
+              {workspaceRoles.map((r) => (
+                <button
                   key={r}
-                  to={roleHome(r)}
+                  type="button"
+                  onClick={() => switchWorkspace(r)}
                   className={`rounded-lg px-2 py-1.5 text-center text-[11px] capitalize ${
-                    role === r ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:bg-sidebar-accent"
+                    normalizeWorkspace(role) === r
+                      ? "bg-primary/15 text-foreground"
+                      : "text-muted-foreground hover:bg-sidebar-accent"
                   }`}
                 >
-                  {collapsed ? r[0].toUpperCase() : r === "farmer" ? "Farmer" : r === "admin" ? "Admin" : r}
-                </Link>
+                  {collapsed ? r[0].toUpperCase() : r === "buyer" ? "Market" : r === "admin" ? "Admin" : "Drive"}
+                </button>
               ))}
             </div>
           </div>
@@ -309,7 +332,7 @@ export function AppShell({
                 </span>
               )}
             </Link>
-            {role === "farmer" && (
+            {roles.includes("farmer") && (role === "buyer" || role === "farmer") && (
               <Link to="/app/create" className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:px-4">
                 <Plus className="h-4 w-4" /> <span className="hidden sm:inline">New listing</span>
               </Link>
@@ -343,9 +366,7 @@ export function AppShell({
   );
 }
 
-function roleHome(r: AppRole) {
-  return (r === "farmer" ? "/app/farmer" : r === "transport" ? "/app/transport" : r === "admin" ? "/app/admin" : "/app/buyer") as "/app/buyer";
-}
+export { roleHome };
 
 export function PageHeader({ eyebrow, title, italic, sub, action }: {
   eyebrow?: string; title: string; italic?: string; sub?: string; action?: ReactNode;

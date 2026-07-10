@@ -1,10 +1,10 @@
-import { useNavigate } from "@tanstack/react-router";
-import { ShoppingBag, Sprout, Truck, ShieldCheck } from "lucide-react";
+import { ShoppingBag, Truck, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
 import { useAuth, type AppRole } from "@/lib/auth";
 import { useDriverProfile } from "@/hooks/use-marketplace";
 import { isDriverVerified } from "@/lib/api/driver-onboarding";
-import { saveActiveWorkspace, roleHome } from "@/lib/active-workspace";
+import { saveActiveWorkspace, roleHome, normalizeWorkspace } from "@/lib/active-workspace";
 import { useActiveWorkspace } from "@/hooks/use-active-workspace";
 
 const OPTIONS: {
@@ -14,8 +14,7 @@ const OPTIONS: {
   icon: typeof ShoppingBag;
   needsVerification?: boolean;
 }[] = [
-  { role: "buyer", label: "Shop", desc: "Feed & orders", icon: ShoppingBag },
-  { role: "farmer", label: "Sell", desc: "Listings & payouts", icon: Sprout },
+  { role: "buyer", label: "Market", desc: "Shop, sell & orders", icon: ShoppingBag },
   { role: "transport", label: "Drive", desc: "Map & deliveries", icon: Truck, needsVerification: true },
   { role: "admin", label: "Admin", desc: "Operations panel", icon: ShieldCheck },
 ];
@@ -29,12 +28,21 @@ export function WorkspaceSwitcher({ compact = false }: Props) {
   const { user, roles, hasRole } = useAuth();
   const { data: driverProfile } = useDriverProfile(user?.id);
   const { active, setWorkspace } = useActiveWorkspace(user?.id, roles);
-  const visible = OPTIONS.filter((o) => hasRole(o.role));
+
+  const visible = OPTIONS.filter((o) => {
+    if (o.role === "buyer") return hasRole("buyer") || hasRole("farmer");
+    return hasRole(o.role);
+  });
 
   if (visible.length <= 1) return null;
 
   const switchTo = (role: AppRole) => {
-    if (!hasRole(role)) {
+    if (role === "buyer" && !hasRole("buyer") && !hasRole("farmer")) {
+      toast.error("Enable this workspace in Settings first");
+      navigate({ to: "/app/settings" });
+      return;
+    }
+    if (role !== "buyer" && !hasRole(role)) {
       toast.error("Enable this workspace in Settings first");
       navigate({ to: "/app/settings" });
       return;
@@ -49,14 +57,16 @@ export function WorkspaceSwitcher({ compact = false }: Props) {
     navigate({ to: roleHome(role) as "/app/buyer" });
   };
 
+  const activeNorm = normalizeWorkspace(active);
+
   return (
     <div className={compact ? "space-y-2" : "space-y-3"}>
       {!compact && (
-        <p className="text-xs text-muted-foreground">Switch dashboard — one account, multiple workspaces.</p>
+        <p className="text-xs text-muted-foreground">Three dashboards — Market, Drive, and Admin.</p>
       )}
-      <div className={`grid gap-2 ${compact ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
+      <div className={`grid gap-2 ${compact ? "grid-cols-2" : "sm:grid-cols-3"}`}>
         {visible.map((o) => {
-          const isActive = active === o.role;
+          const isActive = activeNorm === normalizeWorkspace(o.role);
           return (
             <button
               key={o.role}
