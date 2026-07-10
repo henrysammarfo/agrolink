@@ -18,6 +18,7 @@ Index of all project documentation.
 | [MEMORY.md](./MEMORY.md) | Source of truth — phase status, decisions |
 | [FEED_ALGORITHM.md](./FEED_ALGORITHM.md) | Feed ranking formula + fairness rules |
 | [UX_REFERENCE.md](./UX_REFERENCE.md) | UX patterns (TikTok feed, Bolt driver, Uber tracking) |
+| [COMMS.md](./COMMS.md) | In-trip chat, call, message permissions |
 | [OSS_REFERENCE.md](./OSS_REFERENCE.md) | Open-source libraries referenced |
 
 ## Operations

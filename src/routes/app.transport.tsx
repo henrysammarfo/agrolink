@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { Truck, Radio, Wallet, Loader2 } from "lucide-react";
+import { dialPhone, pickBuyerPhone } from "@/lib/trip-contact";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { VerifiedTransportGate } from "@/components/app/RoleGate";
@@ -253,7 +254,7 @@ function TransportOverview() {
   };
 
   const messageBuyer = (job: DeliveryRow) => {
-    const buyerId = (job.order as { buyer_id?: string } | undefined)?.buyer_id;
+    const buyerId = job.order?.buyer_id;
     if (!buyerId) {
       toast.error("Buyer not available yet");
       return;
@@ -261,7 +262,7 @@ function TransportOverview() {
     navigate({
       to: "/app/inbox/chat/$userId",
       params: { userId: buyerId },
-      search: { order: job.order_id },
+      search: { order: job.order_id, delivery: job.id },
     });
   };
 
@@ -419,9 +420,9 @@ function TransportOverview() {
                 onAdvance={() => advance(featured)}
                 onMessage={() => messageBuyer(featured)}
                 onCall={() => {
-                  const phone = (featured.order as { buyer_phone?: string } | undefined)?.buyer_phone;
-                  if (phone) window.location.href = `tel:${phone}`;
-                  else toast.error("Buyer phone not available — use chat");
+                  const phone = pickBuyerPhone(featured.order?.buyer);
+                  if (dialPhone(phone, "Buyer")) return;
+                  toast.error("Buyer phone not in profile — use chat or ask them to add it in Settings");
                 }}
               />
             ) : (

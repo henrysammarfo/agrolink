@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireAuth } from "@/server/api-auth";
 import { haversineKm, radiusForOfferRound, vehicleCanFulfill } from "@/lib/vehicle-types";
+import { attachBuyerProfiles, collectBuyerUserIds } from "@/lib/order-enrich";
 
 export const Route = createFileRoute("/api/deliveries/available")({
   server: {
@@ -62,7 +63,18 @@ export const Route = createFileRoute("/api/deliveries/available")({
           return true;
         });
 
-        return Response.json({ deliveries: filtered });
+        const buyerIds = collectBuyerUserIds(filtered);
+        let enriched = filtered;
+        if (buyerIds.length) {
+          const { data: profiles, error: pErr } = await supabaseAdmin
+            .from("profiles")
+            .select("id, display_name, avatar_url, phone, slug, username")
+            .in("id", buyerIds);
+          if (pErr) return Response.json({ error: pErr.message }, { status: 500 });
+          enriched = attachBuyerProfiles(filtered, profiles ?? []);
+        }
+
+        return Response.json({ deliveries: enriched });
       },
     },
   },

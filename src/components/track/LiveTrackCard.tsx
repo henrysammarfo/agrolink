@@ -10,6 +10,7 @@ import { buildTrafficSegments } from "@/lib/route-display";
 import type { RouteStep } from "@/lib/api/maps";
 import { useAuth } from "@/lib/auth";
 import type { DeliveryRow, OrderRow } from "@/lib/types/marketplace";
+import { dialPhone, pickDriverPhone } from "@/lib/trip-contact";
 import { toast } from "sonner";
 
 import { DRIVER_DELIVERY_SUBSTEPS, driverDeliverySubstepIndex } from "@/lib/order-lifecycle";
@@ -106,9 +107,9 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   }, [delivery?.driver_id]);
 
   const callDriver = () => {
-    const phone = delivery?.driver?.profile?.phone;
-    if (phone) window.location.href = `tel:${phone}`;
-    else toast.info("Driver phone not available yet");
+    const phone = pickDriverPhone(delivery?.driver);
+    if (dialPhone(phone, "Driver")) return;
+    toast.info("Driver phone not available — add your number in Profile, or use chat");
   };
 
   const messageDriver = () => {
@@ -117,10 +118,14 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
       toast.info("Driver not assigned yet");
       return;
     }
+    if (fullscreen) {
+      setTripChatOpen(true);
+      return;
+    }
     navigate({
       to: "/app/inbox/chat/$userId",
       params: { userId: driverUserId },
-      search: { order: order.id },
+      search: { order: order.id, delivery: delivery.id },
     });
   };
 
@@ -267,6 +272,32 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
             </button>
           </div>
         </div>
+
+        {!fullscreen && delivery.driver?.user_id && user?.id && (
+          <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-3">
+            <button
+              type="button"
+              onClick={() => setTripChatOpen((o) => !o)}
+              className="flex w-full items-center justify-between text-xs font-medium"
+            >
+              <span>In-trip chat with {driverName}</span>
+              {tripChatOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </button>
+            {tripChatOpen && (
+              <div className="mt-3 max-h-[320px] overflow-hidden rounded-xl">
+                <ChatThread
+                  userId={user.id}
+                  partnerId={delivery.driver.user_id}
+                  partnerName={driverName}
+                  senderName={profile?.display_name ?? "You"}
+                  orderId={order.id}
+                  deliveryId={delivery.id}
+                  tripMode
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {!fullscreen && (
           <div className="mt-4 rounded-2xl bg-muted/50 p-3">

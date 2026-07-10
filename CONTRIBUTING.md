@@ -12,7 +12,7 @@
 
 - **`main`** — production-ready; deploys to Vercel
 - Feature branches: `cursor/<description>-cc54` for agent work
-- Do **not** force-push or rebase commits already on `main` (Lovable sync)
+- Do **not** force-push or rebase commits already on `main`
 
 ## Before opening a PR
 

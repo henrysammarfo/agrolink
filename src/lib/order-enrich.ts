@@ -61,3 +61,32 @@ export function collectDriverUserIds(orders: OrderLike[]): string[] {
   }
   return [...ids];
 }
+
+type DeliveryWithOrder = {
+  order?: { buyer_id?: string; buyer?: DriverProfileSnippet } | null;
+};
+
+/** Attach buyer profiles to delivery rows (orders.buyer_id → profiles.id). */
+export function attachBuyerProfiles<T extends DeliveryWithOrder>(
+  deliveries: T[],
+  profiles: DriverProfileSnippet[],
+): T[] {
+  if (!deliveries.length || !profiles.length) return deliveries;
+  const profileMap = new Map(profiles.map((p) => [p.id, p]));
+
+  return deliveries.map((row) => {
+    const buyerId = row.order?.buyer_id;
+    if (!buyerId) return row;
+    const buyer = profileMap.get(buyerId);
+    if (!buyer) return row;
+    return { ...row, order: { ...row.order, buyer } };
+  });
+}
+
+export function collectBuyerUserIds(deliveries: DeliveryWithOrder[]): string[] {
+  const ids = new Set<string>();
+  for (const row of deliveries) {
+    if (row.order?.buyer_id) ids.add(row.order.buyer_id);
+  }
+  return [...ids];
+}

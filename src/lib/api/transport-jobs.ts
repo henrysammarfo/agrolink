@@ -1,16 +1,33 @@
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api/fetch-auth";
+import { attachBuyerProfiles, collectBuyerUserIds } from "@/lib/order-enrich";
 import type { DeliveryRow } from "@/lib/types/marketplace";
+
+const ACTIVE_SELECT = `
+  *,
+  order:orders(buyer_id, total_amount, payment_status)
+`;
+
+async function enrichWithBuyerProfiles(rows: DeliveryRow[]): Promise<DeliveryRow[]> {
+  const buyerIds = collectBuyerUserIds(rows);
+  if (!buyerIds.length) return rows;
+  const { data: profiles, error } = await supabase
+    .from("profiles")
+    .select("id, display_name, avatar_url, phone, slug, username")
+    .in("id", buyerIds);
+  if (error) throw new Error(error.message);
+  return attachBuyerProfiles(rows, profiles ?? []) as DeliveryRow[];
+}
 
 export async function fetchDriverActiveDeliveries(driverProfileId: string): Promise<DeliveryRow[]> {
   const { data, error } = await supabase
     .from("deliveries")
-    .select("*")
+    .select(ACTIVE_SELECT)
     .eq("driver_id", driverProfileId)
     .in("status", ["driver_assigned", "driver_enroute_pickup", "picked_up", "enroute_delivery"])
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []) as DeliveryRow[];
+  return enrichWithBuyerProfiles((data ?? []) as DeliveryRow[]);
 }
 
 /** Open jobs via API (filtered server-side) with Supabase RLS fallback. */
@@ -19,7 +36,7 @@ export async function fetchOpenDeliveries(): Promise<DeliveryRow[]> {
     const res = await apiFetch("/api/deliveries/available");
     if (res.ok) {
       const json = (await res.json()) as { deliveries?: DeliveryRow[] };
-      return json.deliveries ?? [];
+      return enrichWithBuyerProfiles(json.deliveries ?? []);
     }
     const err = (await res.json().catch(() => ({}))) as { error?: string };
     console.warn("[jobs] /api/deliveries/available:", res.status, err.error);
@@ -29,12 +46,12 @@ export async function fetchOpenDeliveries(): Promise<DeliveryRow[]> {
 
   const { data, error } = await supabase
     .from("deliveries")
-    .select("*, order:orders(buyer_id, total_amount)")
+    .select(ACTIVE_SELECT)
     .eq("status", "requested")
     .is("driver_id", null)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []) as DeliveryRow[];
+  return enrichWithBuyerProfiles((data ?? []) as DeliveryRow[]);
 }
 
 export async function loadTransportJobs(driverProfileId: string): Promise<DeliveryRow[]> {

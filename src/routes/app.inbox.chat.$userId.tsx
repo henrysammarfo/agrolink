@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/app/inbox/chat/$userId")({
   validateSearch: (s: Record<string, unknown>) => ({
     order: typeof s.order === "string" ? s.order : undefined,
+    delivery: typeof s.delivery === "string" ? s.delivery : undefined,
   }),
   head: () => ({ meta: [{ title: "Chat · AgroLink" }] }),
   component: ChatPage,
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/app/inbox/chat/$userId")({
 
 function ChatPage() {
   const { userId: partnerId } = Route.useParams();
-  const { order } = Route.useSearch();
+  const { order, delivery: deliveryFromSearch } = Route.useSearch();
   const shellRole = useShellRole();
   const { user, profile } = useAuth();
 
@@ -33,6 +34,21 @@ function ChatPage() {
     },
     enabled: !!partnerId,
   });
+
+  const { data: resolvedDeliveryId } = useQuery({
+    queryKey: ["chat-delivery", order],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("deliveries")
+        .select("id")
+        .eq("order_id", order!)
+        .maybeSingle();
+      return data?.id ?? null;
+    },
+    enabled: !!order && !deliveryFromSearch,
+  });
+
+  const deliveryId = deliveryFromSearch ?? resolvedDeliveryId ?? undefined;
 
   if (!user?.id) {
     return (
@@ -62,6 +78,8 @@ function ChatPage() {
           partnerName={partner.display_name ?? "User"}
           senderName={profile?.display_name ?? "You"}
           orderId={order}
+          deliveryId={deliveryId}
+          tripMode={!!(order || deliveryId)}
         />
       )}
     </AppShell>

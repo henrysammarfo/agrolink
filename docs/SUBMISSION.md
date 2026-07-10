@@ -83,3 +83,72 @@ npm run dev
 5. 3:00 — Live order tracking map
 6. 3:45 — Driver view: go live, accept delivery
 7. 4:30 — Admin: orders + payments audit
+
+---
+
+## Copy-paste: project description (short)
+
+```
+AgroLink is a TikTok-style farm-to-city marketplace for Greater Accra, Ghana. Buyers scroll a vertical produce feed, checkout with MTN MoMo (Paystack), and track Bolt-style drivers in real time. Farmers post listings with AI moderation; drivers go live on a map, accept jobs, chat/call buyers, and capture proof-of-delivery photos. One Supabase account powers buyer, farmer, driver, and admin dashboards.
+```
+
+## Copy-paste: project description (long)
+
+```
+AgroLink connects smallholder farmers in the Dodowa–Tema–Accra corridor with urban buyers through a mobile-first marketplace. The buyer experience mirrors TikTok: full-screen produce cards, likes, comments, saves, and one-tap add-to-cart. Checkout enforces a four-step flow for platform delivery—cart, delivery setup on a live map, driver matching before payment, then Paystack MoMo. Drivers use a Bolt-inspired map: go live, receive job offers with countdown timers, navigate with Google/OSRM routes, and communicate in-trip via chat and phone. Farmers manage a seven-step incoming orders pipeline from payment through handoff to the driver.
+
+The stack is TanStack Start (React 19) on Vercel, Supabase for auth/data/realtime/storage, Paystack for payments and driver payouts, OpenAI for listing moderation, and Google Maps with Leaflet fallback. Row-level security, webhook-verified payments, and escrow splits protect both sides of the transaction. The app is installable as a PWA and seeded with real produce imagery for demos.
+
+Live: https://agrolink-omega.vercel.app
+Source: https://github.com/henrysammarfo/agrolink
+```
+
+## Copy-paste: tech stack field
+
+```
+React 19, TanStack Start/Router, Tailwind CSS 4, Supabase (Postgres, Auth, Realtime, Storage), Paystack MoMo, Google Maps + OSRM, OpenAI API, Resend email, Meta WhatsApp Cloud API, Vercel
+```
+
+## Copy-paste: problem statement
+
+```
+Urban buyers in Accra struggle to discover fresh, traceable produce from corridor farmers; farmers lack digital storefronts and reliable last-mile delivery. AgroLink unifies discovery (TikTok-style feed), payments (MoMo escrow), and logistics (verified drivers with live GPS) in one platform tuned for Ghana's mobile-money economy.
+```
+
+## Copy-paste: solution / impact
+
+```
+AgroLink reduces friction from farm to plate: AI-moderated listings, dynamic OSRM-based delivery quotes, driver matching before payment, live tracking with in-trip chat/call, and automatic driver payouts on delivery completion. One account can buy, sell, and drive—matching how informal agricultural trade actually works in Ghana.
+```
+
+## Copy-paste: team / contact
+
+```
+Team: AgroLink (Henry Sammarfo)
+GitHub: https://github.com/henrysammarfo/agrolink
+Live demo: https://agrolink-omega.vercel.app
+Region: Greater Accra, Ghana
+```
+
+## Copy-paste: setup instructions (forms)
+
+```
+1. Clone https://github.com/henrysammarfo/agrolink
+2. npm install && cp .env.example .env
+3. Add Supabase + Paystack keys (see docs/API_KEYS.md)
+4. npm run db:migrate && npm run seed:demo
+5. npm run dev → http://localhost:5173
+Demo login: ama-farm@demo.agrolink.app / AgroLinkDemo!2026
+```
+
+## Copy-paste: key features bullet list
+
+```
+• TikTok-style vertical produce feed with engagement ranking
+• One-tap cart and 4-step MoMo checkout with driver gate before payment
+• Bolt-style driver map: go live, job offers, slide-to-confirm, POD photo
+• Live buyer tracking with route, ETA, chat, and call
+• Farmer 7-step order pipeline and Paystack escrow payouts
+• Admin control room: orders, payments, drivers, disputes, surge pricing
+• PWA installable; demo seed with real corridor produce photos
+```

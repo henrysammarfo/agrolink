@@ -123,13 +123,24 @@ export type DeliveryRow = {
   pod_captured_at?: string | null;
   created_at: string;
   tracking_updates: unknown[];
+  order?: {
+    buyer_id?: string;
+    total_amount?: number;
+    payment_status?: string;
+    buyer?: { display_name?: string | null; phone?: string | null };
+  } | null;
   driver?: {
     user_id: string;
     vehicle_type: string;
     plate_number: string | null;
+    momo_number?: string | null;
+    vehicle_color?: string | null;
+    vehicle_make?: string | null;
+    vehicle_model?: string | null;
     current_lat: number | null;
     current_lng: number | null;
-    profile?: { display_name: string | null; avatar_url: string | null; phone?: string | null };
+    rating?: number | null;
+    profile?: { display_name: string | null; avatar_url: string | null; phone?: string | null; slug?: string | null; username?: string | null };
   };
 };
 

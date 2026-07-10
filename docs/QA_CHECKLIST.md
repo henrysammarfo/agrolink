@@ -29,6 +29,7 @@ Both must exit 0. **Last verified:** 2026-07-07 — build + stress:comms + test:
 - [x] Engagement notifications (like/comment/follow)
 - [x] Unread badge on bell
 - [x] Message farmer/driver opens chat thread
+- [x] Trip chat + call buyer↔driver (2026-07-10) — see [COMMS.md](./COMMS.md)
 
 ## Production comms + media (2026-07-05)
 
@@ -70,6 +71,8 @@ Both must exit 0. **Last verified:** 2026-07-07 — build + stress:comms + test:
 - [ ] Accept job updates delivery status
 - [ ] Location updates visible to buyer on tracking page
 - [ ] OSRM route polyline renders
+- [ ] Driver can message/call buyer during active trip (phone in buyer profile)
+- [ ] Buyer can message/call driver during active trip (phone in driver profile)
 
 ### Admin
 - [ ] Admin dashboard shows real GMV from payments table
