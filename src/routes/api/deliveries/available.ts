@@ -28,7 +28,7 @@ export const Route = createFileRoute("/api/deliveries/available")({
           .select(
             `
             *,
-            order:orders(buyer_id, total_amount)
+            order:orders(buyer_id, total_amount, payment_status)
           `,
           )
           .eq("status", "requested")
@@ -38,6 +38,9 @@ export const Route = createFileRoute("/api/deliveries/available")({
         if (error) return Response.json({ error: error.message }, { status: 500 });
 
         const filtered = (rows ?? []).filter((job) => {
+          const order = job.order as { buyer_id?: string; total_amount?: number; payment_status?: string } | null;
+          if (order?.payment_status && order.payment_status !== "paid") return false;
+
           const declined = ((job.declined_driver_ids ?? []) as string[]);
           if (declined.includes(driver.id)) return false;
 

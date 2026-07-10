@@ -66,6 +66,7 @@ import { Route as ApiPaymentsVerifyRouteImport } from './routes/api/payments/ver
 import { Route as ApiOtpVerifyRouteImport } from './routes/api/otp/verify'
 import { Route as ApiOtpSendRouteImport } from './routes/api/otp/send'
 import { Route as ApiOrdersVerifyPaymentRouteImport } from './routes/api/orders/verify-payment'
+import { Route as ApiListingsCommentsRouteImport } from './routes/api/listings/comments'
 import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
 import { Route as ApiDeliveryAvailabilityRouteImport } from './routes/api/delivery/availability'
 import { Route as ApiDeliveriesReassignExpiredRouteImport } from './routes/api/deliveries/reassign-expired'
@@ -76,6 +77,7 @@ import { Route as ApiDeliveriesAcceptRouteImport } from './routes/api/deliveries
 import { Route as ApiCommsNotifyRouteImport } from './routes/api/comms/notify'
 import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
 import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
+import { Route as ApiBuyerOrdersRouteImport } from './routes/api/buyer/orders'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAdminPaymentsRouteImport } from './routes/api/admin/payments'
 import { Route as ApiAdminOrdersRouteImport } from './routes/api/admin/orders'
@@ -375,6 +377,11 @@ const ApiOrdersVerifyPaymentRoute = ApiOrdersVerifyPaymentRouteImport.update({
   path: '/api/orders/verify-payment',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiListingsCommentsRoute = ApiListingsCommentsRouteImport.update({
+  id: '/api/listings/comments',
+  path: '/api/listings/comments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDeliveryQuoteRoute = ApiDeliveryQuoteRouteImport.update({
   id: '/api/delivery/quote',
   path: '/api/delivery/quote',
@@ -424,6 +431,11 @@ const ApiChatSendRoute = ApiChatSendRouteImport.update({
 const ApiChatRequestRoute = ApiChatRequestRouteImport.update({
   id: '/api/chat/request',
   path: '/api/chat/request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBuyerOrdersRoute = ApiBuyerOrdersRouteImport.update({
+  id: '/api/buyer/orders',
+  path: '/api/buyer/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAdminPricingRoute = ApiAdminPricingRouteImport.update({
@@ -521,6 +533,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
+  '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
@@ -531,6 +544,7 @@ export interface FileRoutesByFullPath {
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/listings/comments': typeof ApiListingsCommentsRoute
   '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
@@ -601,6 +615,7 @@ export interface FileRoutesByTo {
   '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
+  '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
@@ -611,6 +626,7 @@ export interface FileRoutesByTo {
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/listings/comments': typeof ApiListingsCommentsRoute
   '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
@@ -683,6 +699,7 @@ export interface FileRoutesById {
   '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
+  '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
@@ -693,6 +710,7 @@ export interface FileRoutesById {
   '/api/deliveries/reassign-expired': typeof ApiDeliveriesReassignExpiredRoute
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
+  '/api/listings/comments': typeof ApiListingsCommentsRoute
   '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
@@ -766,6 +784,7 @@ export interface FileRouteTypes {
     | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
+    | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
     | '/api/comms/notify'
@@ -776,6 +795,7 @@ export interface FileRouteTypes {
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/availability'
     | '/api/delivery/quote'
+    | '/api/listings/comments'
     | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
@@ -846,6 +866,7 @@ export interface FileRouteTypes {
     | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
+    | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
     | '/api/comms/notify'
@@ -856,6 +877,7 @@ export interface FileRouteTypes {
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/availability'
     | '/api/delivery/quote'
+    | '/api/listings/comments'
     | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
@@ -927,6 +949,7 @@ export interface FileRouteTypes {
     | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
+    | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
     | '/api/comms/notify'
@@ -937,6 +960,7 @@ export interface FileRouteTypes {
     | '/api/deliveries/reassign-expired'
     | '/api/delivery/availability'
     | '/api/delivery/quote'
+    | '/api/listings/comments'
     | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
@@ -999,6 +1023,7 @@ export interface RootRouteChildren {
   ApiAdminOrdersRoute: typeof ApiAdminOrdersRoute
   ApiAdminPaymentsRoute: typeof ApiAdminPaymentsRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
+  ApiBuyerOrdersRoute: typeof ApiBuyerOrdersRoute
   ApiChatRequestRoute: typeof ApiChatRequestRoute
   ApiChatSendRoute: typeof ApiChatSendRoute
   ApiCommsNotifyRoute: typeof ApiCommsNotifyRoute
@@ -1009,6 +1034,7 @@ export interface RootRouteChildren {
   ApiDeliveriesReassignExpiredRoute: typeof ApiDeliveriesReassignExpiredRoute
   ApiDeliveryAvailabilityRoute: typeof ApiDeliveryAvailabilityRoute
   ApiDeliveryQuoteRoute: typeof ApiDeliveryQuoteRoute
+  ApiListingsCommentsRoute: typeof ApiListingsCommentsRoute
   ApiOrdersVerifyPaymentRoute: typeof ApiOrdersVerifyPaymentRoute
   ApiOtpSendRoute: typeof ApiOtpSendRoute
   ApiOtpVerifyRoute: typeof ApiOtpVerifyRoute
@@ -1426,6 +1452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrdersVerifyPaymentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/listings/comments': {
+      id: '/api/listings/comments'
+      path: '/api/listings/comments'
+      fullPath: '/api/listings/comments'
+      preLoaderRoute: typeof ApiListingsCommentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/delivery/quote': {
       id: '/api/delivery/quote'
       path: '/api/delivery/quote'
@@ -1494,6 +1527,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat/request'
       fullPath: '/api/chat/request'
       preLoaderRoute: typeof ApiChatRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/buyer/orders': {
+      id: '/api/buyer/orders'
+      path: '/api/buyer/orders'
+      fullPath: '/api/buyer/orders'
+      preLoaderRoute: typeof ApiBuyerOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/pricing': {
@@ -1793,6 +1833,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminOrdersRoute: ApiAdminOrdersRoute,
   ApiAdminPaymentsRoute: ApiAdminPaymentsRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,
+  ApiBuyerOrdersRoute: ApiBuyerOrdersRoute,
   ApiChatRequestRoute: ApiChatRequestRoute,
   ApiChatSendRoute: ApiChatSendRoute,
   ApiCommsNotifyRoute: ApiCommsNotifyRoute,
@@ -1803,6 +1844,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeliveriesReassignExpiredRoute: ApiDeliveriesReassignExpiredRoute,
   ApiDeliveryAvailabilityRoute: ApiDeliveryAvailabilityRoute,
   ApiDeliveryQuoteRoute: ApiDeliveryQuoteRoute,
+  ApiListingsCommentsRoute: ApiListingsCommentsRoute,
   ApiOrdersVerifyPaymentRoute: ApiOrdersVerifyPaymentRoute,
   ApiOtpSendRoute: ApiOtpSendRoute,
   ApiOtpVerifyRoute: ApiOtpVerifyRoute,

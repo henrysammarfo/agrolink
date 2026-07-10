@@ -137,12 +137,17 @@ export async function acceptDeliveryServer(
 
   const { data: delivery } = await supabaseAdmin
     .from("deliveries")
-    .select("id, status, driver_id, required_vehicle_type, pickup_lat, pickup_lng, search_radius_km, declined_driver_ids")
+    .select("id, status, driver_id, required_vehicle_type, pickup_lat, pickup_lng, search_radius_km, declined_driver_ids, order:orders(payment_status)")
     .eq("id", deliveryId)
     .maybeSingle();
 
   if (!delivery || delivery.status !== "requested" || delivery.driver_id) {
     return { ok: false, error: "Job no longer available" };
+  }
+
+  const linkedOrder = delivery.order as { payment_status?: string } | null;
+  if (linkedOrder?.payment_status !== "paid") {
+    return { ok: false, error: "Waiting for buyer payment to confirm" };
   }
 
   if (!vehicleCanFulfill(driver.vehicle_type, delivery.required_vehicle_type)) {

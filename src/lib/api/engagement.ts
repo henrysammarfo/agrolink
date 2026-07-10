@@ -46,19 +46,10 @@ export async function fetchUserLiked(listingId: string, userId: string): Promise
 }
 
 export async function fetchComments(listingId: string): Promise<FeedComment[]> {
-  const { data, error } = await supabase
-    .from("listing_comments")
-    .select("id, user_id, content, created_at, profile:profiles(display_name)")
-    .eq("listing_id", listingId)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((c) => ({
-    id: c.id,
-    user_id: c.user_id,
-    author: (c.profile as { display_name: string | null } | null)?.display_name ?? "User",
-    content: c.content,
-    created_at: c.created_at,
-  }));
+  const res = await fetch(`/api/listings/comments?listingId=${encodeURIComponent(listingId)}`);
+  const json = (await res.json()) as { comments?: FeedComment[]; error?: string };
+  if (!res.ok) throw new Error(json.error ?? "Could not load comments");
+  return json.comments ?? [];
 }
 
 export async function addComment(

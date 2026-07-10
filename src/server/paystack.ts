@@ -437,6 +437,7 @@ export async function confirmOrderPayment(reference: string): Promise<{ ok: bool
 
   if (!payment) return { ok: false, message: "Payment not found" };
   if (payment.status === "paid") {
+    await maybeNotifyDriversForPaidOrder(payment.order_id);
     return { ok: true, message: "Already processed", orderId: payment.order_id };
   }
 
@@ -468,24 +469,29 @@ export async function confirmOrderPayment(reference: string): Promise<{ ok: bool
     metadata: { reference },
   });
 
-  const { data: delivery } = await supabaseAdmin
-    .from("deliveries")
-    .select("id, pickup_address, delivery_fee")
-    .eq("order_id", payment.order_id)
-    .maybeSingle();
-
-  if (delivery) {
-    const { notifyDriversOfNewJob } = await import("@/server/push");
-    const { setDeliveryAcceptDeadline } = await import("@/server/delivery-reassign");
-    await setDeliveryAcceptDeadline(delivery.id);
-    await notifyDriversOfNewJob(
-      delivery.id,
-      delivery.pickup_address,
-      Number(delivery.delivery_fee ?? 0),
-    );
-  }
+  await maybeNotifyDriversForPaidOrder(payment.order_id);
 
   return { ok: true, message: "Payment processed", orderId: payment.order_id };
+}
+
+async function maybeNotifyDriversForPaidOrder(orderId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: delivery } = await supabaseAdmin
+    .from("deliveries")
+    .select("id, pickup_address, delivery_fee, status, driver_id")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (!delivery || delivery.status !== "requested" || delivery.driver_id) return;
+
+  const { notifyDriversOfNewJob } = await import("@/server/push");
+  const { setDeliveryAcceptDeadline } = await import("@/server/delivery-reassign");
+  await setDeliveryAcceptDeadline(delivery.id);
+  await notifyDriversOfNewJob(
+    delivery.id,
+    delivery.pickup_address,
+    Number(delivery.delivery_fee ?? 0),
+  );
 }
 
 export async function verifyAndConfirmPayment(reference: string): Promise<{ ok: boolean; message: string; orderId?: string }> {
