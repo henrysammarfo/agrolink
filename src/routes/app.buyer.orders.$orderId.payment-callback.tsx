@@ -28,45 +28,70 @@ function PaymentCallbackPage() {
   const [paymentStep, setPaymentStep] = useState<"initiated" | "pending" | "confirmed">("pending");
 
   useEffect(() => {
-    if (!reference) {
-      setStatus("failed");
-      setMessage("Missing payment reference.");
-      return;
-    }
-
     let cancelled = false;
+
+    async function goToOrder(hasDelivery: boolean) {
+      if (cancelled) return;
+      setTimeout(() => {
+        void navigate({
+          to: hasDelivery ? "/app/buyer/orders/$orderId/match" : "/app/buyer/orders/$orderId/success",
+          params: { orderId },
+          replace: true,
+        });
+      }, 1200);
+    }
 
     async function verify() {
       try {
-        const res = await apiFetch("/api/payments/verify", {
-          method: "POST",
-          body: JSON.stringify({ reference }),
-        });
-        const data = (await res.json()) as { ok?: boolean; message?: string };
+        let ok = false;
+        let verifyMessage = "";
+
+        if (reference) {
+          const res = await apiFetch("/api/payments/verify", {
+            method: "POST",
+            body: JSON.stringify({ reference }),
+          });
+          const data = (await res.json()) as { ok?: boolean; message?: string };
+          ok = !!data.ok;
+          verifyMessage = data.message ?? "";
+        } else {
+          const res = await apiFetch("/api/orders/verify-payment", {
+            method: "POST",
+            body: JSON.stringify({ orderId }),
+          });
+          const data = (await res.json()) as { ok?: boolean; message?: string };
+          ok = !!data.ok;
+          verifyMessage = data.message ?? "";
+        }
+
         if (cancelled) return;
 
-        if (data.ok) {
+        if (ok) {
           setStatus("success");
           setMessage("Payment confirmed!");
           setPaymentStep("confirmed");
           if (user?.id) {
-            await queryClient.invalidateQueries({ queryKey: ["buyer-orders", user.id] });
-            await queryClient.invalidateQueries({ queryKey: ["order-match", orderId] });
-            await queryClient.invalidateQueries({ queryKey: ["order-success", orderId] });
+            void queryClient.invalidateQueries({ queryKey: ["buyer-orders", user.id] });
+            void queryClient.invalidateQueries({ queryKey: ["order-match", orderId] });
+            void queryClient.invalidateQueries({ queryKey: ["order-success", orderId] });
           }
           const order = await fetchOrderById(orderId);
-          const hasDelivery = !!order?.delivery;
-          setTimeout(() => {
-            navigate({
-              to: hasDelivery ? "/app/buyer/orders/$orderId/match" : "/app/buyer/orders/$orderId/success",
-              params: { orderId },
-            });
-          }, 1500);
+          await goToOrder(!!order?.delivery);
+          return;
+        }
+
+        const order = await fetchOrderById(orderId);
+        if (order?.payment_status === "paid") {
+          setStatus("success");
+          setMessage("Payment already confirmed");
+          setPaymentStep("confirmed");
+          await goToOrder(!!order.delivery);
           return;
         }
 
         setStatus("failed");
-        setMessage(data.message ?? "Payment not completed yet.");
+        setMessage(verifyMessage || "Payment not completed yet.");
+        setPaymentStep(getPaymentTrackingStep(order?.payment_status ?? "pending"));
       } catch {
         if (!cancelled) {
           setStatus("failed");
@@ -79,7 +104,7 @@ function PaymentCallbackPage() {
     return () => {
       cancelled = true;
     };
-  }, [reference, orderId, navigate]);
+  }, [reference, orderId, navigate, user?.id, queryClient]);
 
   return (
     <AppShell role="buyer" compact>
@@ -91,33 +116,35 @@ function PaymentCallbackPage() {
           </div>
         </div>
         <div className="mt-8 grid place-items-center text-center">
-        {status === "verifying" && (
-          <>
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="mt-4 text-sm text-muted-foreground">{message}</p>
-          </>
-        )}
-        {status === "success" && (
-          <>
-            <CheckCircle2 className="h-12 w-12 text-primary" />
-            <h1 className="mt-4 font-serif text-2xl">Payment done</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Taking you to driver matching…</p>
-          </>
-        )}
-        {status === "failed" && (
-          <>
-            <XCircle className="h-12 w-12 text-destructive" />
-            <h1 className="mt-4 font-serif text-2xl">Payment pending</h1>
-            <p className="mt-2 text-sm text-muted-foreground">{message}</p>
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/app/buyer/orders/$orderId/match", params: { orderId } })}
-              className="mt-6 rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background"
-            >
-              Continue to order
-            </button>
-          </>
-        )}
+          {status === "verifying" && (
+            <>
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="mt-4 text-sm text-muted-foreground">{message}</p>
+            </>
+          )}
+          {status === "success" && (
+            <>
+              <CheckCircle2 className="h-12 w-12 text-primary" />
+              <h1 className="mt-4 font-serif text-2xl">Payment done</h1>
+              <p className="mt-2 text-sm text-muted-foreground">Taking you to driver matching…</p>
+            </>
+          )}
+          {status === "failed" && (
+            <>
+              <XCircle className="h-12 w-12 text-destructive" />
+              <h1 className="mt-4 font-serif text-2xl">Payment pending</h1>
+              <p className="mt-2 text-sm text-muted-foreground">{message}</p>
+              <button
+                type="button"
+                onClick={() =>
+                  void navigate({ to: "/app/buyer/orders/$orderId/match", params: { orderId }, replace: true })
+                }
+                className="mt-6 rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background"
+              >
+                Continue to order
+              </button>
+            </>
+          )}
         </div>
       </div>
     </AppShell>

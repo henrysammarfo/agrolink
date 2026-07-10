@@ -8,6 +8,7 @@ type Props = {
   hint?: (stepId: string) => string | null;
   compact?: boolean;
   showUpcoming?: boolean;
+  className?: string;
 };
 
 function stepIndex(steps: readonly Step[], id: string): number {
@@ -20,12 +21,13 @@ export function LifecycleStepper({
   hint,
   compact = false,
   showUpcoming = true,
+  className = "",
 }: Props) {
   const currentIdx = stepIndex(steps, currentStepId);
 
   if (compact) {
     return (
-      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+      <div className={`flex items-center gap-1 overflow-x-auto pb-1 ${className}`}>
         {steps.map((step, i) => {
           const done = i < currentIdx;
           const active = step.id === currentStepId;
@@ -51,7 +53,7 @@ export function LifecycleStepper({
   }
 
   return (
-    <div>
+    <div className={className}>
       <div className="hidden sm:flex items-center gap-0">
         {steps.map((step, i) => {
           const done = i < currentIdx;

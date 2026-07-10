@@ -260,6 +260,8 @@ function Cart() {
     }
   }
 
+  const checkoutStepId = step === 1 ? "cart" : step === 2 ? "delivery" : "payment";
+
   async function pay() {
     if (!user?.id || !user.email) {
       toast.error("Sign in to checkout");
@@ -296,24 +298,25 @@ function Cart() {
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
       trackEvent("checkout_initiated", { total, channel });
       if (user.id) {
-        await queryClient.invalidateQueries({ queryKey: ["buyer-orders", user.id] });
-        await queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
+        void queryClient.invalidateQueries({ queryKey: ["buyer-orders", user.id] });
+        void queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
       }
       if (data.authorizationUrl && !data.demoMode) {
         toast.success("Redirecting to Paystack…", {
           description: data.displayText ?? "Complete payment to confirm your order.",
         });
-        window.location.href = data.authorizationUrl;
+        window.location.assign(data.authorizationUrl);
         return;
       }
       toast.success(data.paymentConfirmed ? "Payment confirmed" : "Payment initiated", {
         description: data.displayText ?? "Your order is being processed.",
       });
       if (data.orderId) {
-        navigate({
-          to: needsDelivery ? "/app/buyer/orders/$orderId/match" : "/app/buyer/orders/$orderId/success",
-          params: { orderId: data.orderId },
-        });
+        const dest = needsDelivery
+          ? "/app/buyer/orders/$orderId/match"
+          : "/app/buyer/orders/$orderId/success";
+        await navigate({ to: dest, params: { orderId: data.orderId }, replace: true });
+        return;
       }
     } catch (error) {
       toast.error("Payment failed", {
@@ -357,7 +360,8 @@ function Cart() {
           <PageHeader eyebrow="Checkout" title="Your" italic="order" />
           <LifecycleStepper
             steps={CHECKOUT_MAIN_STEPS}
-            currentStepId={step === 1 ? "cart" : step === 2 ? "delivery" : "payment"}
+            currentStepId={checkoutStepId}
+            className="mb-6"
           />
         </>
       )}
@@ -421,6 +425,7 @@ function Cart() {
               </div>
 
               <div className="relative z-10 -mt-6 rounded-t-3xl border border-border bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-4 shadow-[0_-8px_30px_rgba(0,0,0,.08)]">
+                <LifecycleStepper steps={CHECKOUT_MAIN_STEPS} currentStepId="delivery" compact className="mb-3" />
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Delivery setup</p>
                 <div className="mt-2">
                   <LifecycleStepper steps={DELIVERY_SETUP_SUBSTEPS} currentStepId={deliverySubstep} compact />
@@ -575,7 +580,6 @@ function Cart() {
           <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-4 w-4" /> Back to delivery
           </button>
-          <LifecycleStepper steps={CHECKOUT_MAIN_STEPS} currentStepId="payment" />
           {DEMO_MODE && (
             <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
               <Wallet className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
