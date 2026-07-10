@@ -1,29 +1,27 @@
-import { Loader } from "@googlemaps/js-api-loader";
+import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 
-let loader: Loader | null = null;
-let loadPromise: Promise<typeof google> | null = null;
+let configured = false;
+let mapsPromise: Promise<typeof google.maps> | null = null;
 
 export function getGoogleMapsClientKey(): string | null {
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   return key?.trim() ? key.trim() : null;
 }
 
-export function loadGoogleMaps(): Promise<typeof google> {
+/** Load Maps JavaScript API (v2 loader — setOptions + importLibrary). */
+export function loadGoogleMaps(): Promise<typeof google.maps> {
   const key = getGoogleMapsClientKey();
-  if (!key) return Promise.reject(new Error("VITE_GOOGLE_MAPS_API_KEY not configured"));
+  if (!key) throw new Error("VITE_GOOGLE_MAPS_API_KEY not configured");
 
-  if (!loader) {
-    loader = new Loader({
-      apiKey: key,
-      version: "weekly",
-      libraries: ["marker"],
-    });
+  if (!configured) {
+    setOptions({ key, v: "weekly" });
+    configured = true;
   }
 
-  if (!loadPromise) {
-    loadPromise = loader.load();
+  if (!mapsPromise) {
+    mapsPromise = importLibrary("maps").then(() => google.maps);
   }
-  return loadPromise;
+  return mapsPromise;
 }
 
 /** AgroLink dark map styling — matches checkout / transport night UI. */

@@ -4,6 +4,9 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { HERO_VIDEO_URL, HERO_VIDEO_FALLBACK_URL, MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
 import { TESTIMONIALS, formatGmv } from "@/lib/config/marketing";
 import { useFeedTeaser, useMarketingStats, usePublicSellers } from "@/hooks/use-marketplace";
+import { useAuth } from "@/lib/auth";
+import { loadActiveWorkspace, roleHome } from "@/lib/active-workspace";
+import { profileHandle } from "@/lib/profile-links";
 import produceHero from "@/assets/produce-hero.jpg";
 
 export const Route = createFileRoute("/")({
@@ -35,6 +38,11 @@ function Index() {
 }
 
 function Hero() {
+  const { user, profile, roles, loading } = useAuth();
+  const signedIn = !!user && !loading;
+  const appHome = user ? roleHome(loadActiveWorkspace(user.id, roles)) : "/app";
+  const displayName = profile?.display_name ?? user?.email?.split("@")[0] ?? "there";
+
   return (
     <section className="relative h-[100svh] w-full overflow-hidden">
       <div
@@ -92,6 +100,20 @@ function Hero() {
             className="cinema-fade mt-5 flex flex-col items-center gap-4 md:mt-6 sm:flex-row"
             style={{ animationDelay: "0.4s" }}
           >
+            {signedIn && (
+              <div className="w-full max-w-md rounded-2xl border border-primary/40 bg-primary/15 px-4 py-3 text-left backdrop-blur-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">Already signed in</p>
+                <p className="mt-1 text-sm text-white">
+                  Welcome back, <span className="font-semibold">{displayName}</span>
+                </p>
+                <Link
+                  to={appHome}
+                  className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
+                >
+                  Open your dashboard <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            )}
             <Link
               to="/market"
               className="group inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-medium text-black transition-colors hover:bg-white/90"
@@ -253,6 +275,8 @@ function HowItWorks() {
 
 function FeaturedFarmers() {
   const { data: farmers = [], isLoading } = usePublicSellers(6);
+  const { user } = useAuth();
+
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 md:px-12 md:py-32">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
@@ -277,11 +301,14 @@ function FeaturedFarmers() {
         </div>
       ) : (
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {farmers.map((f) => (
+          {farmers.map((f) => {
+            const handle = (profileHandle(f) ?? f.id).trim().toLowerCase();
+            const profileTo = user ? "/app/users/$slug" : "/farmers/$slug";
+            return (
             <Link
               key={f.id}
-              to="/farmers/$slug"
-              params={{ slug: f.slug ?? f.id }}
+              to={profileTo}
+              params={{ slug: handle }}
               className="group overflow-hidden rounded-3xl border border-border bg-card transition-colors hover:border-primary/40"
             >
               <div className="aspect-[4/5] overflow-hidden bg-muted">
@@ -311,7 +338,8 @@ function FeaturedFarmers() {
                 </p>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
