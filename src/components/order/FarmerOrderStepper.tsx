@@ -56,9 +56,7 @@ export function FarmerOrderStepper({ order }: { order: OrderRow }) {
         {FARMER_ORDER_STEPS.map((step, i) => {
           const done = i < currentIdx;
           const active = step.id === current;
-          const upcoming = i > currentIdx;
           const hint = farmerStepHint(order, step.id as FarmerStepId);
-          if (upcoming && !active) return null;
           return (
             <li key={step.id} className="relative text-sm">
               <span
@@ -66,8 +64,11 @@ export function FarmerOrderStepper({ order }: { order: OrderRow }) {
                   done ? "bg-emerald-500" : active ? "bg-primary" : "bg-border"
                 }`}
               />
-              <span className={active ? "font-medium text-foreground" : "text-muted-foreground"}>{step.label}</span>
-              {hint && active && <p className="text-xs text-muted-foreground">{hint}</p>}
+              <span className={active ? "font-medium text-foreground" : done ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}>
+                {step.label}
+              </span>
+              {active && hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+              {!active && !done && <p className="text-xs text-muted-foreground/60">Upcoming</p>}
             </li>
           );
         })}

@@ -6,6 +6,8 @@ import { AppShell } from "@/components/app/AppShell";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { fetchOrderById } from "@/lib/api/orders";
+import { LifecycleStepper } from "@/components/order/LifecycleStepper";
+import { PAYMENT_TRACKING_STEPS, getPaymentTrackingStep } from "@/lib/order-lifecycle";
 
 export const Route = createFileRoute("/app/buyer/orders/$orderId/payment-callback")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -23,6 +25,7 @@ function PaymentCallbackPage() {
   const { user } = useAuth();
   const [status, setStatus] = useState<"verifying" | "success" | "failed">("verifying");
   const [message, setMessage] = useState("Verifying your payment…");
+  const [paymentStep, setPaymentStep] = useState<"initiated" | "pending" | "confirmed">("pending");
 
   useEffect(() => {
     if (!reference) {
@@ -45,6 +48,7 @@ function PaymentCallbackPage() {
         if (data.ok) {
           setStatus("success");
           setMessage("Payment confirmed!");
+          setPaymentStep("confirmed");
           if (user?.id) {
             await queryClient.invalidateQueries({ queryKey: ["buyer-orders", user.id] });
             await queryClient.invalidateQueries({ queryKey: ["order-match", orderId] });
@@ -79,7 +83,14 @@ function PaymentCallbackPage() {
 
   return (
     <AppShell role="buyer" compact>
-      <div className="mx-auto grid max-w-md min-h-[50vh] place-items-center px-4 text-center">
+      <div className="mx-auto max-w-md min-h-[50vh] px-4 py-8">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Payment tracking</p>
+          <div className="mt-3">
+            <LifecycleStepper steps={PAYMENT_TRACKING_STEPS} currentStepId={paymentStep} />
+          </div>
+        </div>
+        <div className="mt-8 grid place-items-center text-center">
         {status === "verifying" && (
           <>
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -107,6 +118,7 @@ function PaymentCallbackPage() {
             </button>
           </>
         )}
+        </div>
       </div>
     </AppShell>
   );

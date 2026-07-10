@@ -12,13 +12,10 @@ import { useAuth } from "@/lib/auth";
 import type { DeliveryRow, OrderRow } from "@/lib/types/marketplace";
 import { toast } from "sonner";
 
-const STATUS_STEPS = ["confirmed", "processing", "dispatched", "delivered"] as const;
-const DELIVERY_TRACKING = [
-  "driver_assigned",
-  "driver_enroute_pickup",
-  "picked_up",
-  "enroute_delivery",
-] as const;
+import { DRIVER_DELIVERY_SUBSTEPS, driverDeliverySubstepIndex } from "@/lib/order-lifecycle";
+import { LifecycleStepper } from "@/components/order/LifecycleStepper";
+
+const FARMER_STEPS = ["confirmed", "processing", "dispatched"] as const;
 
 type Props = { order: OrderRow; fullscreen?: boolean };
 
@@ -178,12 +175,11 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
       : []),
   ];
 
-  const deliveryStep = delivery?.status
-    ? DELIVERY_TRACKING.indexOf(delivery.status as (typeof DELIVERY_TRACKING)[number])
-    : -1;
-  const orderStep = STATUS_STEPS.indexOf(order.status as (typeof STATUS_STEPS)[number]);
-  const currentIndex = deliveryStep >= 0 ? Math.min(deliveryStep + 1, STATUS_STEPS.length - 1) : orderStep;
-  const progress = currentIndex >= 0 ? (currentIndex + 1) / STATUS_STEPS.length : 0.25;
+  const farmerIdx = FARMER_STEPS.indexOf(order.status as (typeof FARMER_STEPS)[number]);
+  const deliveryIdx = delivery?.status ? driverDeliverySubstepIndex(delivery.status) : -1;
+  const farmerProgress = farmerIdx >= 0 ? (farmerIdx + 1) / FARMER_STEPS.length : 0.33;
+  const deliveryProgress = deliveryIdx >= 0 ? (deliveryIdx + 1) / DRIVER_DELIVERY_SUBSTEPS.length : 0;
+  const progress = Math.max(0.15, Math.min(1, (farmerProgress + deliveryProgress) / 2));
 
   const mapHeight = fullscreen ? "min-h-[55vh] h-[55vh]" : "280px";
   const driverName = delivery.driver?.profile?.display_name ?? "Driver";
@@ -284,6 +280,14 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
               <div
                 className="h-full bg-gradient-to-r from-emerald-500 via-primary to-accent transition-[width]"
                 style={{ width: `${Math.max(6, progress * 100)}%` }}
+              />
+            </div>
+            <div className="mt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Delivery steps</p>
+              <LifecycleStepper
+                steps={DRIVER_DELIVERY_SUBSTEPS}
+                currentStepId={delivery.status}
+                compact
               />
             </div>
             <div className="mt-3 flex items-center justify-between">

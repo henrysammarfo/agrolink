@@ -10,6 +10,7 @@ import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
 import { useAuth } from "@/lib/auth";
 import { useBuyerOrders, useReorderCart } from "@/hooks/use-marketplace";
 import { buildTrackedOrder } from "@/lib/types/fulfillment";
+import { isOrderActive } from "@/lib/order-lifecycle";
 
 export const Route = createFileRoute("/app/buyer/orders")({
   head: () => ({ meta: [{ title: "Orders · AgroLink" }] }),
@@ -24,9 +25,9 @@ function Orders() {
   const [q, setQ] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const activeOrders = orders.filter((o) => !["delivered", "cancelled"].includes(o.status));
+  const activeOrders = orders.filter(isOrderActive);
   const historyOrders = orders
-    .filter((o) => ["delivered", "cancelled"].includes(o.status))
+    .filter((o) => !isOrderActive(o))
     .filter((o) => !q || o.id.includes(q));
 
   const handleReorder = async (orderId: string) => {
@@ -96,7 +97,9 @@ function Orders() {
               >
                 {expandedId === o.id ? "Hide" : "Show"} fulfillment timeline
               </button>
-              {expandedId === o.id && <OrderTracker order={buildTrackedOrder(o)} />}
+              {expandedId === o.id && (
+                <OrderTracker order={buildTrackedOrder(o)} sourceOrder={o} showPayment showFullPipeline />
+              )}
             </div>
           ))}
           {activeOrders.length === 0 && (

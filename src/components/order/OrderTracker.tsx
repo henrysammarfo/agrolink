@@ -1,21 +1,34 @@
-import { Check, Clock, Package, Truck, MapPin, FileText, User } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   FULFILLMENT_FLOW,
   type TrackedOrder,
   type FulfillmentStep,
+  BUYER_ORDER_PIPELINE,
+  pipelineStepHint,
 } from "@/lib/types/fulfillment";
+import type { OrderRow } from "@/lib/types/marketplace";
+import { LifecycleStepper } from "@/components/order/LifecycleStepper";
+import { PAYMENT_TRACKING_STEPS, getPaymentTrackingStep } from "@/lib/order-lifecycle";
 
 const STEP_ICONS: Record<FulfillmentStep, typeof Check> = {
   placed: Check,
   confirmed: Check,
-  packed: Package,
-  shipped: Truck,
-  in_transit: MapPin,
+  packed: Check,
+  shipped: Check,
+  in_transit: Check,
   delivered: Check,
 };
 
-export function OrderTracker({ order }: { order: TrackedOrder }) {
+type Props = {
+  order: TrackedOrder;
+  sourceOrder?: OrderRow;
+  showPayment?: boolean;
+  showFullPipeline?: boolean;
+};
+
+export function OrderTracker({ order, sourceOrder, showPayment = true, showFullPipeline = true }: Props) {
   const currentIndex = FULFILLMENT_FLOW.findIndex((s) => s.step === order.currentStep);
+  const paymentStep = sourceOrder ? getPaymentTrackingStep(sourceOrder.payment_status) : null;
 
   return (
     <div className="rounded-3xl border border-border bg-card p-5 md:p-6">
@@ -23,21 +36,36 @@ export function OrderTracker({ order }: { order: TrackedOrder }) {
         <div>
           <div className="text-[10px] uppercase tracking-widest text-primary/80">{order.id}</div>
           <div className="mt-1 font-serif text-2xl text-foreground">{order.items}</div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><User className="h-3 w-3 text-emerald-600" /> {order.farmer}</span>
-            {order.driver && <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3 text-amber-600" /> {order.driver}</span>}
-            {order.eta && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3 text-rose-500" /> ETA {order.eta}</span>}
-          </div>
         </div>
         <div className="text-right">
           <div className="font-serif text-3xl text-primary">GHS {order.totalGhs}</div>
-          <a href={order.receiptUrl} className="mt-1 inline-flex items-center gap-1 text-xs text-accent hover:underline">
-            <FileText className="h-3 w-3" /> Receipt
-          </a>
         </div>
       </div>
 
-      {/* progress rail */}
+      {showPayment && paymentStep && (
+        <div className="mt-5 rounded-2xl border border-border bg-muted/30 p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Payment tracking</p>
+          <div className="mt-3">
+            <LifecycleStepper steps={PAYMENT_TRACKING_STEPS} currentStepId={paymentStep} showUpcoming />
+          </div>
+        </div>
+      )}
+
+      {showFullPipeline && sourceOrder && (
+        <div className="mt-5 rounded-2xl border border-border bg-background p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Full order pipeline</p>
+          <div className="mt-3">
+            <LifecycleStepper
+              steps={BUYER_ORDER_PIPELINE.filter((s) => !["cart", "delivery_setup", "payment_checkout"].includes(s.id))}
+              currentStepId={order.pipelineStep}
+              hint={(id) => pipelineStepHint(sourceOrder, id as typeof order.pipelineStep)}
+              showUpcoming
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Summary progress rail */}
       <div className="mt-6 hidden md:flex items-center">
         {FULFILLMENT_FLOW.map((s, i) => {
           const done = i <= currentIndex;
@@ -62,7 +90,7 @@ export function OrderTracker({ order }: { order: TrackedOrder }) {
         })}
       </div>
 
-      {/* timeline */}
+      {/* Event timeline */}
       <ol className="mt-6 space-y-3 border-l border-border pl-5">
         {order.timeline.map((e, i) => {
           const Icon = STEP_ICONS[e.step];
