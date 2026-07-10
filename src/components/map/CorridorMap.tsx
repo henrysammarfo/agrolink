@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
-import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, GHANA_MIN_ZOOM, GHANA_NE, GHANA_OVERVIEW_ZOOM, GHANA_SW, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, GHANA_MIN_ZOOM, GHANA_NE, GHANA_OVERVIEW_ZOOM, GHANA_SW, GREATER_ACCRA_NE, GREATER_ACCRA_SW, GREATER_ACCRA_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import { getGoogleMapsClientKey } from "@/lib/google-maps-client";
 import { DRIVER_CAR_ICON_ANCHOR, DRIVER_CAR_ICON_HTML, DRIVER_CAR_ICON_SIZE } from "@/lib/map-icons";
 import { GoogleCorridorMap } from "@/components/map/GoogleCorridorMap";
@@ -25,6 +25,8 @@ type Props = {
   fitKey?: string;
   etaLabel?: string;
   priceLabel?: string;
+  /** When true, fit/zoom to Greater Accra corridor instead of all Ghana */
+  corridorOnly?: boolean;
 };
 
 const COLORS: Record<NonNullable<Pin["kind"]>, string> = {
@@ -63,6 +65,7 @@ function LeafletCorridorMap({
   fitKey,
   etaLabel,
   priceLabel,
+  corridorOnly = false,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -218,30 +221,6 @@ function LeafletCorridorMap({
       rafRef.current = requestAnimationFrame(tick);
     }
 
-    if (etaLabel && allRouteCoords.length > 0) {
-      const dest = allRouteCoords[allRouteCoords.length - 1];
-      const etaIcon = L.divIcon({
-        html: `<div style="background:#ef4444;color:#fff;font:700 12px Inter,sans-serif;padding:6px 10px;border-radius:10px;box-shadow:0 4px 16px rgba(239,68,68,.45);white-space:nowrap">${etaLabel}</div>`,
-        className: "",
-        iconSize: [0, 0],
-        iconAnchor: [-8, 20],
-      });
-      layers.overlays.push(L.marker(dest, { icon: etaIcon, interactive: false }).addTo(map));
-    }
-
-    if (priceLabel && !driverPosition) {
-      const priceIcon = L.divIcon({
-        html: `<div style="background:#ef4444;color:#fff;font:700 13px Inter,sans-serif;padding:8px 12px;border-radius:9999px;box-shadow:0 4px 16px rgba(239,68,68,.4)">${priceLabel}</div>`,
-        className: "",
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-      });
-      const anchor = center && isValidMapCoord(center[0], center[1]) ? center : ACCRA_CENTER;
-      layers.overlays.push(
-        L.marker([anchor[0] + 0.006, anchor[1] + 0.01], { icon: priceIcon, interactive: false }).addTo(map),
-      );
-    }
-
     const shouldFit = fitKey !== lastFitKey.current;
     if (shouldFit) lastFitKey.current = fitKey;
 
@@ -255,16 +234,20 @@ function LeafletCorridorMap({
 
     if (shouldFit && fitPoints.length > 0) {
       map.fitBounds(L.latLngBounds(fitPoints), { padding: [120, 56], maxZoom: STREET_ZOOM });
-      if ((map.getZoom() ?? 0) < 10) map.setZoom(10);
+      if ((map.getZoom() ?? 0) < (corridorOnly ? GREATER_ACCRA_ZOOM : 10)) {
+        map.setZoom(corridorOnly ? GREATER_ACCRA_ZOOM : 10);
+      }
     } else if (shouldFit && center && isValidMapCoord(center[0], center[1])) {
-      map.setView(center, Math.max(zoom ?? STREET_ZOOM, 11));
+      map.setView(center, Math.max(zoom ?? STREET_ZOOM, corridorOnly ? GREATER_ACCRA_ZOOM : 11));
     } else if (shouldFit) {
-      map.fitBounds(L.latLngBounds(GHANA_SW, GHANA_NE), { padding: [40, 40] });
-      map.setZoom(GHANA_OVERVIEW_ZOOM);
+      const sw = corridorOnly ? GREATER_ACCRA_SW : GHANA_SW;
+      const ne = corridorOnly ? GREATER_ACCRA_NE : GHANA_NE;
+      map.fitBounds(L.latLngBounds(sw, ne), { padding: [40, 40] });
+      map.setZoom(corridorOnly ? GREATER_ACCRA_ZOOM : GHANA_OVERVIEW_ZOOM);
     }
 
     setTimeout(() => map.invalidateSize(), 80);
-  }, [pins, route, routeSegments, fitKey, animateDriver, driverLabel, onProgress, etaLabel, priceLabel, center, zoom]);
+  }, [pins, route, routeSegments, fitKey, animateDriver, driverLabel, onProgress, center, zoom, corridorOnly]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -289,7 +272,12 @@ function LeafletCorridorMap({
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ height, width: "100%" }}>
       <div ref={ref} className="absolute inset-0" />
-      {priceLabel && driverPosition && (
+      {etaLabel && (
+        <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl bg-black/75 px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm">
+          {etaLabel}
+        </div>
+      )}
+      {priceLabel && (
         <div className="pointer-events-none absolute right-3 top-3 z-[500] rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-lg">
           {priceLabel}
         </div>

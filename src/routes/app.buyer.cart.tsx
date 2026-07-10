@@ -20,6 +20,7 @@ import { reverseGeocode } from "@/lib/api/maps";
 import { FULFILLMENT_OPTIONS, type FulfillmentMode } from "@/lib/fulfillment";
 import type { MapLocation } from "@/lib/api/maps";
 import { DeliveryVehiclePicker, mapQuoteVehicle } from "@/components/checkout/DeliveryVehiclePicker";
+import { ACCRA_CENTER, isInGreaterAccra, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 
 const DEFAULT_DELIVERY: MapLocation = GHANA_LOCATIONS[0];
 
@@ -59,6 +60,8 @@ function Cart() {
   const [addressSheetOpen, setAddressSheetOpen] = useState(false);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [routeEtaMin, setRouteEtaMin] = useState<number | null>(null);
+  const [liveDrivers, setLiveDrivers] = useState<{ lat: number; lng: number }[]>([]);
+  const [driversNearby, setDriversNearby] = useState(0);
 
   const subtotal = items.reduce(
     (s, i) => s + Number(i.listing?.price_per_unit ?? 0) * Number(i.quantity),
@@ -80,34 +83,57 @@ function Cart() {
   const pickupStops = useMemo(() => {
     const stops = items
       .map((i) => i.listing)
-      .filter((l): l is NonNullable<typeof l> => !!l?.lat && !!l?.lng)
+      .filter((l): l is NonNullable<typeof l> => !!l?.lat && !!l?.lng && isValidMapCoord(l.lat, l.lng))
       .map((l) => ({ lat: l.lat, lng: l.lng, label: l.location_name }));
     return [...new Map(stops.map((s) => [`${s.lat},${s.lng}`, s])).values()];
   }, [items]);
 
-  const pickupLabel = pickupStops[0]?.label ?? items[0]?.listing?.location_name ?? "Farm pickup";
+  const mapCenter = useMemo((): [number, number] => {
+    const points = [
+      ...pickupStops,
+      isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng) ? deliveryLocation : null,
+      ...liveDrivers,
+    ].filter(Boolean) as { lat: number; lng: number }[];
+    if (!points.length) return ACCRA_CENTER;
+    const lat = points.reduce((s, p) => s + p.lat, 0) / points.length;
+    const lng = points.reduce((s, p) => s + p.lng, 0) / points.length;
+    return [lat, lng];
+  }, [pickupStops, deliveryLocation, liveDrivers]);
+
+  const mapFitKey = `${deliveryLocation.lat},${deliveryLocation.lng}:${routeCoords.length}:${liveDrivers.length}`;
 
   const mapPins = useMemo(() => {
-    const pins: { lat: number; lng: number; label: string; kind: "farm" | "buyer" }[] = [];
+    const pins: { lat: number; lng: number; label: string; kind: "farm" | "buyer" | "driver" }[] = [];
     for (const s of pickupStops) {
       pins.push({ lat: s.lat, lng: s.lng, label: s.label ?? "Farm", kind: "farm" });
     }
-    pins.push({ lat: deliveryLocation.lat, lng: deliveryLocation.lng, label: "You", kind: "buyer" });
+    if (isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng)) {
+      pins.push({ lat: deliveryLocation.lat, lng: deliveryLocation.lng, label: "You", kind: "buyer" });
+    }
+    for (const d of liveDrivers) {
+      if (isValidMapCoord(d.lat, d.lng)) {
+        pins.push({ lat: d.lat, lng: d.lng, label: "Driver", kind: "driver" });
+      }
+    }
     return pins;
-  }, [pickupStops, deliveryLocation]);
+  }, [pickupStops, deliveryLocation, liveDrivers]);
 
   const routeSegments = useMemo(() => buildTrafficSegments(routeCoords), [routeCoords]);
 
+  const pickupLabel = pickupStops[0]?.label ?? items[0]?.listing?.location_name ?? "Farm pickup";
+
   useEffect(() => {
-    if (step !== 2 || !needsDelivery || !items[0]?.listing?.lat || !items[0]?.listing?.lng) {
+    if (step !== 2 || !needsDelivery || !pickupStops[0]) {
       setRouteCoords([]);
       setRouteEtaMin(null);
       return;
     }
+    const dest = deliveryLocation;
+    if (!isValidMapCoord(dest.lat, dest.lng)) return;
     let cancelled = false;
     fetchDrivingRoute(
-      { lat: items[0].listing.lat, lng: items[0].listing.lng },
-      { lat: deliveryLocation.lat, lng: deliveryLocation.lng },
+      { lat: pickupStops[0].lat, lng: pickupStops[0].lng },
+      { lat: dest.lat, lng: dest.lng },
     ).then((r) => {
       if (cancelled || !r) return;
       setRouteCoords(r.coordinates);
@@ -116,16 +142,22 @@ function Cart() {
     return () => {
       cancelled = true;
     };
-  }, [step, needsDelivery, deliveryLocation.lat, deliveryLocation.lng, items]);
+  }, [step, needsDelivery, deliveryLocation.lat, deliveryLocation.lng, pickupStops]);
 
   useEffect(() => {
     void getCurrentPosition().then(async (p) => {
-      if (!p) return;
+      if (!p || !isValidMapCoord(p.lat, p.lng)) return;
       try {
         const loc = await reverseGeocode(p.lat, p.lng);
-        setDeliveryLocation(loc);
+        if (isInGreaterAccra(loc.lat, loc.lng)) {
+          setDeliveryLocation(loc);
+        } else {
+          setDeliveryLocation(DEFAULT_DELIVERY);
+        }
       } catch {
-        setDeliveryLocation({ name: "Your location", lat: p.lat, lng: p.lng });
+        if (isInGreaterAccra(p.lat, p.lng)) {
+          setDeliveryLocation({ name: "Your location", lat: p.lat, lng: p.lng });
+        }
       }
     });
   }, []);
@@ -135,8 +167,8 @@ function Cart() {
       if (!needsDelivery) setDeliveryQuote(null);
       return;
     }
-    const first = items[0].listing;
-    if (!first?.lat || !first?.lng) return;
+    const first = pickupStops[0];
+    if (!first || !isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng)) return;
     const weightKg = items.reduce((s, i) => s + Number(i.quantity), 0);
     setQuoteLoading(true);
     apiFetch("/api/delivery/quote", {
@@ -156,6 +188,37 @@ function Cart() {
       .catch(() => setDeliveryQuote(null))
       .finally(() => setQuoteLoading(false));
   }, [items, pickupStops, deliveryLocation, needsDelivery, selectedVehicle, step]);
+
+  useEffect(() => {
+    if (step !== 2 || !needsDelivery || !pickupStops[0]) {
+      setLiveDrivers([]);
+      setDriversNearby(0);
+      return;
+    }
+    const load = () => {
+      const params = new URLSearchParams({
+        pickupLat: String(pickupStops[0].lat),
+        pickupLng: String(pickupStops[0].lng),
+        deliveryLat: String(deliveryLocation.lat),
+        deliveryLng: String(deliveryLocation.lng),
+        weightKg: String(items.reduce((s, i) => s + Number(i.quantity), 0)),
+      });
+      apiFetch(`/api/delivery/availability?${params}`)
+        .then((r) => r.json())
+        .then((j: { liveDrivers?: { lat: number; lng: number }[]; options?: { driversNearby: number }[] }) => {
+          const drivers = (j.liveDrivers ?? []).filter((d) => isValidMapCoord(d.lat, d.lng));
+          setLiveDrivers(drivers);
+          setDriversNearby(drivers.length);
+        })
+        .catch(() => {
+          setLiveDrivers([]);
+          setDriversNearby(0);
+        });
+    };
+    load();
+    const interval = setInterval(load, 30_000);
+    return () => clearInterval(interval);
+  }, [step, needsDelivery, pickupStops, deliveryLocation.lat, deliveryLocation.lng, items]);
 
   async function sendOtp() {
     if (!user?.id) return;
@@ -233,7 +296,7 @@ function Cart() {
       });
       if (data.orderId) {
         navigate({
-          to: "/app/buyer/orders/$orderId/success",
+          to: needsDelivery ? "/app/buyer/orders/$orderId/match" : "/app/buyer/orders/$orderId/success",
           params: { orderId: data.orderId },
         });
       }
@@ -306,18 +369,20 @@ function Cart() {
 
       {step === 2 && (
         <div className="relative -mx-4 sm:-mx-6 md:-mx-10">
-          {needsDelivery && items[0]?.listing?.lat && items[0]?.listing?.lng ? (
+          {needsDelivery && pickupStops[0] ? (
             <>
               <div className="relative h-[42vh] min-h-[280px] max-h-[420px]">
                 <CorridorMap
                   pins={mapPins}
                   route={routeCoords}
                   routeSegments={routeSegments}
-                  fitKey={`${deliveryLocation.lat},${deliveryLocation.lng}`}
+                  fitKey={mapFitKey}
+                  center={mapCenter}
+                  zoom={STREET_ZOOM}
+                  corridorOnly
                   dark={false}
                   height="100%"
                   etaLabel={routeEtaMin != null ? `${routeEtaMin} min` : undefined}
-                  priceLabel={deliveryQuote ? `GHS ${Math.round(total)}` : undefined}
                 />
                 <button
                   type="button"
@@ -372,11 +437,11 @@ function Cart() {
                   </div>
                 </button>
 
-                {items[0]?.listing?.lat && items[0]?.listing?.lng && (
+                {pickupStops[0] && (
                   <div className="mt-4">
                     <DeliveryVehiclePicker
-                      pickupLat={items[0].listing.lat}
-                      pickupLng={items[0].listing.lng}
+                      pickupLat={pickupStops[0].lat}
+                      pickupLng={pickupStops[0].lng}
                       deliveryLat={deliveryLocation.lat}
                       deliveryLng={deliveryLocation.lng}
                       weightKg={items.reduce((s, i) => s + Number(i.quantity), 0)}
@@ -384,6 +449,15 @@ function Cart() {
                       onChange={setSelectedVehicle}
                       etaMin={routeEtaMin ?? undefined}
                     />
+                    {driversNearby > 0 ? (
+                      <p className="mt-2 text-xs text-emerald-600">
+                        {driversNearby} live driver{driversNearby === 1 ? "" : "s"} nearby on map
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        No drivers online nearby — you can still checkout; we&apos;ll search when you pay.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -399,7 +473,13 @@ function Cart() {
                 onClose={() => setAddressSheetOpen(false)}
                 pickupLabel={pickupLabel}
                 value={deliveryLocation}
-                onChange={setDeliveryLocation}
+                onChange={(loc) => {
+                  if (isValidMapCoord(loc.lat, loc.lng) && isInGreaterAccra(loc.lat, loc.lng)) {
+                    setDeliveryLocation(loc);
+                  } else {
+                    toast.error("Choose an address in Greater Accra");
+                  }
+                }}
                 recentPicks={GHANA_LOCATIONS}
               />
 

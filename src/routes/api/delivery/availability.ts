@@ -168,6 +168,11 @@ export const Route = createFileRoute("/api/delivery/availability")({
           radiusKm,
           routeEtaMin: routeEtaMin != null ? Math.round(routeEtaMin) : null,
           etaSource: routeEtaMin != null ? "google_matrix" : null,
+          liveDrivers: nearby.map((d) => ({
+            lat: d.current_lat as number,
+            lng: d.current_lng as number,
+            vehicleType: vehicleToFilterBucket(d.vehicle_type),
+          })),
         });
       },
     },

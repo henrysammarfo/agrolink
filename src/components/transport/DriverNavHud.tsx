@@ -14,6 +14,8 @@ type Props = {
   enabled?: boolean;
   muted?: boolean;
   onToggleMute?: () => void;
+  /** When active trip, sit above bottom sheet instead of top */
+  placement?: "top" | "above-sheet";
 };
 
 function haversineM(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -46,6 +48,7 @@ export function DriverNavHud({
   enabled = true,
   muted = false,
   onToggleMute,
+  placement = "top",
 }: Props) {
   const spokeStartRef = useRef(false);
   const stepIndexRef = useRef(0);
@@ -94,8 +97,13 @@ export function DriverNavHud({
   const etaMin = durationInTrafficMin ?? durationMin;
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&travelmode=driving`;
 
+  const placementClass =
+    placement === "above-sheet"
+      ? "bottom-[calc(var(--agrolink-tab-bar,3.5rem)+env(safe-area-inset-bottom)+14rem)] top-auto"
+      : "top-[max(env(safe-area-inset-top),3.5rem)]";
+
   return (
-    <div className="pointer-events-auto absolute inset-x-3 top-[max(env(safe-area-inset-top),3.5rem)] z-30 mx-auto max-w-md rounded-2xl border border-white/15 bg-black/75 p-3 text-white backdrop-blur-md">
+    <div className={`pointer-events-auto absolute inset-x-3 z-30 mx-auto max-w-md rounded-2xl border border-white/15 bg-black/75 p-3 text-white backdrop-blur-md ${placementClass}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

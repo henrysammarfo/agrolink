@@ -17,6 +17,36 @@ export const GHANA_SW: [number, number] = [GHANA_BOUNDS.south, GHANA_BOUNDS.west
 export const GHANA_NE: [number, number] = [GHANA_BOUNDS.north, GHANA_BOUNDS.east];
 export const GHANA_CENTER: [number, number] = [7.95, -1.02];
 
+/** Greater Accra corridor — default viewport for marketplace / delivery maps */
+export const GREATER_ACCRA_BOUNDS = {
+  south: 5.45,
+  west: -0.42,
+  north: 6.05,
+  east: 0.78,
+} as const;
+
+export const GREATER_ACCRA_SW: [number, number] = [GREATER_ACCRA_BOUNDS.south, GREATER_ACCRA_BOUNDS.west];
+export const GREATER_ACCRA_NE: [number, number] = [GREATER_ACCRA_BOUNDS.north, GREATER_ACCRA_BOUNDS.east];
+export const GREATER_ACCRA_ZOOM = 11;
+
+/** Clamp a point inside Greater Accra bounds */
+export function clampToGreaterAccra(lat: number, lng: number): [number, number] {
+  return [
+    Math.min(GREATER_ACCRA_BOUNDS.north, Math.max(GREATER_ACCRA_BOUNDS.south, lat)),
+    Math.min(GREATER_ACCRA_BOUNDS.east, Math.max(GREATER_ACCRA_BOUNDS.west, lng)),
+  ];
+}
+
+/** True when coordinates fall inside the Accra corridor */
+export function isInGreaterAccra(lat: number, lng: number): boolean {
+  return (
+    lat >= GREATER_ACCRA_BOUNDS.south &&
+    lat <= GREATER_ACCRA_BOUNDS.north &&
+    lng >= GREATER_ACCRA_BOUNDS.west &&
+    lng <= GREATER_ACCRA_BOUNDS.east
+  );
+}
+
 export const ACCRA_CENTER: [number, number] = [5.6037, -0.187];
 export const DEFAULT_MAP_ZOOM = 13;
 export const STREET_ZOOM = 15;

@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Loader2, MapPin } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, MapPin, MessageCircle } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { CorridorMap } from "@/components/map/CorridorMap";
-import { useAuth } from "@/lib/auth";
 import { fetchOrderById } from "@/lib/api/orders";
 import { useQuery } from "@tanstack/react-query";
 import { LiveTrackCard } from "@/components/track/LiveTrackCard";
+import { apiFetch } from "@/lib/api/fetch-auth";
+import { ACCRA_CENTER, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 
 export const Route = createFileRoute("/app/buyer/orders/$orderId/match")({
   head: () => ({ meta: [{ title: "Finding driver · AgroLink" }] }),
@@ -15,8 +16,8 @@ export const Route = createFileRoute("/app/buyer/orders/$orderId/match")({
 
 function DriverMatchPage() {
   const { orderId } = Route.useParams();
-  const { user } = useAuth();
   const [pulse, setPulse] = useState(0);
+  const [liveDrivers, setLiveDrivers] = useState<{ lat: number; lng: number }[]>([]);
 
   const { data: order, refetch, isLoading } = useQuery({
     queryKey: ["order-match", orderId],
@@ -38,6 +39,50 @@ function DriverMatchPage() {
     if (matched) void refetch();
   }, [matched, refetch]);
 
+  useEffect(() => {
+    if (!delivery || matched) return;
+    const load = () => {
+      const params = new URLSearchParams({
+        pickupLat: String(delivery.pickup_lat),
+        pickupLng: String(delivery.pickup_lng),
+        deliveryLat: String(delivery.delivery_lat),
+        deliveryLng: String(delivery.delivery_lng),
+        weightKg: "10",
+      });
+      apiFetch(`/api/delivery/availability?${params}`)
+        .then((r) => r.json())
+        .then((j: { liveDrivers?: { lat: number; lng: number }[] }) => {
+          setLiveDrivers((j.liveDrivers ?? []).filter((d) => isValidMapCoord(d.lat, d.lng)));
+        })
+        .catch(() => setLiveDrivers([]));
+    };
+    load();
+    const interval = setInterval(load, 15_000);
+    return () => clearInterval(interval);
+  }, [delivery?.pickup_lat, delivery?.pickup_lng, delivery?.delivery_lat, delivery?.delivery_lng, matched]);
+
+  const pins = useMemo(() => {
+    if (!delivery) return [];
+    const list: { lat: number; lng: number; label: string; kind: "farm" | "buyer" | "driver" }[] = [];
+    if (isValidMapCoord(delivery.pickup_lat, delivery.pickup_lng)) {
+      list.push({ lat: delivery.pickup_lat, lng: delivery.pickup_lng, label: "Farm", kind: "farm" });
+    }
+    if (isValidMapCoord(delivery.delivery_lat, delivery.delivery_lng)) {
+      list.push({ lat: delivery.delivery_lat, lng: delivery.delivery_lng, label: "You", kind: "buyer" });
+    }
+    for (const d of liveDrivers) {
+      list.push({ lat: d.lat, lng: d.lng, label: "Driver", kind: "driver" });
+    }
+    return list;
+  }, [delivery, liveDrivers]);
+
+  const mapCenter = useMemo((): [number, number] => {
+    if (!pins.length) return ACCRA_CENTER;
+    const lat = pins.reduce((s, p) => s + p.lat, 0) / pins.length;
+    const lng = pins.reduce((s, p) => s + p.lng, 0) / pins.length;
+    return [lat, lng];
+  }, [pins]);
+
   if (isLoading || !order) {
     return (
       <AppShell role="buyer">
@@ -49,6 +94,7 @@ function DriverMatchPage() {
   }
 
   if (matched && delivery) {
+    const driverUserId = delivery.driver?.user_id;
     return (
       <AppShell role="buyer">
         <div className="mx-auto max-w-2xl px-4 py-6">
@@ -57,33 +103,46 @@ function DriverMatchPage() {
           <div className="mt-6">
             <LiveTrackCard order={order} />
           </div>
-          <Link
-            to="/app/buyer/orders/$orderId/track"
-            params={{ orderId }}
-            className="mt-4 block text-center text-sm text-primary hover:underline"
-          >
-            Open full-screen map
-          </Link>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Link
+              to="/app/buyer/orders/$orderId/track"
+              params={{ orderId }}
+              className="inline-flex flex-1 items-center justify-center rounded-full bg-foreground py-3 text-sm font-medium text-background"
+            >
+              Open full-screen map
+            </Link>
+            {driverUserId && (
+              <Link
+                to="/app/inbox/chat/$userId"
+                params={{ userId: driverUserId }}
+                search={{ order: orderId }}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border py-3 text-sm font-medium"
+              >
+                <MessageCircle className="h-4 w-4" /> Message driver
+              </Link>
+            )}
+          </div>
         </div>
       </AppShell>
     );
   }
 
-  const pins = delivery
-    ? [
-        { lat: delivery.pickup_lat, lng: delivery.pickup_lng, label: "Farm", kind: "farm" as const },
-        { lat: delivery.delivery_lat, lng: delivery.delivery_lng, label: "You", kind: "buyer" as const },
-      ]
-    : [];
-
   const radius = (delivery as { search_radius_km?: number })?.search_radius_km ?? 20;
   const round = (delivery as { offer_round?: number })?.offer_round ?? 1;
 
   return (
-    <AppShell role="buyer">
-      <div className="relative -mx-6 -mt-6 h-[calc(100vh-120px)] min-h-[500px] md:-mx-10 md:-mt-10">
-        <CorridorMap pins={pins} dark height="100%" />
-        <div className="absolute inset-x-0 bottom-0 px-4 pb-8">
+    <AppShell role="buyer" hideMobileNav>
+      <div className="relative -mx-6 -mt-6 h-[100dvh] min-h-[500px] md:-mx-10 md:-mt-10">
+        <CorridorMap
+          pins={pins}
+          fitKey={`${orderId}-${liveDrivers.length}`}
+          center={mapCenter}
+          zoom={STREET_ZOOM}
+          corridorOnly
+          dark
+          height="100%"
+        />
+        <div className="absolute inset-x-0 bottom-0 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
           <div className="mx-auto max-w-lg rounded-3xl border border-border bg-background/95 p-6 shadow-2xl backdrop-blur">
             <div className="flex items-center gap-3">
               <span className={`grid h-12 w-12 place-items-center rounded-full bg-primary/15 ${pulse % 2 === 0 ? "scale-100" : "scale-110"} transition-transform`}>
@@ -93,6 +152,7 @@ function DriverMatchPage() {
                 <h1 className="font-serif text-xl">Searching for drivers</h1>
                 <p className="text-xs text-muted-foreground">
                   Round {round} · within {radius} km
+                  {liveDrivers.length > 0 && ` · ${liveDrivers.length} live nearby`}
                 </p>
               </div>
             </div>
