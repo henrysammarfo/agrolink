@@ -43,7 +43,9 @@ function OrderSuccessPage() {
           <>
             <div className="rounded-3xl border border-primary/30 bg-primary/5 p-6 text-center">
               <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
-              <h1 className="mt-4 font-serif text-2xl sm:text-3xl">Payment initiated</h1>
+              <h1 className="mt-4 font-serif text-2xl sm:text-3xl">
+                {order.payment_status === "paid" ? "Payment done" : "Payment initiated"}
+              </h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 {order.payment_status === "paid"
                   ? "Payment confirmed — your order is on the way."

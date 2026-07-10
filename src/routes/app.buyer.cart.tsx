@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Smartphone, ChevronLeft, Flag, User, ChevronRight } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { CartSkeleton } from "@/components/feed/FeedSkeleton";
 import { useAuth } from "@/lib/auth";
@@ -34,6 +35,7 @@ const DEMO_MODE =
 
 function Cart() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const { data: items = [], isLoading } = useCart(user?.id);
   const updateItem = useUpdateCartItem(user?.id);
@@ -60,7 +62,6 @@ function Cart() {
   const [addressSheetOpen, setAddressSheetOpen] = useState(false);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [routeEtaMin, setRouteEtaMin] = useState<number | null>(null);
-  const [liveDrivers, setLiveDrivers] = useState<{ lat: number; lng: number }[]>([]);
   const [driversNearby, setDriversNearby] = useState(0);
 
   const subtotal = items.reduce(
@@ -92,15 +93,14 @@ function Cart() {
     const points = [
       ...pickupStops,
       isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng) ? deliveryLocation : null,
-      ...liveDrivers,
     ].filter(Boolean) as { lat: number; lng: number }[];
     if (!points.length) return ACCRA_CENTER;
     const lat = points.reduce((s, p) => s + p.lat, 0) / points.length;
     const lng = points.reduce((s, p) => s + p.lng, 0) / points.length;
     return [lat, lng];
-  }, [pickupStops, deliveryLocation, liveDrivers]);
+  }, [pickupStops, deliveryLocation]);
 
-  const mapFitKey = `${deliveryLocation.lat},${deliveryLocation.lng}:${routeCoords.length}:${liveDrivers.length}`;
+  const mapFitKey = `${deliveryLocation.lat},${deliveryLocation.lng}:${routeCoords.length}:${driversNearby}`;
 
   const mapPins = useMemo(() => {
     const pins: { lat: number; lng: number; label: string; kind: "farm" | "buyer" | "driver" }[] = [];
@@ -110,13 +110,8 @@ function Cart() {
     if (isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng)) {
       pins.push({ lat: deliveryLocation.lat, lng: deliveryLocation.lng, label: "You", kind: "buyer" });
     }
-    for (const d of liveDrivers) {
-      if (isValidMapCoord(d.lat, d.lng)) {
-        pins.push({ lat: d.lat, lng: d.lng, label: "Driver", kind: "driver" });
-      }
-    }
     return pins;
-  }, [pickupStops, deliveryLocation, liveDrivers]);
+  }, [pickupStops, deliveryLocation]);
 
   const routeSegments = useMemo(() => buildTrafficSegments(routeCoords), [routeCoords]);
 
@@ -191,7 +186,6 @@ function Cart() {
 
   useEffect(() => {
     if (step !== 2 || !needsDelivery || !pickupStops[0]) {
-      setLiveDrivers([]);
       setDriversNearby(0);
       return;
     }
@@ -205,13 +199,10 @@ function Cart() {
       });
       apiFetch(`/api/delivery/availability?${params}`)
         .then((r) => r.json())
-        .then((j: { liveDrivers?: { lat: number; lng: number }[]; options?: { driversNearby: number }[] }) => {
-          const drivers = (j.liveDrivers ?? []).filter((d) => isValidMapCoord(d.lat, d.lng));
-          setLiveDrivers(drivers);
-          setDriversNearby(drivers.length);
+        .then((j: { driversNearby?: number }) => {
+          setDriversNearby(j.driversNearby ?? 0);
         })
         .catch(() => {
-          setLiveDrivers([]);
           setDriversNearby(0);
         });
     };
@@ -288,11 +279,29 @@ function Cart() {
           vehicleType: needsDelivery ? selectedVehicle : undefined,
         }),
       });
-      const data = (await res.json()) as { orderId?: string; displayText?: string; error?: string };
+      const data = (await res.json()) as {
+        orderId?: string;
+        authorizationUrl?: string;
+        displayText?: string;
+        demoMode?: boolean;
+        paymentConfirmed?: boolean;
+        error?: string;
+      };
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
       trackEvent("checkout_initiated", { total, channel });
-      toast.success("Payment initiated", {
-        description: data.displayText ?? "Check your phone to approve MoMo.",
+      if (user.id) {
+        await queryClient.invalidateQueries({ queryKey: ["buyer-orders", user.id] });
+        await queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
+      }
+      if (data.authorizationUrl && !data.demoMode) {
+        toast.success("Redirecting to Paystack…", {
+          description: data.displayText ?? "Complete payment to confirm your order.",
+        });
+        window.location.href = data.authorizationUrl;
+        return;
+      }
+      toast.success(data.paymentConfirmed ? "Payment confirmed" : "Payment initiated", {
+        description: data.displayText ?? "Your order is being processed.",
       });
       if (data.orderId) {
         navigate({
@@ -451,7 +460,7 @@ function Cart() {
                     />
                     {driversNearby > 0 ? (
                       <p className="mt-2 text-xs text-emerald-600">
-                        {driversNearby} live driver{driversNearby === 1 ? "" : "s"} nearby on map
+                        Couriers available in this area — exact locations stay private until you pay.
                       </p>
                     ) : (
                       <p className="mt-2 text-xs text-muted-foreground">
@@ -583,7 +592,7 @@ function Cart() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-50"
           >
             {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-            {paying ? "Processing…" : `Pay GHS ${total.toFixed(2)} via MoMo`}
+            {paying ? "Processing…" : DEMO_MODE ? `Pay GHS ${total.toFixed(2)} (demo)` : `Pay GHS ${total.toFixed(2)} via Paystack`}
           </button>
         </div>
       )}
