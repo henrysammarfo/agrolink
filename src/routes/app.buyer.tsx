@@ -131,6 +131,7 @@ function BuyerOverview() {
               <Link
                 key={l.id}
                 to="/app/buyer/feed"
+                search={{ listing: l.id }}
                 className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3 transition hover:border-primary/40"
               >
                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl">
@@ -143,6 +144,14 @@ function BuyerOverview() {
                 <div className="text-sm text-primary">GHS {l.price_per_unit}</div>
               </Link>
             ))
+            )}
+            {!feedLoading && feed.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                No produce in the feed yet.{" "}
+                <Link to="/app/buyer/feed" className="text-primary hover:underline">
+                  Open feed
+                </Link>
+              </div>
             )}
           </div>
         </div>

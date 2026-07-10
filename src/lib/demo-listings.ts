@@ -261,6 +261,5 @@ export function sanitizeListingMedia(listing: FeedListing): FeedListing {
 export function mergeDemoFeedIfEmpty(listings: FeedListing[]): FeedListing[] {
   const sanitized = listings.map(sanitizeListingMedia);
   if (sanitized.length > 0) return sanitized;
-  if (!isSeedFeedEnabled()) return sanitized;
   return SEED_FEED_LISTINGS.map(sanitizeListingMedia);
 }

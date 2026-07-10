@@ -35,7 +35,7 @@ import {
 } from "@/lib/api/engagement";
 import type { FeedListing } from "@/lib/types/marketplace";
 import type { FeedComment } from "@/lib/types/marketplace";
-import { isSeedFeedEnabled, isSeedListingId } from "@/lib/demo-listings";
+import { isSeedListingId } from "@/lib/demo-listings";
 import { isValidUserId } from "@/lib/api/cart";
 import { getCurrentPosition } from "@/lib/native-geolocation";
 import { triggerLikeHaptic } from "@/lib/haptics";
@@ -49,11 +49,13 @@ type Props = {
   fullscreen?: boolean;
   /** In-app buyer feed with bottom tab bar overlay (TikTok-style) */
   inAppFeed?: boolean;
+  /** Jump to a specific listing in the feed */
+  listingId?: string;
 };
 
-export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = false }: Props) {
+export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = false, listingId }: Props) {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | undefined>();
-  const { data, isLoading, error } = useFeed(coords?.lat, coords?.lng);
+  const { data, isLoading, error, refetch, isFetching } = useFeed(coords?.lat, coords?.lng);
   const rankedListings = data?.listings ?? [];
   const [active, setActive] = useState(initialIndex);
   const [muted, setMuted] = useState(true);
@@ -65,6 +67,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
     () => filterByCategory(rankedListings, category),
     [rankedListings, category],
   );
+  const categoryFilteredEmpty = rankedListings.length > 0 && filteredListings.length === 0;
 
   useEffect(() => {
     void getCurrentPosition().then((p) => {
@@ -72,6 +75,15 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
     });
     trackEvent("feed_view");
   }, []);
+
+  useEffect(() => {
+    if (!listingId || !filteredListings.length) return;
+    const idx = filteredListings.findIndex((l) => l.id === listingId);
+    if (idx >= 0) {
+      setActive(idx);
+      feedRef.current?.scrollToItem(idx, "auto");
+    }
+  }, [listingId, filteredListings]);
 
   useEffect(() => {
     if (filteredListings.length) {
@@ -91,7 +103,26 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
     );
   }
 
-  if (error || (filteredListings.length === 0 && !isSeedFeedEnabled())) {
+  if (error && rankedListings.length === 0) {
+    return (
+      <div className={`${wrapperClass} grid place-items-center p-8 text-center`}>
+        <p className="text-white font-sans text-2xl font-semibold">Couldn&apos;t load feed</p>
+        <p className="mt-2 text-sm text-white/70">
+          {error instanceof Error ? error.message : "Check your connection and try again."}
+        </p>
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="mt-6 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {isFetching ? "Retrying…" : "Retry"}
+        </button>
+      </div>
+    );
+  }
+
+  if (rankedListings.length === 0) {
     return (
       <div className={`${wrapperClass} grid place-items-center p-8 text-center`}>
         <p className="text-white font-sans text-2xl font-semibold">No listings yet</p>
@@ -104,6 +135,29 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
         >
           Post a listing
         </Link>
+      </div>
+    );
+  }
+
+  if (categoryFilteredEmpty) {
+    return (
+      <div className={wrapperClass}>
+        <div className="relative flex h-full flex-col items-center justify-center p-8 text-center">
+          {inAppFeed && (
+            <div className="absolute inset-x-0 top-0 z-10 pt-[max(env(safe-area-inset-top),6px)]">
+              <CategoryChips active={category} onChange={setCategory} inAppFeed />
+            </div>
+          )}
+          <p className="text-white font-sans text-xl font-semibold">No listings in this category</p>
+          <p className="mt-2 text-sm text-white/70">Try another filter or browse all produce.</p>
+          <button
+            type="button"
+            onClick={() => setCategory("all")}
+            className="mt-6 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground"
+          >
+            Show all
+          </button>
+        </div>
       </div>
     );
   }
