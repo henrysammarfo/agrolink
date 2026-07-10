@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireAuth } from "@/server/api-auth";
+import {
+  ORDER_WITH_DELIVERY_SELECT,
+  attachDriverProfiles,
+  collectDriverUserIds,
+} from "@/lib/order-enrich";
 
 export const Route = createFileRoute("/api/buyer/orders")({
   server: {
@@ -15,13 +20,7 @@ export const Route = createFileRoute("/api/buyer/orders")({
 
         let query = supabaseAdmin
           .from("orders")
-          .select(
-            `
-            *,
-            items:order_items(*, listing:listings(title, image_url)),
-            delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone, slug, username)))
-          `,
-          )
+          .select(ORDER_WITH_DELIVERY_SELECT)
           .eq("buyer_id", auth.userId)
           .order("created_at", { ascending: false });
 
@@ -34,12 +33,25 @@ export const Route = createFileRoute("/api/buyer/orders")({
         const { data, error } = orderId ? await query.maybeSingle() : await query;
         if (error) return Response.json({ error: error.message }, { status: 500 });
 
-        if (orderId) {
-          if (!data) return Response.json({ error: "Order not found" }, { status: 404 });
-          return Response.json({ order: data });
+        const rows = orderId ? (data ? [data] : []) : ((data ?? []) as Record<string, unknown>[]);
+        const userIds = collectDriverUserIds(rows);
+
+        let enriched = rows;
+        if (userIds.length) {
+          const { data: profiles, error: profileErr } = await supabaseAdmin
+            .from("profiles")
+            .select("id, display_name, avatar_url, phone, slug, username")
+            .in("id", userIds);
+          if (profileErr) return Response.json({ error: profileErr.message }, { status: 500 });
+          enriched = attachDriverProfiles(rows, profiles ?? []);
         }
 
-        return Response.json({ orders: data ?? [] });
+        if (orderId) {
+          if (!enriched[0]) return Response.json({ error: "Order not found" }, { status: 404 });
+          return Response.json({ order: enriched[0] });
+        }
+
+        return Response.json({ orders: enriched });
       },
     },
   },
