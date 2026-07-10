@@ -37,6 +37,10 @@
   object-fit: cover;
 }
 
+.agrolink-tiktok-feed video {
+  object-fit: cover;
+}
+
 /* Feed commerce overlay — above Riyils, below modals */
 .agrolink-feed-overlay {
   z-index: 10050;

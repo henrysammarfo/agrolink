@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Grant admin role by email. Usage: node scripts/grant-admin.mjs user@email.com */
+/** Grant admin role — defaults to jasonneil4040@gmail.com only. Usage: node scripts/grant-admin.mjs [email] */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -14,14 +14,8 @@ if (existsSync(ENV_PATH)) {
   }
 }
 
-const emails = process.argv.slice(2).length
-  ? process.argv.slice(2)
-  : [
-      "jasonneil4040@gmail.com",
-      "0xmhiskall@gmail.com",
-      "henrysammarfo@gmail.com",
-      "karimnurudeen13@gmail.com",
-    ];
+const PRIMARY_ADMIN = "jasonneil4040@gmail.com";
+const emails = process.argv.slice(2).length ? process.argv.slice(2) : [PRIMARY_ADMIN];
 
 const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -34,6 +28,20 @@ const admin = createClient(url, key, { auth: { persistSession: false } });
 
 const { data: list } = await admin.auth.admin.listUsers({ perPage: 200 });
 const users = list?.users ?? [];
+
+// Revoke admin from everyone except target emails
+const keepIds = emails
+  .map((e) => users.find((u) => u.email?.toLowerCase() === e.toLowerCase())?.id)
+  .filter(Boolean);
+
+const { data: admins } = await admin.from("user_roles").select("user_id").eq("role", "admin");
+for (const row of admins ?? []) {
+  if (!keepIds.includes(row.user_id)) {
+    await admin.from("user_roles").delete().eq("user_id", row.user_id).eq("role", "admin");
+    const email = users.find((u) => u.id === row.user_id)?.email ?? row.user_id;
+    console.log("Admin revoked:", email);
+  }
+}
 
 for (const email of emails) {
   const user = users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
