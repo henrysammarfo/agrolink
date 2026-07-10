@@ -185,7 +185,7 @@ type ProduceSnapFeedProps = {
   onActiveChange: (i: number) => void;
   inAppFeed: boolean;
   muted: boolean;
-  onToggleMute: () => void;
+  onToggleMute: (e: React.MouseEvent) => void;
   onOpenGrid: () => void;
   category: string;
   onCategoryChange: (c: string) => void;
@@ -224,6 +224,10 @@ const ProduceSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: Scroll
       return () => observer.disconnect();
     }, [listings.length, onActiveChange]);
 
+    useEffect(() => {
+      videoRefs.current.length = listings.length;
+    }, [listings.length]);
+
     // Sync mute + play/pause for video listings
     useEffect(() => {
       videoRefs.current.forEach((video, idx) => {
@@ -236,6 +240,17 @@ const ProduceSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: Scroll
         }
       });
     }, [active, muted, listings]);
+
+    const handleToggleMute = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const nextMuted = !muted;
+      onToggleMute();
+      const video = videoRefs.current[active];
+      if (video) {
+        video.muted = nextMuted;
+        if (!nextMuted) void video.play().catch(() => {});
+      }
+    };
 
     return (
       <div
@@ -278,7 +293,7 @@ const ProduceSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: Scroll
                 item={listing}
                 isActive={i === active}
                 muted={muted}
-                onToggleMute={onToggleMute}
+                onToggleMute={handleToggleMute}
                 onOpenGrid={onOpenGrid}
                 progress={`${i + 1} / ${listings.length}`}
                 hasVideo={isVideo}
@@ -311,7 +326,7 @@ function FeedCardOverlay({
   item: FeedListing;
   isActive: boolean;
   muted: boolean;
-  onToggleMute: () => void;
+  onToggleMute: (e: React.MouseEvent) => void;
   onOpenGrid: () => void;
   progress: string;
   hasVideo?: boolean;
@@ -577,7 +592,7 @@ function FeedCardOverlay({
             {hasVideo && (
               <button
                 type="button"
-                onClick={onToggleMute}
+                onClick={(e) => onToggleMute(e)}
                 className="grid h-9 w-9 place-items-center rounded-full bg-black/20 text-white backdrop-blur-sm transition active:scale-95"
                 aria-label={muted ? "Unmute" : "Mute"}
               >
@@ -601,7 +616,7 @@ function FeedCardOverlay({
           {hasVideo ? (
             <button
               type="button"
-              onClick={onToggleMute}
+              onClick={(e) => onToggleMute(e)}
               className="grid h-10 w-10 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition active:scale-95"
               aria-label={muted ? "Unmute" : "Mute"}
             >

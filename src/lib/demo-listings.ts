@@ -41,7 +41,7 @@ export const SEED_FEED_LISTINGS: FeedListing[] = [
     lat: 5.883,
     lng: -0.089,
     image_url: MEDIA.tomato,
-    video_url: null,
+    video_url: "/media/demo/tomato-harvest.mp4",
     status: "active",
     view_count: 842,
     like_count: 156,
