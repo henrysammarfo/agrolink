@@ -52,6 +52,15 @@ function BuyerOverview() {
 
       <section className="mt-10">
         <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-serif text-2xl">Discover <span className="italic text-accent">produce</span></h2>
+          <Link to="/app/buyer/feed" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+            Open feed <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="font-serif text-2xl">Track <span className="italic text-accent">live</span></h2>
           <div className="flex items-center gap-3">
             <Link to="/app/buyer/payments" className="text-sm text-muted-foreground hover:text-foreground">
