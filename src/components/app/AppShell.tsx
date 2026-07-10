@@ -32,12 +32,14 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
   buyer: MARKET_NAV,
   farmer: MARKET_NAV,
   transport: [
+    { to: "/app/buyer/feed", label: "Market", icon: Sprout },
     { to: "/app/transport", label: "Map", icon: MapPin },
     { to: "/app/transport/jobs", label: "Jobs", icon: Truck },
     { to: "/app/inbox", label: "Inbox", icon: Inbox },
   ],
   admin: [
     { to: "/app/admin", label: "Overview", icon: ShieldCheck },
+    { to: "/app/buyer/feed", label: "Market feed", icon: Sprout },
     { to: "/app/admin/orders", label: "Orders", icon: ClipboardList },
     { to: "/app/admin/payments", label: "Payments", icon: CreditCard },
     { to: "/app/admin/disputes", label: "Disputes", icon: AlertTriangle },
@@ -70,18 +72,18 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, 
   }
   if (role === "transport") {
     return [
+      { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "Shop" },
       { id: "map", to: "/app/transport", icon: MapPin, label: "Map" },
-      { id: "jobs", to: "/app/transport/jobs", icon: Truck, label: "Jobs" },
       { id: "live", to: "/app/transport", icon: Radio, label: "Live", center: true },
-      { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Inbox", badge: unreadInbox },
+      { id: "jobs", to: "/app/transport/jobs", icon: Truck, label: "Jobs" },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
     ];
   }
   if (role === "admin") {
     return [
       { id: "home", to: "/app/admin", icon: Home, label: "Home" },
-      { id: "orders", to: "/app/admin/orders", icon: ClipboardList, label: "Orders" },
-      { id: "payments", to: "/app/admin/payments", icon: CreditCard, label: "Payments", center: true },
+      { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "Market" },
+      { id: "orders", to: "/app/admin/orders", icon: ClipboardList, label: "Orders", center: true },
       { id: "disputes", to: "/app/admin/disputes", icon: AlertTriangle, label: "Disputes" },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
     ];

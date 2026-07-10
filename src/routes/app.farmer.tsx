@@ -63,15 +63,22 @@ function FarmerOverview() {
             )}
           </div>
           <div className="mt-8 flex h-48 items-end gap-3">
-            {series.map((r) => (
-              <div key={r.day} className="flex flex-1 flex-col items-center gap-2">
-                <div
-                  className="w-full rounded-t-lg bg-gradient-to-t from-primary to-accent"
-                  style={{ height: `${Math.max(4, (r.ghs / max) * 100)}%` }}
-                />
-                <span className="text-xs text-muted-foreground">{r.day}</span>
+            {total === 0 && !isLoading ? (
+              <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                No paid sales this week yet — your chart will fill in after orders confirm.
               </div>
-            ))}
+            ) : (
+              series.map((r) => (
+                <div key={r.day} className="flex flex-1 flex-col items-center gap-2">
+                  <div
+                    className="w-full rounded-t-lg bg-gradient-to-t from-primary to-accent transition-all"
+                    style={{ height: `${Math.max(4, (r.ghs / max) * 100)}%` }}
+                    title={`GHS ${r.ghs.toFixed(2)}`}
+                  />
+                  <span className="text-xs text-muted-foreground">{r.day}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

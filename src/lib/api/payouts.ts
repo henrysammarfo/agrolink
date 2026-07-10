@@ -54,29 +54,38 @@ export async function fetchUserPayouts(userId: string) {
 
 export async function fetchFarmerRevenue(userId: string, days = 7) {
   const since = new Date(Date.now() - days * 86400000).toISOString();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("order_items")
     .select("total_price, created_at, order:orders!inner(payment_status, status)")
     .eq("seller_id", userId)
     .gte("created_at", since);
 
+  if (error) {
+    console.warn("[fetchFarmerRevenue]", error.message);
+  }
+
   const paid = (data ?? []).filter((i) => {
-    const o = i.order as { payment_status: string };
-    return o.payment_status === "paid";
+    const o = i.order as { payment_status?: string } | null;
+    return o?.payment_status === "paid";
   });
 
-  const byDay = new Map<string, number>();
+  const byDay = new Map<string, { label: string; ghs: number }>();
   for (let d = days - 1; d >= 0; d--) {
     const date = new Date(Date.now() - d * 86400000);
-    byDay.set(date.toLocaleDateString("en-GH", { weekday: "short" }), 0);
+    const key = date.toISOString().slice(0, 10);
+    byDay.set(key, {
+      label: date.toLocaleDateString("en-GH", { weekday: "short" }),
+      ghs: 0,
+    });
   }
   for (const item of paid) {
-    const day = new Date(item.created_at).toLocaleDateString("en-GH", { weekday: "short" });
-    byDay.set(day, (byDay.get(day) ?? 0) + Number(item.total_price));
+    const key = new Date(item.created_at).toISOString().slice(0, 10);
+    const row = byDay.get(key);
+    if (row) row.ghs += Number(item.total_price);
   }
 
   return {
-    series: Array.from(byDay.entries()).map(([day, ghs]) => ({ day, ghs })),
+    series: Array.from(byDay.values()).map(({ label, ghs }) => ({ day: label, ghs })),
     total: paid.reduce((s, i) => s + Number(i.total_price), 0),
     pendingOrders: (data ?? []).length - paid.length,
   };
