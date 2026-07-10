@@ -16,7 +16,7 @@
 | Demo farmer | `kofi-farm@demo.agrolink.app` | `AgroLinkDemo!2026` |
 | E2E / admin | `e2e@agrolink.app` | `AgroLinkE2e!2026` |
 
-Run `npm run seed:demo` to populate 24+ produce listings across 6 corridor farmers.
+Run `npm run seed:demo` to populate 24+ produce listings across 6 corridor farmers with **real produce photos** (JPG) uploaded to Supabase Storage.
 
 ## Core workflows (for demo video)
 

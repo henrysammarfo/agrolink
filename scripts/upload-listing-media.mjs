@@ -26,7 +26,13 @@ async function uploadFile(name) {
   const filePath = path.join(DEMO_DIR, name);
   const buf = await readFile(filePath);
   const storagePath = `demo/${name}`;
-  const contentType = name.endsWith(".svg") ? "image/svg+xml" : "image/png";
+  const contentType = /\.svg$/i.test(name)
+    ? "image/svg+xml"
+    : /\.png$/i.test(name)
+      ? "image/png"
+      : /\.webp$/i.test(name)
+        ? "image/webp"
+        : "image/jpeg";
 
   const { error } = await admin.storage.from("listing-images").upload(storagePath, buf, {
     upsert: true,
@@ -40,7 +46,7 @@ async function uploadFile(name) {
 }
 
 async function main() {
-  const files = (await readdir(DEMO_DIR)).filter((f) => f.endsWith(".svg") || f.endsWith(".png"));
+  const files = (await readdir(DEMO_DIR)).filter((f) => /\.(svg|png|jpe?g|webp)$/i.test(f));
   const urls = {};
   for (const f of files) {
     urls[f.replace(/\.(svg|png)$/, "")] = await uploadFile(f);

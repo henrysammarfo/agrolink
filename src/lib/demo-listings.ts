@@ -7,13 +7,14 @@ import { resolveMediaUrl, resolveVideoUrl } from "@/lib/media-urls";
 
 const DEMO_SELLER = "a0000001-0001-4000-8000-000000000001";
 
-/** Prefer Supabase Storage URLs in production; fall back to local /media/demo/* */
+/** Prefer real JPG photos in /public/media/demo; fall back to SVG */
 function demoMedia(name: string): string {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const fileBase = name === "leafy_greens" ? "greens" : name === "garden_egg" ? "garden-egg" : name;
   if (supabaseUrl) {
-    return `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/listing-images/demo/${name}.svg`;
+    return `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/listing-images/demo/${fileBase}.jpg`;
   }
-  return `/media/demo/${name}.svg`;
+  return `/media/demo/${fileBase}.jpg`;
 }
 
 const MEDIA = {
@@ -249,7 +250,7 @@ export function getDemoFarmerProfileBySlug(slug: string) {
 }
 
 export function sanitizeListingMedia(listing: FeedListing): FeedListing {
-  const fallback = MEDIA[listing.crop_type as keyof typeof MEDIA] ?? "/media/demo/tomato.svg";
+  const fallback = MEDIA[listing.crop_type as keyof typeof MEDIA] ?? "/media/demo/tomato.jpg";
   return {
     ...listing,
     image_url: resolveMediaUrl(listing.image_url, fallback),
