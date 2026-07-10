@@ -160,16 +160,12 @@ export async function fetchPublicBookmarks(userId: string) {
 }
 
 export async function fetchMarketingStats() {
-  const [listings, orders, profiles] = await Promise.all([
-    supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active"),
-    supabase.from("orders").select("total_amount").eq("payment_status", "paid"),
-    supabase.from("profiles").select("id", { count: "exact", head: true }),
-  ]);
-  const gmv = (orders.data ?? []).reduce((s, o) => s + Number(o.total_amount), 0);
-  return {
-    activeListings: listings.count ?? 0,
-    completedOrders: orders.data?.length ?? 0,
-    gmv,
-    sellers: profiles.count ?? 0,
-  };
+  const res = await fetch("/api/stats/marketing");
+  if (!res.ok) throw new Error("Failed to load marketing stats");
+  return res.json() as Promise<{
+    activeListings: number;
+    completedOrders: number;
+    gmv: number;
+    sellers: number;
+  }>;
 }
