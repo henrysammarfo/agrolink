@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
+import { DRIVER_CAR_ICON_ANCHOR, DRIVER_CAR_ICON_HTML, DRIVER_CAR_ICON_SIZE } from "@/lib/map-icons";
 import type { RouteSegment } from "@/lib/route-display";
 
 type Pin = { lat: number; lng: number; label: string; kind?: "farm" | "buyer" | "hub" | "driver" };
@@ -161,24 +162,20 @@ export function CorridorMap({
 
     if (driverPosition && isValidMapCoord(driverPosition.lat, driverPosition.lng)) {
       const driverIcon = L.divIcon({
-        html: `<div style="position:relative">
-          <span style="position:absolute;left:-14px;top:-14px;width:44px;height:44px;border-radius:9999px;background:#22c55e44;animation:pulse 2s infinite"></span>
-          <span style="position:relative;display:grid;place-items:center;width:36px;height:36px;border-radius:9999px;background:#111;color:#fff;font:700 14px Inter,sans-serif;box-shadow:0 8px 24px -6px #0008">🚗</span>
-        </div>
-        <style>@keyframes pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.4);opacity:0}}</style>`,
-        className: "",
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        html: DRIVER_CAR_ICON_HTML,
+        className: "agrolink-driver-marker",
+        iconSize: DRIVER_CAR_ICON_SIZE,
+        iconAnchor: DRIVER_CAR_ICON_ANCHOR,
       });
-      layers.driverMarker = L.marker([driverPosition.lat, driverPosition.lng], { icon: driverIcon })
-        .bindTooltip(driverLabel, { direction: "top", offset: [0, -14] })
+      layers.driverMarker = L.marker([driverPosition.lat, driverPosition.lng], { icon: driverIcon, zIndexOffset: 1000 })
+        .bindTooltip(driverLabel, { direction: "top", offset: [0, -18] })
         .addTo(map);
     } else if (animateDriver && allRouteCoords.length > 1) {
       const driverIcon = L.divIcon({
-        html: `<span style="display:grid;place-items-center;width:36px;height:36px;border-radius:9999px;background:#111;color:#fff">🚗</span>`,
-        className: "",
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        html: DRIVER_CAR_ICON_HTML,
+        className: "agrolink-driver-marker",
+        iconSize: DRIVER_CAR_ICON_SIZE,
+        iconAnchor: DRIVER_CAR_ICON_ANCHOR,
       });
       const marker = L.marker(allRouteCoords[0], { icon: driverIcon }).addTo(map);
       layers.driverMarker = marker;
@@ -218,16 +215,16 @@ export function CorridorMap({
       layers.overlays.push(L.marker(dest, { icon: etaIcon, interactive: false }).addTo(map));
     }
 
-    if (priceLabel) {
+    if (priceLabel && !driverPosition) {
       const priceIcon = L.divIcon({
-        html: `<div style="background:#ef4444;color:#fff;font:700 13px Inter,sans-serif;padding:8px 12px;border-radius:9999px;box-shadow:0 4px 16px rgba(239,68,68,.4);display:flex;align-items:center;gap:6px"><span>🚗</span>${priceLabel}</div>`,
+        html: `<div style="background:#ef4444;color:#fff;font:700 13px Inter,sans-serif;padding:8px 12px;border-radius:9999px;box-shadow:0 4px 16px rgba(239,68,68,.4)">${priceLabel}</div>`,
         className: "",
         iconSize: [0, 0],
         iconAnchor: [0, 0],
       });
       const anchor = center && isValidMapCoord(center[0], center[1]) ? center : ACCRA_CENTER;
       layers.overlays.push(
-        L.marker([anchor[0] + 0.008, anchor[1] + 0.012], { icon: priceIcon, interactive: false }).addTo(map),
+        L.marker([anchor[0] + 0.006, anchor[1] + 0.01], { icon: priceIcon, interactive: false }).addTo(map),
       );
     }
 
@@ -262,18 +259,27 @@ export function CorridorMap({
       layers.driverMarker.setLatLng([driverPosition.lat, driverPosition.lng]);
     } else {
       const driverIcon = L.divIcon({
-        html: `<span style="display:grid;place-items:center;width:36px;height:36px;border-radius:9999px;background:#111;color:#fff">🚗</span>`,
-        className: "",
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        html: DRIVER_CAR_ICON_HTML,
+        className: "agrolink-driver-marker",
+        iconSize: DRIVER_CAR_ICON_SIZE,
+        iconAnchor: DRIVER_CAR_ICON_ANCHOR,
       });
-      layers.driverMarker = L.marker([driverPosition.lat, driverPosition.lng], { icon: driverIcon })
-        .bindTooltip(driverLabel, { direction: "top", offset: [0, -14] })
+      layers.driverMarker = L.marker([driverPosition.lat, driverPosition.lng], { icon: driverIcon, zIndexOffset: 1000 })
+        .bindTooltip(driverLabel, { direction: "top", offset: [0, -18] })
         .addTo(map);
     }
   }, [driverPosition?.lat, driverPosition?.lng, driverLabel]);
 
-  return <div ref={ref} className={`relative overflow-hidden ${className}`} style={{ height, width: "100%" }} />;
+  return (
+    <div className={`relative overflow-hidden ${className}`} style={{ height, width: "100%" }}>
+      <div ref={ref} className="absolute inset-0" />
+      {priceLabel && driverPosition && (
+        <div className="pointer-events-none absolute right-3 top-3 z-[500] rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-lg">
+          {priceLabel}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export const CORRIDOR_PINS: Pin[] = [
