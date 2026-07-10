@@ -122,10 +122,10 @@ function buildListings(media) {
     organic,
     hashtags: tags,
     description: `Fresh ${crop.replace(/_/g, " ")} from ${loc}. Harvested for the Accra corridor.`,
-    view_count: views,
-    like_count: likes,
-    comment_count: comments,
-    save_count: saves,
+    view_count: 0,
+    like_count: 0,
+    comment_count: 0,
+    save_count: 0,
     hoursAgo,
   });
 
@@ -211,6 +211,11 @@ async function upsertListing(l, media) {
     created_at,
     updated_at: created_at,
   };
+  // Never overwrite live engagement counts on re-seed — triggers maintain these.
+  delete payload.like_count;
+  delete payload.comment_count;
+  delete payload.save_count;
+  delete payload.view_count;
 
   if (existing) {
     await admin.from("listings").update(payload).eq("id", existing.id);
@@ -219,7 +224,17 @@ async function upsertListing(l, media) {
     return existing.id;
   }
 
-  const { data, error } = await admin.from("listings").insert(payload).select("id").single();
+  const { data, error } = await admin
+    .from("listings")
+    .insert({
+      ...payload,
+      like_count: 0,
+      comment_count: 0,
+      save_count: 0,
+      view_count: 0,
+    })
+    .select("id")
+    .single();
   if (error) throw error;
   await seedAiAnalysis(data.id, row.crop_type);
   console.log("Listed:", row.title);

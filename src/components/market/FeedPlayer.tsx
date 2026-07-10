@@ -341,6 +341,7 @@ function FeedCardOverlay({
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [likes, setLikes] = useState(item.like_count);
+  const [commentCount, setCommentCount] = useState(item.comment_count);
   const [comments, setComments] = useState<FeedComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [panel, setPanel] = useState<"comments" | "share" | null>(null);
@@ -354,6 +355,11 @@ function FeedCardOverlay({
   const isSelf = user?.id === item.seller_id;
   const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
   const isDemoListing = isSeedListingId(item.id);
+
+  useEffect(() => {
+    setLikes(item.like_count);
+    setCommentCount(item.comment_count);
+  }, [item.id, item.like_count, item.comment_count]);
 
   useEffect(() => {
     if (!user?.id || isDemoListing || !followKey || isSelf) return;
@@ -434,22 +440,12 @@ function FeedCardOverlay({
       toast.error("Sign in to comment");
       return;
     }
-    const text = commentText.trim();
-    if (!text) return;
     if (isDemoListing) {
-      setComments((c) => [
-        {
-          id: `demo-${Date.now()}`,
-          user_id: user.id,
-          author: profile?.display_name ?? "You",
-          content: text,
-          created_at: new Date().toISOString(),
-        },
-        ...c,
-      ]);
-      setCommentText("");
+      toast.error("This is an offline preview listing");
       return;
     }
+    const text = commentText.trim();
+    if (!text) return;
     try {
       await addComment(item.id, user.id, text, {
         sellerId: item.seller_id,
@@ -460,12 +456,13 @@ function FeedCardOverlay({
         {
           id: `new-${Date.now()}`,
           user_id: user.id,
-          author: "You",
+          author: profile?.display_name ?? "You",
           content: text,
           created_at: new Date().toISOString(),
         },
         ...c,
       ]);
+      setCommentCount((n) => n + 1);
       setCommentText("");
       trackEvent("feed_comment", { listing_id: item.id });
     } catch (err) {
@@ -669,7 +666,7 @@ function FeedCardOverlay({
         />
         <Action
           icon={MessageCircle}
-          label={formatCount(isDemoListing ? comments.length : item.comment_count)}
+          label={formatCount(commentCount)}
           onClick={() => setPanel("comments")}
         />
         <Action
@@ -745,61 +742,87 @@ function FeedCardOverlay({
           </div>
         )}
         {isDemoListing && (
-          <p className="mt-2 text-[10px] uppercase tracking-wide text-white/50">Sample listing · actions are local preview</p>
+          <p className="mt-2 text-[10px] uppercase tracking-wide text-white/50">Offline preview · sign in on live listings to interact</p>
         )}
       </div>
 
       {panel && (
         <div
-          className="feed-touch-target absolute inset-0 z-30 flex items-end bg-black/35"
+          className="feed-touch-target fixed inset-0 z-[10070] flex items-end bg-black/35"
           onClick={() => setPanel(null)}
         >
           <div
-            className="max-h-[72%] w-full rounded-t-3xl bg-background text-foreground shadow-2xl animate-in slide-in-from-bottom duration-300"
+            className="flex max-h-[min(72dvh,520px)] w-full flex-col rounded-t-3xl bg-background text-foreground shadow-2xl animate-in slide-in-from-bottom duration-300"
+            style={{
+              paddingBottom: inAppFeed
+                ? "calc(var(--agrolink-tab-bar, 3.5rem) + env(safe-area-inset-bottom, 0px))"
+                : "env(safe-area-inset-bottom, 0px)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted" />
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-muted" />
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
               <h3 className="font-sans text-lg font-semibold">{panel === "comments" ? "Comments" : "Share"}</h3>
               <button
                 onClick={() => setPanel(null)}
                 className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary"
+                aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             {panel === "comments" ? (
-              <div className="flex max-h-[calc(72vh-72px)] flex-col">
-                <div className="no-scrollbar flex-1 space-y-4 overflow-y-auto px-4 py-4">
-                  {comments.map((c) => (
-                    <div key={c.id} className="flex gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-sans font-semibold text-primary">
-                        {c.author[0]}
-                      </span>
-                      <div>
-                        <div className="text-xs font-medium">{c.author}</div>
-                        <p className="mt-1 text-sm">{c.content}</p>
+              <>
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+                  {comments.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      No comments yet — be the first.
+                    </p>
+                  ) : (
+                    comments.map((c) => (
+                      <div key={c.id} className="flex gap-3">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-sans font-semibold text-primary">
+                          {c.author[0]}
+                        </span>
+                        <div>
+                          <div className="text-xs font-medium">{c.author}</div>
+                          <p className="mt-1 text-sm">{c.content}</p>
+                        </div>
                       </div>
+                    ))
+                  )}
+                </div>
+                <div className="shrink-0 border-t border-border bg-background p-3">
+                  {user?.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleAddComment()}
+                        placeholder="Add a comment…"
+                        aria-label="Add a comment"
+                        className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddComment}
+                        disabled={!commentText.trim() || isDemoListing}
+                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
+                        aria-label="Post comment"
+                      >
+                        <Send className="h-4 w-4" />
+                      </button>
                     </div>
-                  ))}
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground">
+                      <Link to="/auth" className="font-medium text-primary hover:underline">
+                        Sign in
+                      </Link>{" "}
+                      to comment
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 border-t border-border p-3">
-                  <input
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
-                    placeholder="Add a comment…"
-                    className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary"
-                  />
-                  <button
-                    onClick={handleAddComment}
-                    disabled={!commentText.trim()}
-                    className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
-                  >
-                    <Send className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+              </>
             ) : (
               <div className="grid gap-3 p-4 sm:grid-cols-2">
                 <button
