@@ -61,11 +61,17 @@ export const Route = createFileRoute("/api/comms/notify")({
               .or(`slug.eq.${slug},username.eq.${slug}`)
               .maybeSingle();
             if (profile?.id && profile.id !== actorUserId) {
+              const { data: actorProfile } = await supabaseAdmin
+                .from("profiles")
+                .select("username, slug, display_name")
+                .eq("id", actorUserId)
+                .maybeSingle();
+              const actorHandle = actorProfile?.username ?? actorProfile?.slug ?? null;
               await notifyUser(profile.id, {
                 type: "follow",
                 title: `${actor} started following you`,
-                body: "New follower on your farmer profile",
-                link: `/farmers/${body.farmerSlug}`,
+                body: "New follower on your profile",
+                link: actorHandle ? `/app/users/${actorHandle}` : "/app/inbox",
               });
             }
           }

@@ -72,18 +72,11 @@ export function AppShell({
   const immersive = IMMERSIVE_PATHS.some((p) => pathname === p);
 
   const mobileTabs = [
-    { to: roleHome(role), icon: Home, label: "Home" },
+    { to: mobileHomeTab(role), icon: Home, label: "Home" },
     {
-      to:
-        role === "transport"
-          ? "/app/transport"
-          : role === "admin"
-            ? "/app/admin"
-            : role === "farmer"
-              ? "/app/farmer"
-              : "/app/buyer/feed",
+      to: mobileDiscoverTab(role),
       icon: role === "transport" ? Truck : role === "admin" ? ShieldCheck : Sprout,
-      label: role === "transport" ? "Map" : role === "admin" ? "Admin" : "Discover",
+      label: role === "transport" ? "Jobs" : role === "admin" ? "Admin" : "Discover",
     },
     role === "farmer" || role === "buyer"
       ? { to: "/app/create", icon: Plus, label: "", center: true }
@@ -319,6 +312,21 @@ export function AppShell({
 
 function roleHome(r: AppRole) {
   return (r === "farmer" ? "/app/farmer" : r === "transport" ? "/app/transport" : r === "admin" ? "/app/admin" : "/app/buyer") as "/app/buyer";
+}
+
+/** Bottom tab: Home — primary workspace entry (feed for buyers). */
+function mobileHomeTab(r: AppRole) {
+  if (r === "buyer") return "/app/buyer/feed";
+  return roleHome(r);
+}
+
+/** Bottom tab: Discover — secondary hub (overview, listings, jobs). */
+function mobileDiscoverTab(r: AppRole) {
+  if (r === "buyer") return "/app/buyer";
+  if (r === "farmer") return "/app/farmer/listings";
+  if (r === "transport") return "/app/transport/jobs";
+  if (r === "admin") return "/app/admin/payments";
+  return "/app/buyer";
 }
 
 export function PageHeader({ eyebrow, title, italic, sub, action }: {
