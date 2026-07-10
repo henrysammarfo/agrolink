@@ -150,7 +150,8 @@ Central hub: `src/server/comms.ts` → `notifyUser()`
 | Web push | Driver jobs, alerts | VAPID + `web-push` |
 | FCM | Native (optional) | `FCM_SERVER_KEY` |
 
-Chat: `messages` table + `chat-attachments` bucket + realtime subscription.
+Chat: `messages` table + `chat-attachments` bucket + realtime subscription.  
+Trip chat/call details: [COMMS.md](./COMMS.md).
 
 ### 5. Admin
 

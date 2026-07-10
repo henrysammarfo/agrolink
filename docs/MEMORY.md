@@ -1,6 +1,6 @@
 # AgroLink Memory — Source of Truth
 
-Last updated: 2026-07-07
+Last updated: 2026-07-10
 
 ## Stack (actual, not build guide)
 
@@ -43,7 +43,7 @@ Last updated: 2026-07-07
 - Driver registration + document upload + `verification_status` gate
 - Transport map/jobs (approved drivers only)
 - Farmer dashboard, orders, payouts
-- Buyer dashboard, cart, orders, live tracking
+- Buyer dashboard, cart, orders, live tracking, in-trip chat/call
 - Admin payments, disputes, listings moderation
 - Public farmers directory + TikTok-style profile pages
 
