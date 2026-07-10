@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle } from "react";
+import { createPortal } from "react-dom";
 import "@/styles/riyils-overrides.css";
 import {
   Heart,
@@ -348,6 +349,7 @@ function FeedCardOverlay({
   const [showLikeBurst, setShowLikeBurst] = useState(false);
   const [following, setFollowing] = useState(false);
   const lastTap = useRef(0);
+  const [portalReady, setPortalReady] = useState(false);
   const sellerSlug = item.seller_slug?.trim().toLowerCase() || null;
   const profileHandle = sellerSlug ?? item.seller_id;
   const followKey = sellerSlug ?? item.seller_id ?? "";
@@ -355,6 +357,19 @@ function FeedCardOverlay({
   const isSelf = user?.id === item.seller_id;
   const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
   const isDemoListing = isSeedListingId(item.id);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!panel) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [panel]);
 
   useEffect(() => {
     setLikes(item.like_count);
@@ -746,107 +761,119 @@ function FeedCardOverlay({
         )}
       </div>
 
-      {panel && (
-        <div
-          className="feed-touch-target fixed inset-0 z-[10070] flex items-end bg-black/35"
-          onClick={() => setPanel(null)}
-        >
-          <div
-            className="flex max-h-[min(72dvh,520px)] w-full flex-col rounded-t-3xl bg-background text-foreground shadow-2xl animate-in slide-in-from-bottom duration-300"
-            style={{
-              paddingBottom: inAppFeed
-                ? "calc(var(--agrolink-tab-bar, 3.5rem) + env(safe-area-inset-bottom, 0px))"
-                : "env(safe-area-inset-bottom, 0px)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-muted" />
-            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-              <h3 className="font-sans text-lg font-semibold">{panel === "comments" ? "Comments" : "Share"}</h3>
-              <button
-                onClick={() => setPanel(null)}
-                className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary"
-                aria-label="Close"
+      {panel && portalReady
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[10080] flex items-end bg-black/40"
+              style={{
+                paddingBottom: inAppFeed
+                  ? "calc(var(--agrolink-tab-bar, 3.5rem) + env(safe-area-inset-bottom, 0px))"
+                  : "env(safe-area-inset-bottom, 0px)",
+              }}
+              onClick={() => setPanel(null)}
+              role="presentation"
+            >
+              <div
+                className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-background text-foreground shadow-2xl animate-in slide-in-from-bottom duration-300 mx-auto"
+                style={{ height: "min(70dvh, 520px)" }}
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label={panel === "comments" ? "Comments" : "Share"}
               >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            {panel === "comments" ? (
-              <>
-                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
-                  {comments.length === 0 ? (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      No comments yet — be the first.
-                    </p>
-                  ) : (
-                    comments.map((c) => (
-                      <div key={c.id} className="flex gap-3">
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-sans font-semibold text-primary">
-                          {c.author[0]}
-                        </span>
-                        <div>
-                          <div className="text-xs font-medium">{c.author}</div>
-                          <p className="mt-1 text-sm">{c.content}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-muted" />
+                <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+                  <h3 className="font-sans text-lg font-semibold">{panel === "comments" ? "Comments" : "Share"}</h3>
+                  <button
+                    type="button"
+                    onClick={() => setPanel(null)}
+                    className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="shrink-0 border-t border-border bg-background p-3">
-                  {user?.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleAddComment()}
-                        placeholder="Add a comment…"
-                        aria-label="Add a comment"
-                        className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddComment}
-                        disabled={!commentText.trim() || isDemoListing}
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
-                        aria-label="Post comment"
-                      >
-                        <Send className="h-4 w-4" />
-                      </button>
+                {panel === "comments" ? (
+                  <>
+                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+                      {comments.length === 0 ? (
+                        <p className="py-6 text-center text-sm text-muted-foreground">
+                          No comments yet — be the first.
+                        </p>
+                      ) : (
+                        comments.map((c) => (
+                          <div key={c.id} className="flex gap-3">
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-sans font-semibold text-primary">
+                              {c.author[0]}
+                            </span>
+                            <div>
+                              <div className="text-xs font-medium">{c.author}</div>
+                              <p className="mt-1 text-sm">{c.content}</p>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-center text-sm text-muted-foreground">
-                      <Link to="/auth" className="font-medium text-primary hover:underline">
-                        Sign in
-                      </Link>{" "}
-                      to comment
-                    </p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="grid gap-3 p-4 sm:grid-cols-2">
-                <button
-                  onClick={shareListing}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
-                >
-                  <Share2 className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium">Share</span>
-                </button>
-                <button
-                  onClick={() => {
-                    navigator.clipboard?.writeText(`${location.origin}/market?listing=${item.id}`);
-                    toast.success("Copied");
-                  }}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
-                >
-                  <Copy className="h-5 w-5" />
-                  <span className="text-sm font-medium">Copy link</span>
-                </button>
+                    <div className="shrink-0 border-t border-border bg-background p-3 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+                      {user?.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleAddComment()}
+                            placeholder="Add a comment…"
+                            aria-label="Add a comment"
+                            autoFocus
+                            className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-3 text-base outline-none focus:border-primary"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddComment}
+                            disabled={!commentText.trim() || isDemoListing}
+                            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
+                            aria-label="Post comment"
+                          >
+                            <Send className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="py-2 text-center text-sm text-muted-foreground">
+                          <Link to="/auth" className="font-medium text-primary hover:underline">
+                            Sign in
+                          </Link>{" "}
+                          to comment
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid gap-3 p-4 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={shareListing}
+                      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
+                    >
+                      <Share2 className="h-5 w-5 text-primary" />
+                      <span className="text-sm font-medium">Share</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(`${location.origin}/market?listing=${item.id}`);
+                        toast.success("Copied");
+                      }}
+                      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
+                    >
+                      <Copy className="h-5 w-5" />
+                      <span className="text-sm font-medium">Copy link</span>
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
