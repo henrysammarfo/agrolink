@@ -1,7 +1,15 @@
 import type { OrderRow } from "@/lib/types/marketplace";
 
-/** Checkout main steps — Cart → Delivery → Payment */
+/** Checkout main steps — Cart → Delivery → Driver → Payment */
 export const CHECKOUT_MAIN_STEPS = [
+  { id: "cart", label: "Cart" },
+  { id: "delivery", label: "Delivery" },
+  { id: "driver", label: "Driver" },
+  { id: "payment", label: "Payment" },
+] as const;
+
+/** Pickup modes skip the driver step. */
+export const CHECKOUT_STEPS_PICKUP = [
   { id: "cart", label: "Cart" },
   { id: "delivery", label: "Delivery" },
   { id: "payment", label: "Payment" },
@@ -58,13 +66,30 @@ export function getDeliverySetupSubstep(input: {
   return "drivers";
 }
 
-export function isDeliveryReadyForPayment(input: {
+export function canRequestDriver(input: {
   fulfillmentMode: string;
   hasQuote: boolean;
   driversForVehicle: number;
 }): boolean {
   if (input.fulfillmentMode !== "platform_delivery") return true;
   return input.hasQuote && input.driversForVehicle > 0;
+}
+
+export function isDriverMatchedForPayment(input: {
+  fulfillmentMode: string;
+  driverMatched: boolean;
+}): boolean {
+  if (input.fulfillmentMode !== "platform_delivery") return true;
+  return input.driverMatched;
+}
+
+/** @deprecated use canRequestDriver + isDriverMatchedForPayment */
+export function isDeliveryReadyForPayment(input: {
+  fulfillmentMode: string;
+  hasQuote: boolean;
+  driversForVehicle: number;
+}): boolean {
+  return canRequestDriver(input);
 }
 
 export function deliverySetupSubstepIndex(id: DeliverySetupSubstepId): number {

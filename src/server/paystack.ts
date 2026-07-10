@@ -416,6 +416,269 @@ export async function processCheckout(params: {
   };
 }
 
+/** Create pending order + delivery, notify drivers — payment happens after driver accepts. */
+export async function reserveOrderForDriverMatch(params: {
+  userId: string;
+  deliveryAddress?: string;
+  deliveryLat?: number;
+  deliveryLng?: number;
+  vehicleType?: "bicycle" | "motorcycle" | "car";
+  otpVerified?: boolean;
+}): Promise<{ orderId: string; deliveryId: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { notifyEligibleDriversForDelivery } = await import("@/server/driver-matching");
+
+  const { data: cart } = await supabaseAdmin
+    .from("carts")
+    .select("id")
+    .eq("user_id", params.userId)
+    .maybeSingle();
+  if (!cart) throw new Error("Cart is empty");
+
+  const { data: items } = await supabaseAdmin
+    .from("cart_items")
+    .select("*, listing:listings(*)")
+    .eq("cart_id", cart.id);
+  if (!items?.length) throw new Error("Cart is empty");
+
+  for (const it of items) {
+    const listing = it.listing as { id: string; quantity: number; status: string; title: string; unit: string };
+    if (listing.status !== "active") throw new Error(`${listing.title ?? "An item"} is no longer available.`);
+    if (Number(listing.quantity) < Number(it.quantity)) {
+      throw new Error(`Only ${listing.quantity} ${listing.unit} left for ${listing.title ?? "an item"}.`);
+    }
+  }
+
+  const subtotal = items.reduce((s, it) => {
+    const listing = it.listing as { price_per_unit: number };
+    return s + Number(listing.price_per_unit) * Number(it.quantity);
+  }, 0);
+
+  const listings = items.map((it) => it.listing as { lat: number; lng: number; location_name: string; seller_id: string; price_per_unit: number; id: string; quantity: number; unit: string; status: string; title: string });
+  const firstListing = listings[0];
+  const weightKg = items.reduce((s, it) => s + Number(it.quantity), 0);
+  const deliveryLat = params.deliveryLat ?? firstListing.lat + 0.05;
+  const deliveryLng = params.deliveryLng ?? firstListing.lng + 0.05;
+
+  const pickupStops = [
+    ...new Map(listings.map((l) => [`${l.lat},${l.lng}`, { lat: l.lat, lng: l.lng, label: l.location_name }])).values(),
+  ];
+
+  const { computeDeliveryQuote } = await import("@/server/delivery-quote");
+  const quoteVehicle = params.vehicleType === "car" ? "pickup" : "motorcycle";
+  let quote = await computeDeliveryQuote({
+    pickupLat: firstListing.lat,
+    pickupLng: firstListing.lng,
+    deliveryLat,
+    deliveryLng,
+    weightKg,
+    vehicleType: quoteVehicle,
+    pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
+  });
+  if (params.vehicleType === "bicycle") quote = { ...quote, total: Math.round(quote.total * 0.85) };
+
+  const deliveryFee = quote.total;
+  const platformFee = Math.round(subtotal * quote.pricingConfig.platform_fee_pct * 100) / 100;
+  const total = subtotal + deliveryFee + platformFee;
+
+  const { requireOtpForCheckout } = await import("@/server/checkout-otp");
+  if (await requireOtpForCheckout(params.userId, total)) {
+    if (!params.otpVerified) throw new Error("SMS verification required for orders over GHS 500");
+  }
+
+  const primarySellerId = firstListing.seller_id;
+  const { buildEscrowSplit } = await import("@/server/paystack-subaccounts");
+  const escrowSplit = await buildEscrowSplit({
+    sellerId: primarySellerId,
+    subtotalGhs: subtotal,
+    platformFeePct: quote.pricingConfig.platform_fee_pct,
+  });
+
+  const feeBreakdown = {
+    fulfillmentMode: "platform_delivery",
+    distanceKm: quote.distanceKm,
+    breakdown: quote.breakdown,
+    baseFare: quote.baseFare,
+    peakMultiplier: quote.peakMultiplier,
+    vehicleMultiplier: quote.vehicleMultiplier,
+    pickupStops: quote.orderedStops ?? pickupStops,
+  };
+
+  const { data: order, error: orderErr } = await supabaseAdmin
+    .from("orders")
+    .insert({
+      buyer_id: params.userId,
+      status: "pending",
+      payment_status: "pending",
+      subtotal,
+      delivery_fee: deliveryFee,
+      platform_fee: platformFee,
+      total_amount: total,
+      delivery_fee_breakdown: feeBreakdown,
+      delivery_address: params.deliveryAddress ?? null,
+      delivery_lat: deliveryLat,
+      delivery_lng: deliveryLng,
+      notes: "platform_delivery",
+      escrow_status: escrowSplit ? "held" : "pending",
+      escrow_amount: escrowSplit?.farmerShareGhs ?? null,
+      otp_verified_at: params.otpVerified ? new Date().toISOString() : null,
+    })
+    .select()
+    .single();
+  if (orderErr) throw orderErr;
+
+  await supabaseAdmin.from("order_items").insert(
+    items.map((it) => {
+      const listing = it.listing as { id: string; seller_id: string; price_per_unit: number };
+      return {
+        order_id: order.id,
+        listing_id: listing.id,
+        seller_id: listing.seller_id,
+        quantity: it.quantity,
+        unit_price: listing.price_per_unit,
+        total_price: Number(listing.price_per_unit) * Number(it.quantity),
+      };
+    }),
+  );
+
+  for (const it of items) {
+    const listing = it.listing as { id: string; quantity: number };
+    const remaining = Math.max(0, Number(listing.quantity) - Number(it.quantity));
+    await supabaseAdmin.from("listings").update({
+      quantity: remaining,
+      status: remaining <= 0 ? "sold_out" : "active",
+      updated_at: new Date().toISOString(),
+    }).eq("id", listing.id);
+  }
+
+  const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
+  const { radiusForOfferRound } = await import("@/lib/vehicle-types");
+  const vehicleType = buyerVehicleToRequired(params.vehicleType);
+
+  const { data: delivery, error: delErr } = await supabaseAdmin
+    .from("deliveries")
+    .insert({
+      order_id: order.id,
+      pickup_lat: firstListing.lat,
+      pickup_lng: firstListing.lng,
+      pickup_address: pickupStops.length > 1 ? `${pickupStops.length} farms · ${firstListing.location_name}` : firstListing.location_name,
+      delivery_lat: deliveryLat,
+      delivery_lng: deliveryLng,
+      delivery_address: params.deliveryAddress ?? "Buyer address",
+      estimated_distance_km: quote.distanceKm,
+      delivery_fee: deliveryFee,
+      fee_breakdown: feeBreakdown,
+      pickup_stops: quote.orderedStops ?? pickupStops,
+      accept_deadline: acceptDeadlineFromNow(),
+      required_vehicle_type: vehicleType,
+      search_radius_km: radiusForOfferRound(1),
+      offer_round: 1,
+      declined_driver_ids: [],
+      status: "requested",
+    })
+    .select("id")
+    .single();
+  if (delErr) throw delErr;
+
+  await supabaseAdmin.from("cart_items").delete().eq("cart_id", cart.id);
+
+  await notifyEligibleDriversForDelivery(delivery.id);
+
+  return { orderId: order.id, deliveryId: delivery.id };
+}
+
+/** Start payment for a reserved order — requires driver assigned first. */
+export async function initiatePaymentForOrder(params: {
+  userId: string;
+  orderId: string;
+  email: string;
+  phone: string;
+  momoProvider: "mtn" | "vod" | "atl";
+}): Promise<{
+  orderId: string;
+  paymentReference: string;
+  authorizationUrl?: string;
+  displayText?: string;
+  demoMode?: boolean;
+  paymentConfirmed?: boolean;
+}> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: order } = await supabaseAdmin
+    .from("orders")
+    .select("*, delivery:deliveries(id, driver_id, status)")
+    .eq("id", params.orderId)
+    .eq("buyer_id", params.userId)
+    .maybeSingle();
+
+  if (!order) throw new Error("Order not found");
+  if (order.payment_status === "paid") throw new Error("Order already paid");
+
+  const isPlatform = order.notes === "platform_delivery";
+  const delivery = order.delivery as { id: string; driver_id: string | null; status: string } | { id: string; driver_id: string | null; status: string }[] | null;
+  const deliveryRow = Array.isArray(delivery) ? delivery[0] : delivery;
+
+  if (isPlatform && !deliveryRow?.driver_id) {
+    throw new Error("A driver must accept your trip before you can pay");
+  }
+
+  const { data: existingPayment } = await supabaseAdmin
+    .from("payments")
+    .select("id, idempotency_key")
+    .eq("order_id", params.orderId)
+    .maybeSingle();
+
+  const idempotencyKey = existingPayment?.idempotency_key ?? `agrolink-${params.userId.slice(0, 8)}-${Date.now()}`;
+  const total = Number(order.total_amount);
+
+  if (!existingPayment) {
+    const primarySellerId = (await supabaseAdmin.from("order_items").select("seller_id").eq("order_id", params.orderId).limit(1).maybeSingle()).data?.seller_id;
+    const { buildEscrowSplit } = await import("@/server/paystack-subaccounts");
+    const escrowSplit = primarySellerId
+      ? await buildEscrowSplit({ sellerId: primarySellerId, subtotalGhs: Number(order.subtotal), platformFeePct: 0.06 })
+      : null;
+
+    await supabaseAdmin.from("payments").insert({
+      order_id: params.orderId,
+      provider: "paystack",
+      amount: total,
+      status: "pending",
+      idempotency_key: idempotencyKey,
+      provider_reference: idempotencyKey,
+      escrow_status: escrowSplit ? "held" : null,
+      paystack_split: escrowSplit
+        ? { subaccount: escrowSplit.subaccountCode, farmer_share: escrowSplit.farmerShareGhs, platform_share: escrowSplit.platformShareGhs }
+        : null,
+    });
+  }
+
+  const siteOrigin = getSiteOrigin() || process.env.SITE_URL || process.env.VITE_SITE_URL || "https://agrolink-omega.vercel.app";
+  const callbackUrl = `${siteOrigin.replace(/\/$/, "")}/app/buyer/orders/${params.orderId}/payment-callback?reference=${encodeURIComponent(idempotencyKey)}`;
+
+  const init = await initializePaystackTransaction({
+    amount: total,
+    email: params.email,
+    reference: idempotencyKey,
+    callbackUrl,
+  });
+
+  const demoMode = !process.env.PAYSTACK_SECRET_KEY;
+  let paymentConfirmed = false;
+  if (demoMode) {
+    const confirmed = await confirmOrderPayment(idempotencyKey);
+    paymentConfirmed = confirmed.ok;
+  }
+
+  return {
+    orderId: params.orderId,
+    paymentReference: idempotencyKey,
+    authorizationUrl: init.data?.authorization_url,
+    displayText: demoMode ? "Demo payment confirmed — your driver is ready." : "Complete payment on Paystack to confirm your order.",
+    demoMode,
+    paymentConfirmed,
+  };
+}
+
 export async function confirmOrderPayment(reference: string): Promise<{ ok: boolean; message: string; orderId?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
