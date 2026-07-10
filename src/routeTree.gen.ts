@@ -75,6 +75,8 @@ import { Route as ApiDeliveriesCompleteRouteImport } from './routes/api/deliveri
 import { Route as ApiDeliveriesAvailableRouteImport } from './routes/api/deliveries/available'
 import { Route as ApiDeliveriesAcceptRouteImport } from './routes/api/deliveries/accept'
 import { Route as ApiCommsNotifyRouteImport } from './routes/api/comms/notify'
+import { Route as ApiCheckoutReserveRouteImport } from './routes/api/checkout/reserve'
+import { Route as ApiCheckoutPayRouteImport } from './routes/api/checkout/pay'
 import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
 import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
 import { Route as ApiBuyerOrdersRouteImport } from './routes/api/buyer/orders'
@@ -423,6 +425,16 @@ const ApiCommsNotifyRoute = ApiCommsNotifyRouteImport.update({
   path: '/api/comms/notify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCheckoutReserveRoute = ApiCheckoutReserveRouteImport.update({
+  id: '/reserve',
+  path: '/reserve',
+  getParentRoute: () => ApiCheckoutRoute,
+} as any)
+const ApiCheckoutPayRoute = ApiCheckoutPayRouteImport.update({
+  id: '/pay',
+  path: '/pay',
+  getParentRoute: () => ApiCheckoutRoute,
+} as any)
 const ApiChatSendRoute = ApiChatSendRouteImport.update({
   id: '/api/chat/send',
   path: '/api/chat/send',
@@ -515,7 +527,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
-  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/checkout': typeof ApiCheckoutRouteWithChildren
   '/api/maps': typeof ApiMapsRoute
   '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
@@ -536,6 +548,8 @@ export interface FileRoutesByFullPath {
   '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
+  '/api/checkout/pay': typeof ApiCheckoutPayRoute
+  '/api/checkout/reserve': typeof ApiCheckoutReserveRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
   '/api/deliveries/available': typeof ApiDeliveriesAvailableRoute
@@ -597,7 +611,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
-  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/checkout': typeof ApiCheckoutRouteWithChildren
   '/api/maps': typeof ApiMapsRoute
   '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
@@ -618,6 +632,8 @@ export interface FileRoutesByTo {
   '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
+  '/api/checkout/pay': typeof ApiCheckoutPayRoute
+  '/api/checkout/reserve': typeof ApiCheckoutReserveRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
   '/api/deliveries/available': typeof ApiDeliveriesAvailableRoute
@@ -681,7 +697,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/market': typeof MarketRoute
   '/pricing': typeof PricingRoute
-  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/checkout': typeof ApiCheckoutRouteWithChildren
   '/api/maps': typeof ApiMapsRoute
   '/api/moderate': typeof ApiModerateRoute
   '/app/admin': typeof AppAdminRouteWithChildren
@@ -702,6 +718,8 @@ export interface FileRoutesById {
   '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
+  '/api/checkout/pay': typeof ApiCheckoutPayRoute
+  '/api/checkout/reserve': typeof ApiCheckoutReserveRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
   '/api/deliveries/accept': typeof ApiDeliveriesAcceptRoute
   '/api/deliveries/available': typeof ApiDeliveriesAvailableRoute
@@ -787,6 +805,8 @@ export interface FileRouteTypes {
     | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
+    | '/api/checkout/pay'
+    | '/api/checkout/reserve'
     | '/api/comms/notify'
     | '/api/deliveries/accept'
     | '/api/deliveries/available'
@@ -869,6 +889,8 @@ export interface FileRouteTypes {
     | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
+    | '/api/checkout/pay'
+    | '/api/checkout/reserve'
     | '/api/comms/notify'
     | '/api/deliveries/accept'
     | '/api/deliveries/available'
@@ -952,6 +974,8 @@ export interface FileRouteTypes {
     | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
+    | '/api/checkout/pay'
+    | '/api/checkout/reserve'
     | '/api/comms/notify'
     | '/api/deliveries/accept'
     | '/api/deliveries/available'
@@ -1015,7 +1039,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   MarketRoute: typeof MarketRoute
   PricingRoute: typeof PricingRoute
-  ApiCheckoutRoute: typeof ApiCheckoutRoute
+  ApiCheckoutRoute: typeof ApiCheckoutRouteWithChildren
   ApiMapsRoute: typeof ApiMapsRoute
   ApiModerateRoute: typeof ApiModerateRoute
   ApiAdminDriversRoute: typeof ApiAdminDriversRoute
@@ -1515,6 +1539,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCommsNotifyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/checkout/reserve': {
+      id: '/api/checkout/reserve'
+      path: '/reserve'
+      fullPath: '/api/checkout/reserve'
+      preLoaderRoute: typeof ApiCheckoutReserveRouteImport
+      parentRoute: typeof ApiCheckoutRoute
+    }
+    '/api/checkout/pay': {
+      id: '/api/checkout/pay'
+      path: '/pay'
+      fullPath: '/api/checkout/pay'
+      preLoaderRoute: typeof ApiCheckoutPayRouteImport
+      parentRoute: typeof ApiCheckoutRoute
+    }
     '/api/chat/send': {
       id: '/api/chat/send'
       path: '/api/chat/send'
@@ -1814,6 +1852,20 @@ const FarmersRouteChildren: FarmersRouteChildren = {
 const FarmersRouteWithChildren =
   FarmersRoute._addFileChildren(FarmersRouteChildren)
 
+interface ApiCheckoutRouteChildren {
+  ApiCheckoutPayRoute: typeof ApiCheckoutPayRoute
+  ApiCheckoutReserveRoute: typeof ApiCheckoutReserveRoute
+}
+
+const ApiCheckoutRouteChildren: ApiCheckoutRouteChildren = {
+  ApiCheckoutPayRoute: ApiCheckoutPayRoute,
+  ApiCheckoutReserveRoute: ApiCheckoutReserveRoute,
+}
+
+const ApiCheckoutRouteWithChildren = ApiCheckoutRoute._addFileChildren(
+  ApiCheckoutRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -1825,7 +1877,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   MarketRoute: MarketRoute,
   PricingRoute: PricingRoute,
-  ApiCheckoutRoute: ApiCheckoutRoute,
+  ApiCheckoutRoute: ApiCheckoutRouteWithChildren,
   ApiMapsRoute: ApiMapsRoute,
   ApiModerateRoute: ApiModerateRoute,
   ApiAdminDriversRoute: ApiAdminDriversRoute,

@@ -23,11 +23,14 @@ import type { MapLocation } from "@/lib/api/maps";
 import { DeliveryVehiclePicker, mapQuoteVehicle } from "@/components/checkout/DeliveryVehiclePicker";
 import { ACCRA_CENTER, isInGreaterAccra, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import { LifecycleStepper } from "@/components/order/LifecycleStepper";
+import { fetchOrderById } from "@/lib/api/orders";
 import {
   CHECKOUT_MAIN_STEPS,
+  CHECKOUT_STEPS_PICKUP,
   DELIVERY_SETUP_SUBSTEPS,
+  canRequestDriver,
   getDeliverySetupSubstep,
-  isDeliveryReadyForPayment,
+  isDriverMatchedForPayment,
 } from "@/lib/order-lifecycle";
 import type { VehicleOption } from "@/components/checkout/DeliveryVehiclePicker";
 
@@ -58,7 +61,11 @@ function Cart() {
   const [deliveryLocation, setDeliveryLocation] = useState<MapLocation>(DEFAULT_DELIVERY);
   const [fulfillmentMode, setFulfillmentMode] = useState<FulfillmentMode>("platform_delivery");
   const [selectedVehicle, setSelectedVehicle] = useState<"bicycle" | "motorcycle" | "car">("motorcycle");
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [driverMatched, setDriverMatched] = useState(false);
+  const [matchedDriverName, setMatchedDriverName] = useState<string | null>(null);
+  const [requestingDriver, setRequestingDriver] = useState(false);
   const [deliveryQuote, setDeliveryQuote] = useState<{
     total: number;
     breakdown: string[];
@@ -81,22 +88,28 @@ function Cart() {
   const driversForVehicle =
     vehicleOptions.find((o) => o.type === selectedVehicle)?.driversNearby ?? 0;
   const hasDriverForVehicle = !needsDelivery || driversForVehicle > 0;
-  const deliveryReady = isDeliveryReadyForPayment({
+  const canRequestDriverNow = canRequestDriver({
     fulfillmentMode,
     hasQuote: !!deliveryQuote,
     driversForVehicle,
   });
+  const driverAccepted = !needsDelivery || driverMatched;
   const delivery = needsDelivery ? (deliveryQuote?.total ?? 0) : 0;
   const platformFee = Math.round(subtotal * 0.06 * 100) / 100;
   const total = subtotal + delivery + platformFee;
   const needsOtp = total >= HIGH_VALUE_OTP_THRESHOLD_GHS;
+  const paymentStep = needsDelivery ? 4 : 3;
   const canPay =
     items.length > 0 &&
     !quoteLoading &&
-    deliveryReady &&
+    isDriverMatchedForPayment({ fulfillmentMode, driverMatched: driverAccepted }) &&
     (!needsOtp || otpVerified);
   const canContinueStep2 =
-    items.length > 0 && (needsDelivery ? deliveryReady && !quoteLoading : true);
+    items.length > 0 && (needsDelivery ? canRequestDriverNow && !quoteLoading : true);
+
+  const checkoutSteps = needsDelivery ? CHECKOUT_MAIN_STEPS : CHECKOUT_STEPS_PICKUP;
+  const checkoutStepId =
+    step === 1 ? "cart" : step === 2 ? "delivery" : needsDelivery && step === 3 ? "driver" : "payment";
 
   const pickupStops = useMemo(() => {
     const stops = items
@@ -228,6 +241,68 @@ function Cart() {
     return () => clearInterval(interval);
   }, [step, needsDelivery, pickupStops, deliveryLocation.lat, deliveryLocation.lng, items]);
 
+  useEffect(() => {
+    if (step !== 3 || !needsDelivery || !pendingOrderId) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const order = await fetchOrderById(pendingOrderId);
+        if (cancelled || !order?.delivery?.driver_id) return;
+        setDriverMatched(true);
+        setMatchedDriverName(order.delivery.driver?.profile?.display_name ?? "Driver");
+      } catch {
+        /* retry on next poll */
+      }
+    };
+    void poll();
+    const interval = setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [step, needsDelivery, pendingOrderId]);
+
+  async function requestDriver() {
+    if (!user?.id) {
+      toast.error("Sign in to continue");
+      return;
+    }
+    if (!canRequestDriverNow) {
+      toast.error("Wait for a nearby courier before requesting a driver.");
+      return;
+    }
+    if (needsOtp && !otpVerified) {
+      toast.error("Verify your phone first for orders over GHS 500.");
+      return;
+    }
+    setRequestingDriver(true);
+    try {
+      const res = await apiFetch("/api/checkout/reserve", {
+        method: "POST",
+        body: JSON.stringify({
+          deliveryAddress: deliveryLocation.name,
+          deliveryLat: deliveryLocation.lat,
+          deliveryLng: deliveryLocation.lng,
+          vehicleType: selectedVehicle,
+          otpVerified: needsOtp ? otpVerified : undefined,
+        }),
+      });
+      const data = (await res.json()) as { orderId?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not request driver");
+      if (!data.orderId) throw new Error("No order created");
+      setPendingOrderId(data.orderId);
+      setDriverMatched(false);
+      setMatchedDriverName(null);
+      void queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
+      setStep(3);
+      toast.success("Drivers notified — waiting for one to accept your trip");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not request driver");
+    } finally {
+      setRequestingDriver(false);
+    }
+  }
+
   async function sendOtp() {
     if (!user?.id) return;
     setOtpLoading(true);
@@ -271,37 +346,43 @@ function Cart() {
     }
   }
 
-  const checkoutStepId = step === 1 ? "cart" : step === 2 ? "delivery" : "payment";
-
   async function pay() {
     if (!user?.id || !user.email) {
       toast.error("Sign in to checkout");
       return;
     }
     if (!canPay) {
-      if (needsDelivery && !hasDriverForVehicle) {
-        toast.error("No couriers available for your vehicle — wait for a driver or change vehicle.");
+      if (needsDelivery && !driverMatched) {
+        toast.error("Wait for a driver to accept your trip before paying.");
       } else {
-        toast.error("Complete delivery and verification first");
+        toast.error("Complete verification first");
       }
       return;
     }
     setPaying(true);
     try {
-      const res = await apiFetch("/api/checkout", {
-        method: "POST",
-        body: JSON.stringify({
-          email: user.email,
-          phone: profile?.phone ?? "+233551234987",
-          momoProvider: channel,
-          deliveryAddress: needsDelivery ? deliveryLocation.name : undefined,
-          deliveryLat: needsDelivery ? deliveryLocation.lat : undefined,
-          deliveryLng: needsDelivery ? deliveryLocation.lng : undefined,
-          fulfillmentMode,
-          otpVerified: needsOtp ? otpVerified : undefined,
-          vehicleType: needsDelivery ? selectedVehicle : undefined,
-        }),
-      });
+      const payBody = {
+        email: user.email,
+        phone: profile?.phone ?? "+233551234987",
+        momoProvider: channel,
+      };
+      const res = needsDelivery && pendingOrderId
+        ? await apiFetch("/api/checkout/pay", {
+            method: "POST",
+            body: JSON.stringify({ ...payBody, orderId: pendingOrderId }),
+          })
+        : await apiFetch("/api/checkout", {
+            method: "POST",
+            body: JSON.stringify({
+              ...payBody,
+              deliveryAddress: needsDelivery ? deliveryLocation.name : undefined,
+              deliveryLat: needsDelivery ? deliveryLocation.lat : undefined,
+              deliveryLng: needsDelivery ? deliveryLocation.lng : undefined,
+              fulfillmentMode,
+              otpVerified: needsOtp ? otpVerified : undefined,
+              vehicleType: needsDelivery ? selectedVehicle : undefined,
+            }),
+          });
       const data = (await res.json()) as {
         orderId?: string;
         authorizationUrl?: string;
@@ -327,9 +408,11 @@ function Cart() {
         description: data.displayText ?? "Your order is being processed.",
       });
       if (data.orderId) {
-        const dest = needsDelivery
-          ? "/app/buyer/orders/$orderId/match"
-          : "/app/buyer/orders/$orderId/success";
+        const dest = needsDelivery && driverMatched
+          ? "/app/buyer/orders/$orderId/track"
+          : needsDelivery
+            ? "/app/buyer/orders/$orderId/match"
+            : "/app/buyer/orders/$orderId/success";
         if (user.id) {
           void queryClient.refetchQueries({ queryKey: ["buyer-orders", user.id] });
         }
@@ -377,7 +460,7 @@ function Cart() {
           </div>
           <PageHeader eyebrow="Checkout" title="Your" italic="order" />
           <LifecycleStepper
-            steps={CHECKOUT_MAIN_STEPS}
+            steps={checkoutSteps}
             currentStepId={checkoutStepId}
             className="mb-6"
           />
@@ -508,7 +591,7 @@ function Cart() {
                     />
                     {hasDriverForVehicle ? (
                       <p className="mt-2 text-xs text-emerald-600">
-                        {driversForVehicle} {selectedVehicle} courier{driversForVehicle === 1 ? "" : "s"} nearby — you can continue to payment.
+                        {driversForVehicle} {selectedVehicle} courier{driversForVehicle === 1 ? "" : "s"} nearby — request one to accept before payment.
                       </p>
                     ) : (
                       <p className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
@@ -548,17 +631,18 @@ function Cart() {
                   </div>
                   <button
                     type="button"
-                    disabled={!canContinueStep2}
-                    onClick={() => {
-                      if (needsDelivery && !hasDriverForVehicle) {
-                        toast.error("Wait for a nearby courier before continuing to payment.");
-                        return;
-                      }
-                      setStep(3);
-                    }}
+                    disabled={!canContinueStep2 || requestingDriver}
+                    onClick={() => void requestDriver()}
                     className="inline-flex flex-[1.4] items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                   >
-                    {quoteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : hasDriverForVehicle ? "Continue to payment" : "Waiting for driver…"}
+                    {requestingDriver || quoteLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : null}
+                    {requestingDriver
+                      ? "Requesting…"
+                      : hasDriverForVehicle
+                        ? "Request driver"
+                        : "Waiting for courier…"}
                   </button>
                 </div>
               </div>
@@ -603,11 +687,55 @@ function Cart() {
         </div>
       )}
 
-      {step === 3 && (
+      {step === 3 && needsDelivery && (
         <div className="mx-auto max-w-md space-y-5">
           <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-4 w-4" /> Back to delivery
           </button>
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Driver matching</p>
+            {driverMatched ? (
+              <div className="mt-4">
+                <p className="font-serif text-xl text-emerald-700 dark:text-emerald-300">Driver accepted!</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {matchedDriverName ?? "Your driver"} is ready — continue to payment to confirm your order.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div>
+                    <p className="font-medium">Waiting for a driver to accept</p>
+                    <p className="text-xs text-muted-foreground">Nearby couriers were notified. Payment unlocks after accept.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
+          <button
+            type="button"
+            disabled={!driverMatched}
+            onClick={() => setStep(4)}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            {driverMatched ? "Continue to payment" : "Waiting for driver accept…"}
+            {driverMatched && <ArrowRight className="h-4 w-4" />}
+          </button>
+        </div>
+      )}
+
+      {step === paymentStep && (
+        <div className="mx-auto max-w-md space-y-5">
+          <button type="button" onClick={() => setStep(needsDelivery ? 3 : 2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="h-4 w-4" /> {needsDelivery ? "Back to driver" : "Back to delivery"}
+          </button>
+          {needsDelivery && matchedDriverName && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-800 dark:text-emerald-200">
+              Driver {matchedDriverName} accepted — complete payment to confirm.
+            </div>
+          )}
           {DEMO_MODE && (
             <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
               <Wallet className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
