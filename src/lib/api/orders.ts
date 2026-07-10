@@ -3,6 +3,11 @@ import type { OrderRow, DeliveryRow } from "@/lib/types/marketplace";
 import { normalizeOrderRow } from "@/lib/order-normalize";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { fetchOpenDeliveries, fetchDriverActiveDeliveries, loadTransportJobs } from "@/lib/api/transport-jobs";
+import {
+  ORDER_WITH_DELIVERY_SELECT,
+  attachDriverProfiles,
+  collectDriverUserIds,
+} from "@/lib/order-enrich";
 
 export async function fetchBuyerOrders(buyerId: string): Promise<OrderRow[]> {
   const res = await apiFetch("/api/buyer/orders");
@@ -22,17 +27,20 @@ export async function fetchSellerOrders(sellerId: string): Promise<OrderRow[]> {
 
   const { data, error: oErr } = await supabase
     .from("orders")
-    .select(
-      `
-      *,
-      items:order_items(*, listing:listings(title, image_url)),
-      delivery:deliveries(*, driver:driver_profiles(*, profile:profiles!driver_profiles_user_id_fkey(display_name, avatar_url, phone, slug, username)))
-    `,
-    )
+    .select(ORDER_WITH_DELIVERY_SELECT)
     .in("id", orderIds)
     .order("created_at", { ascending: false });
   if (oErr) throw oErr;
-  return (data ?? []) as OrderRow[];
+  const rows = (data ?? []) as OrderRow[];
+  const userIds = collectDriverUserIds(rows);
+  if (!userIds.length) return rows;
+
+  const { data: profiles, error: pErr } = await supabase
+    .from("profiles")
+    .select("id, display_name, avatar_url, phone, slug, username")
+    .in("id", userIds);
+  if (pErr) throw pErr;
+  return attachDriverProfiles(rows, profiles ?? []) as OrderRow[];
 }
 
 export type AdminOrderRow = OrderRow & {
