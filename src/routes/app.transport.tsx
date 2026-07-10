@@ -1,26 +1,29 @@
-import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { MapPin, Truck, Navigation, Loader2, Wallet, MessageCircle, Zap, Radio } from "lucide-react";
+import { Truck, Radio, Wallet, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { VerifiedTransportGate } from "@/components/app/RoleGate";
 import { JobOfferSheet } from "@/components/transport/JobOfferSheet";
 import { DriverNavHud } from "@/components/transport/DriverNavHud";
+import { TransportTripSheet } from "@/components/transport/TransportTripSheet";
 import { PodCaptureSheet } from "@/components/transport/PodCaptureSheet";
-import { SlideToConfirm } from "@/components/ui/SlideToConfirm";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { useAuth } from "@/lib/auth";
 import { useDriverProfile, useDriverEarnings } from "@/hooks/use-marketplace";
 import { trackEvent } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import {
-  fetchAvailableDeliveries, fetchDriverDeliveries, acceptDelivery, declineDelivery, advanceDeliveryStatus,
+  acceptDelivery, declineDelivery, advanceDeliveryStatus,
   completeDeliveryViaApi,
 } from "@/lib/api/orders";
+import { loadTransportJobs } from "@/lib/api/transport-jobs";
 import {
-  updateDriverAvailability, startDriverLocationWatch, fetchOsrmRoute, goOnlineWithLocation,
+  updateDriverAvailability, startDriverLocationWatch, fetchDrivingRoute, goOnlineWithLocation,
 } from "@/lib/api/driver";
+import type { RouteStep } from "@/lib/api/maps";
 import { filterJobsForDriver } from "@/lib/driver-jobs";
+import { buildTrafficSegments, estimateDriverPayout } from "@/lib/route-display";
 import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import { vehicleToFilterBucket } from "@/lib/vehicle-types";
 import type { DeliveryRow } from "@/lib/types/marketplace";
@@ -40,8 +43,15 @@ function TransportOverview() {
   const { data: earnings } = useDriverEarnings(user?.id);
   const [jobs, setJobs] = useState<DeliveryRow[]>([]);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
-  const [routeMeta, setRouteMeta] = useState<{ distance_km: number; duration_min: number } | null>(null);
+  const [routeMeta, setRouteMeta] = useState<{
+    distance_km: number;
+    duration_min: number;
+    duration_in_traffic_min?: number;
+    source: "google" | "osrm";
+    steps: RouteStep[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
   const [podJob, setPodJob] = useState<DeliveryRow | null>(null);
   const [offerJob, setOfferJob] = useState<DeliveryRow | null>(null);
   const [accepting, setAccepting] = useState(false);
@@ -67,17 +77,20 @@ function TransportOverview() {
     return ACCRA_CENTER;
   }, [livePos, driverProfile?.current_lat, driverProfile?.current_lng]);
 
-  const loadJobs = useCallback(async () => {
-    if (!driverProfile?.id) { setLoading(false); return; }
+  const loadJobs = useCallback(async (showToastOnError = false) => {
+    if (!driverProfile?.id) {
+      setLoading(false);
+      return;
+    }
     try {
-      const [available, mine] = await Promise.all([
-        fetchAvailableDeliveries(),
-        fetchDriverDeliveries(driverProfile.id),
-      ]);
-      setJobs([...mine, ...available.filter((a) => !mine.find((m) => m.id === a.id))]);
+      const next = await loadTransportJobs(driverProfile.id);
+      setJobs(next);
+      setJobsError(null);
     } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not load jobs";
       console.warn("[Transport] load jobs failed", e);
-      toast.error(e instanceof Error ? e.message : "Could not load jobs");
+      setJobsError(msg);
+      if (showToastOnError) toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -85,8 +98,8 @@ function TransportOverview() {
 
   useEffect(() => {
     if (!user?.id || !isIndex) return;
-    loadJobs();
-    const interval = setInterval(loadJobs, 12_000);
+    void loadJobs(true);
+    const interval = setInterval(() => loadJobs(false), 12_000);
     const reassign = setInterval(() => apiFetch("/api/deliveries/reassign-expired").catch(() => {}), 10_000);
     return () => {
       clearInterval(interval);
@@ -109,6 +122,13 @@ function TransportOverview() {
     setOfferJob(nextAvailable);
   }, [nextAvailable?.id, nextAvailable?.status, active, online]);
 
+  const routeSegments = useMemo(
+    () => buildTrafficSegments(routeCoords, routeMeta?.steps),
+    [routeCoords, routeMeta?.steps],
+  );
+
+  const routeFitKey = featured?.id ? `${featured.id}-${featured.status}` : "idle";
+
   useEffect(() => {
     if (!featured || !isIndex) {
       setRouteCoords([]);
@@ -120,26 +140,60 @@ function TransportOverview() {
     const dropOk = isValidMapCoord(featured.delivery_lat, featured.delivery_lng);
     if (!pickupOk || !dropOk) return;
 
-    const enrouteToPickup = ["driver_assigned", "driver_enroute_pickup"].includes(featured.status);
-    const enrouteToBuyer = ["picked_up", "enroute_delivery"].includes(featured.status);
+    const enrouteToPickup = active && ["driver_assigned", "driver_enroute_pickup"].includes(featured.status);
+    const enrouteToBuyer = active && ["picked_up", "enroute_delivery"].includes(featured.status);
+    const previewTrip = !active || featured.status === "requested";
 
-    const origin = livePos && isValidMapCoord(livePos.lat, livePos.lng)
-      ? livePos
-      : { lat: driverCenter[0], lng: driverCenter[1] };
-    let to = enrouteToBuyer
-      ? { lat: featured.delivery_lat, lng: featured.delivery_lng }
-      : enrouteToPickup || featured.status === "requested"
+    let origin: { lat: number; lng: number };
+    let to: { lat: number; lng: number };
+
+    if (previewTrip) {
+      origin = { lat: featured.pickup_lat, lng: featured.pickup_lng };
+      to = { lat: featured.delivery_lat, lng: featured.delivery_lng };
+    } else if (enrouteToBuyer) {
+      origin = livePos && isValidMapCoord(livePos.lat, livePos.lng)
+        ? livePos
+        : { lat: driverCenter[0], lng: driverCenter[1] };
+      to = { lat: featured.delivery_lat, lng: featured.delivery_lng };
+    } else {
+      origin = livePos && isValidMapCoord(livePos.lat, livePos.lng)
+        ? livePos
+        : { lat: driverCenter[0], lng: driverCenter[1] };
+      to = enrouteToPickup
         ? { lat: featured.pickup_lat, lng: featured.pickup_lng }
         : { lat: featured.delivery_lat, lng: featured.delivery_lng };
+    }
 
-    if (!isValidMapCoord(origin.lat, origin.lng)) return;
+    if (!isValidMapCoord(origin.lat, origin.lng) || !isValidMapCoord(to.lat, to.lng)) return;
 
-    fetchOsrmRoute(origin, to).then((r) => {
-      if (!r) return;
+    let cancelled = false;
+    fetchDrivingRoute(origin, to).then((r) => {
+      if (cancelled || !r) return;
       setRouteCoords(r.coordinates);
-      setRouteMeta({ distance_km: r.distance_km, duration_min: r.duration_min });
+      setRouteMeta({
+        distance_km: r.distance_km,
+        duration_min: r.duration_min,
+        duration_in_traffic_min: r.duration_in_traffic_min,
+        source: r.source,
+        steps: r.steps ?? [],
+      });
     });
-  }, [featured?.id, featured?.status, featured?.pickup_lat, featured?.pickup_lng, featured?.delivery_lat, featured?.delivery_lng, isIndex, driverCenter, livePos, active]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    featured?.id,
+    featured?.status,
+    featured?.pickup_lat,
+    featured?.pickup_lng,
+    featured?.delivery_lat,
+    featured?.delivery_lng,
+    isIndex,
+    active,
+    livePos?.lat,
+    livePos?.lng,
+    driverCenter,
+  ]);
 
   if (!isIndex) return <Outlet />;
 
@@ -268,6 +322,9 @@ function TransportOverview() {
         ? "Slide to confirm delivery"
         : null;
 
+  const etaMin = routeMeta?.duration_in_traffic_min ?? routeMeta?.duration_min;
+  const payoutLabel = featured ? estimateDriverPayout(featured) : null;
+
   return (
     <VerifiedTransportGate>
       <AppShell role="transport">
@@ -275,13 +332,17 @@ function TransportOverview() {
           <CorridorMap
             pins={mapPins}
             route={routeCoords}
+            routeSegments={routeSegments}
+            fitKey={routeFitKey}
             center={driverCenter}
             zoom={online ? STREET_ZOOM : DEFAULT_MAP_ZOOM}
             driverPosition={livePos ?? (driverProfile?.current_lat != null && driverProfile.current_lng != null ? { lat: driverProfile.current_lat, lng: driverProfile.current_lng } : null)}
             animateDriver={false}
             driverLabel="You"
-            dark
+            dark={false}
             height="100%"
+            etaLabel={etaMin != null ? `${Math.max(1, Math.round(etaMin))} min` : undefined}
+            priceLabel={payoutLabel != null ? `GHS ${Math.round(payoutLabel)}` : undefined}
           />
 
           {navDestination && (
@@ -290,6 +351,10 @@ function TransportOverview() {
               destination={{ lat: navDestination.lat, lng: navDestination.lng }}
               distanceKm={routeMeta?.distance_km}
               durationMin={routeMeta?.duration_min}
+              durationInTrafficMin={routeMeta?.duration_in_traffic_min}
+              routeSource={routeMeta?.source}
+              steps={routeMeta?.steps}
+              currentPosition={livePos}
               enabled={!!active}
               muted={navMuted}
               onToggleMute={() => setNavMuted((m) => !m)}
@@ -329,59 +394,32 @@ function TransportOverview() {
             {online ? "Live" : "Go live"}
           </button>
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--agrolink-tab-bar,3.5rem)+env(safe-area-inset-bottom)+0.5rem)] z-20 px-3">
-            <div className="pointer-events-auto mx-auto max-w-lg rounded-2xl border border-border/80 bg-background/95 p-4 shadow-2xl backdrop-blur">
-              {loading ? (
-                <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
-              ) : featured ? (
-                <>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-primary">
-                      {active ? "Active trip" : "Preview"}
-                    </span>
-                    <Link to="/app/transport/jobs" className="text-xs text-muted-foreground hover:text-foreground">
-                      Job board →
-                    </Link>
+          <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--agrolink-tab-bar,3.5rem)+env(safe-area-inset-bottom))] z-20">
+            {loading ? (
+              <div className="pointer-events-auto mx-auto flex max-w-lg justify-center rounded-t-3xl bg-background/95 p-6 shadow-2xl">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            ) : featured ? (
+              <TransportTripSheet
+                job={featured}
+                active={!!active}
+                online={online}
+                etaMin={etaMin}
+                distanceKm={routeMeta?.distance_km}
+                vehicleLabel={vehicleLabel}
+                slideLabel={slideLabel}
+                jobsError={jobsError}
+                onAdvance={() => advance(featured)}
+                onMessage={() => messageBuyer(featured)}
+              />
+            ) : (
+              <div className="pointer-events-auto mx-auto max-w-lg rounded-t-3xl border border-border/80 bg-background p-5 shadow-2xl">
+                {jobsError && (
+                  <div className="mb-3 rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                    {jobsError}
                   </div>
-                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                    <MapPin className="mr-1 inline h-3 w-3 text-rose-500" />
-                    {featured.pickup_address}
-                    <Navigation className="mx-1 inline h-3 w-3 text-primary" />
-                    {featured.delivery_address}
-                  </p>
-                  {slideLabel ? (
-                    <div className="mt-3">
-                      <SlideToConfirm
-                        label={slideLabel}
-                        tone={featured.status === "enroute_delivery" ? "blue" : "primary"}
-                        onConfirm={() => advance(featured)}
-                      />
-                    </div>
-                  ) : (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {active && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => advance(featured)}
-                            className="inline-flex flex-1 items-center justify-center gap-1 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-                          >
-                            <Zap className="h-4 w-4" /> Update status
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => messageBuyer(featured)}
-                            className="inline-flex items-center justify-center gap-1 rounded-full border border-border px-4 py-2.5 text-sm"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-center gap-3 py-1">
+                )}
+                <div className="flex items-center gap-3">
                   <Wallet className="h-8 w-8 shrink-0 text-muted-foreground/50" />
                   <div className="min-w-0 text-left">
                     <p className="font-sans text-sm font-semibold">
@@ -394,8 +432,8 @@ function TransportOverview() {
                     </p>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </AppShell>

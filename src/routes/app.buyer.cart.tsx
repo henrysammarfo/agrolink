@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Info, Smartphone, ChevronLeft } from "lucide-react";
+import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Smartphone, ChevronLeft, Flag, User, ChevronRight } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
@@ -11,16 +11,17 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { getCurrentPosition } from "@/lib/native-geolocation";
 import { trackEvent } from "@/lib/analytics";
 import { apiFetch } from "@/lib/api/fetch-auth";
-import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
-import { FULFILLMENT_OPTIONS, type FulfillmentMode } from "@/lib/fulfillment";
+import { LocationSearchSheet } from "@/components/checkout/LocationSearchSheet";
+import { CorridorMap } from "@/components/map/CorridorMap";
+import { fetchDrivingRoute } from "@/lib/api/driver";
+import { buildTrafficSegments } from "@/lib/route-display";
+import { GHANA_LOCATIONS } from "@/lib/ghana-locations";
 import { reverseGeocode } from "@/lib/api/maps";
+import { FULFILLMENT_OPTIONS, type FulfillmentMode } from "@/lib/fulfillment";
+import type { MapLocation } from "@/lib/api/maps";
 import { DeliveryVehiclePicker, mapQuoteVehicle } from "@/components/checkout/DeliveryVehiclePicker";
 
-const DEFAULT_DELIVERY: MapLocation = {
-  name: "East Legon, Accra, Ghana",
-  lat: 5.65,
-  lng: -0.165,
-};
+const DEFAULT_DELIVERY: MapLocation = GHANA_LOCATIONS[0];
 
 export const Route = createFileRoute("/app/buyer/cart")({
   head: () => ({ meta: [{ title: "Cart · AgroLink" }] }),
@@ -55,6 +56,9 @@ function Cart() {
     orderedStops?: { lat: number; lng: number; label?: string }[];
   } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [addressSheetOpen, setAddressSheetOpen] = useState(false);
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+  const [routeEtaMin, setRouteEtaMin] = useState<number | null>(null);
 
   const subtotal = items.reduce(
     (s, i) => s + Number(i.listing?.price_per_unit ?? 0) * Number(i.quantity),
@@ -80,6 +84,39 @@ function Cart() {
       .map((l) => ({ lat: l.lat, lng: l.lng, label: l.location_name }));
     return [...new Map(stops.map((s) => [`${s.lat},${s.lng}`, s])).values()];
   }, [items]);
+
+  const pickupLabel = pickupStops[0]?.label ?? items[0]?.listing?.location_name ?? "Farm pickup";
+
+  const mapPins = useMemo(() => {
+    const pins: { lat: number; lng: number; label: string; kind: "farm" | "buyer" }[] = [];
+    for (const s of pickupStops) {
+      pins.push({ lat: s.lat, lng: s.lng, label: s.label ?? "Farm", kind: "farm" });
+    }
+    pins.push({ lat: deliveryLocation.lat, lng: deliveryLocation.lng, label: "You", kind: "buyer" });
+    return pins;
+  }, [pickupStops, deliveryLocation]);
+
+  const routeSegments = useMemo(() => buildTrafficSegments(routeCoords), [routeCoords]);
+
+  useEffect(() => {
+    if (step !== 2 || !needsDelivery || !items[0]?.listing?.lat || !items[0]?.listing?.lng) {
+      setRouteCoords([]);
+      setRouteEtaMin(null);
+      return;
+    }
+    let cancelled = false;
+    fetchDrivingRoute(
+      { lat: items[0].listing.lat, lng: items[0].listing.lng },
+      { lat: deliveryLocation.lat, lng: deliveryLocation.lng },
+    ).then((r) => {
+      if (cancelled || !r) return;
+      setRouteCoords(r.coordinates);
+      setRouteEtaMin(Math.round(r.duration_in_traffic_min ?? r.duration_min));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, needsDelivery, deliveryLocation.lat, deliveryLocation.lng, items]);
 
   useEffect(() => {
     void getCurrentPosition().then(async (p) => {
@@ -219,18 +256,22 @@ function Cart() {
   }
 
   return (
-    <AppShell role="buyer" compact>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/app/buyer/feed" })}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" /> Back to feed
-        </button>
-      </div>
-      <PageHeader eyebrow="Checkout" title="Your" italic="order" />
-      <CheckoutSteps step={step} />
+    <AppShell role="buyer" compact hideMobileNav={step === 2 && needsDelivery}>
+      {!(step === 2 && needsDelivery) && (
+        <>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/app/buyer/feed" })}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="h-4 w-4" /> Back to feed
+            </button>
+          </div>
+          <PageHeader eyebrow="Checkout" title="Your" italic="order" />
+          <CheckoutSteps step={step} />
+        </>
+      )}
 
       {step === 1 && (
         <div className="space-y-4">
@@ -264,57 +305,158 @@ function Cart() {
       )}
 
       {step === 2 && (
-        <div className="space-y-5">
-          <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="h-4 w-4" /> Back to cart
-          </button>
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Fulfillment</p>
-            {FULFILLMENT_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setFulfillmentMode(opt.value)}
-                className={`w-full rounded-2xl border p-4 text-left transition ${
-                  fulfillmentMode === opt.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                }`}
-              >
-                <div className="text-sm font-medium">{opt.label}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{opt.description}</div>
-              </button>
-            ))}
-          </div>
-          {needsDelivery ? (
-            <div className="space-y-4">
-              <LocationPicker value={deliveryLocation} onChange={setDeliveryLocation} placeholder="Delivery address in Ghana" />
-              {items[0]?.listing?.lat && items[0]?.listing?.lng && (
-                <DeliveryVehiclePicker
-                  pickupLat={items[0].listing.lat}
-                  pickupLng={items[0].listing.lng}
-                  deliveryLat={deliveryLocation.lat}
-                  deliveryLng={deliveryLocation.lng}
-                  weightKg={items.reduce((s, i) => s + Number(i.quantity), 0)}
-                  value={selectedVehicle}
-                  onChange={setSelectedVehicle}
+        <div className="relative -mx-4 sm:-mx-6 md:-mx-10">
+          {needsDelivery && items[0]?.listing?.lat && items[0]?.listing?.lng ? (
+            <>
+              <div className="relative h-[42vh] min-h-[280px] max-h-[420px]">
+                <CorridorMap
+                  pins={mapPins}
+                  route={routeCoords}
+                  routeSegments={routeSegments}
+                  fitKey={`${deliveryLocation.lat},${deliveryLocation.lng}`}
+                  dark={false}
+                  height="100%"
+                  etaLabel={routeEtaMin != null ? `${routeEtaMin} min` : undefined}
+                  priceLabel={deliveryQuote ? `GHS ${Math.round(total)}` : undefined}
                 />
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="absolute left-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-background/95 shadow-md"
+                  aria-label="Back"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="relative z-10 -mt-6 rounded-t-3xl border border-border bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-4 shadow-[0_-8px_30px_rgba(0,0,0,.08)]">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your trip</p>
+                <div className="mt-3 flex gap-2 overflow-x-auto">
+                  {FULFILLMENT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFulfillmentMode(opt.value)}
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
+                        fulfillmentMode === opt.value
+                          ? "bg-primary text-primary-foreground"
+                          : "border border-border text-muted-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAddressSheetOpen(true)}
+                  className="mt-3 w-full rounded-2xl border border-border bg-card p-3 text-left"
+                >
+                  <div className="flex items-center gap-3 border-b border-border pb-2">
+                    <User className="h-4 w-4 text-rose-500" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase text-muted-foreground">Pickup</p>
+                      <p className="truncate text-sm font-medium">{pickupLabel}</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <Flag className="h-4 w-4 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-primary">
+                        {deliveryLocation.name.split(",")[0]}
+                        {routeEtaMin != null && ` · ${routeEtaMin} min`}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{deliveryLocation.name}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </div>
+                </button>
+
+                {items[0]?.listing?.lat && items[0]?.listing?.lng && (
+                  <div className="mt-4">
+                    <DeliveryVehiclePicker
+                      pickupLat={items[0].listing.lat}
+                      pickupLng={items[0].listing.lng}
+                      deliveryLat={deliveryLocation.lat}
+                      deliveryLng={deliveryLocation.lng}
+                      weightKg={items.reduce((s, i) => s + Number(i.quantity), 0)}
+                      value={selectedVehicle}
+                      onChange={setSelectedVehicle}
+                      etaMin={routeEtaMin ?? undefined}
+                    />
+                  </div>
+                )}
+
+                {deliveryQuote?.breakdown?.length ? (
+                  <p className="mt-2 text-[11px] text-muted-foreground line-clamp-2">
+                    {deliveryQuote.breakdown.join(" · ")} · {deliveryQuote.distanceKm.toFixed(1)} km
+                  </p>
+                ) : null}
+              </div>
+
+              <LocationSearchSheet
+                open={addressSheetOpen}
+                onClose={() => setAddressSheetOpen(false)}
+                pickupLabel={pickupLabel}
+                value={deliveryLocation}
+                onChange={setDeliveryLocation}
+                recentPicks={GHANA_LOCATIONS}
+              />
+
+              <div className="fixed inset-x-0 bottom-[max(env(safe-area-inset-bottom),0.5rem)] z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
+                <div className="mx-auto flex max-w-lg items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground">Total</p>
+                    <p className="font-sans text-lg font-bold">GHS {total.toFixed(0)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!canContinueStep2}
+                    onClick={() => setStep(3)}
+                    className="inline-flex flex-[1.4] items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                  >
+                    {quoteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
+                  </button>
+                </div>
+              </div>
+            </>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border p-4 text-xs text-muted-foreground">
-              {fulfillmentMode === "farm_pickup"
-                ? "You'll collect at the farmer's location after payment."
-                : "Your driver collects at the farm after payment."}
+            <div className="space-y-5 px-1">
+              <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                <ChevronLeft className="h-4 w-4" /> Back to cart
+              </button>
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Fulfillment</p>
+                {FULFILLMENT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFulfillmentMode(opt.value)}
+                    className={`w-full rounded-2xl border p-4 text-left transition ${
+                      fulfillmentMode === opt.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="text-sm font-medium">{opt.label}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{opt.description}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="rounded-2xl border border-dashed border-border p-4 text-xs text-muted-foreground">
+                {fulfillmentMode === "farm_pickup"
+                  ? "You'll collect at the farmer's location after payment."
+                  : "Your driver collects at the farm after payment."}
+              </div>
+              <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
+              <button
+                type="button"
+                disabled={!canContinueStep2}
+                onClick={() => setStep(3)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-50"
+              >
+                Continue to payment <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           )}
-          <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} quoteLoading={quoteLoading} />
-          <button
-            type="button"
-            disabled={!canContinueStep2}
-            onClick={() => setStep(3)}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-50"
-          >
-            Continue to payment <ArrowRight className="h-4 w-4" />
-          </button>
         </div>
       )}
 

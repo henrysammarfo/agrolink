@@ -148,6 +148,11 @@ function Jobs() {
         <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
       <div className="space-y-3">
+        {!driver?.id && (
+          <div className="rounded-2xl border border-amber-300/60 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            Complete driver registration to load jobs.
+          </div>
+        )}
         {visible.map((j) => {
           const st = STATUS_MAP[j.status] ?? { label: j.status, tone: "" };
           const payout = j.delivery_fee ?? (j.estimated_distance_km ? Math.max(12, Math.round(Number(j.estimated_distance_km) * 1.2 + 8)) : null);

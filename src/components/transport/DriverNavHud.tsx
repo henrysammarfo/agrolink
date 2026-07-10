@@ -1,56 +1,121 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Volume2, VolumeX } from "lucide-react";
+import type { RouteStep } from "@/lib/api/maps";
 
 type Props = {
   destinationLabel: string;
   distanceKm?: number;
   durationMin?: number;
+  durationInTrafficMin?: number;
+  routeSource?: "google" | "osrm";
   destination: { lat: number; lng: number };
+  currentPosition?: { lat: number; lng: number } | null;
+  steps?: RouteStep[];
   enabled?: boolean;
   muted?: boolean;
   onToggleMute?: () => void;
 };
 
+function haversineM(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371000;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function speak(text: string) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.95;
+  window.speechSynthesis.speak(utter);
+}
+
 export function DriverNavHud({
   destinationLabel,
   distanceKm,
   durationMin,
+  durationInTrafficMin,
+  routeSource,
   destination,
+  currentPosition,
+  steps = [],
   enabled = true,
   muted = false,
   onToggleMute,
 }: Props) {
-  const spokeRef = useRef(false);
+  const spokeStartRef = useRef(false);
+  const stepIndexRef = useRef(0);
+  const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
-    if (!enabled || muted || spokeRef.current) return;
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    spokeRef.current = true;
-    const utter = new SpeechSynthesisUtterance(
-      `Navigation started. Head to ${destinationLabel}.${distanceKm ? ` About ${distanceKm.toFixed(1)} kilometers.` : ""}`,
+    spokeStartRef.current = false;
+    stepIndexRef.current = 0;
+    setActiveStep(0);
+  }, [destination.lat, destination.lng, steps.length]);
+
+  useEffect(() => {
+    if (!enabled || muted || spokeStartRef.current) return;
+    spokeStartRef.current = true;
+    const first = steps[0]?.instruction;
+    speak(
+      first
+        ? `Navigation started. ${first}`
+        : `Navigation started. Head to ${destinationLabel}.${distanceKm ? ` About ${distanceKm.toFixed(1)} kilometers.` : ""}`,
     );
-    utter.rate = 0.95;
-    window.speechSynthesis.speak(utter);
-    return () => {
-      window.speechSynthesis.cancel();
-    };
-  }, [enabled, muted, destinationLabel, distanceKm]);
+    return () => window.speechSynthesis?.cancel();
+  }, [enabled, muted, destinationLabel, distanceKm, steps]);
+
+  useEffect(() => {
+    if (!enabled || muted || !currentPosition || steps.length === 0) return;
+
+    let idx = stepIndexRef.current;
+    while (idx < steps.length - 1) {
+      const step = steps[idx];
+      const dist = haversineM(currentPosition, { lat: step.end_lat, lng: step.end_lng });
+      if (dist > 45) break;
+      idx += 1;
+    }
+
+    if (idx !== stepIndexRef.current) {
+      stepIndexRef.current = idx;
+      setActiveStep(idx);
+      const next = steps[idx];
+      if (next) speak(next.instruction);
+    }
+  }, [enabled, muted, currentPosition, steps]);
 
   if (!enabled) return null;
 
+  const currentInstruction = steps[activeStep]?.instruction;
+  const etaMin = durationInTrafficMin ?? durationMin;
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&travelmode=driving`;
 
   return (
     <div className="pointer-events-auto absolute inset-x-3 top-[max(env(safe-area-inset-top),3.5rem)] z-30 mx-auto max-w-md rounded-2xl border border-white/15 bg-black/75 p-3 text-white backdrop-blur-md">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-widest text-white/60">Navigating to</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] uppercase tracking-widest text-white/60">Navigating to</p>
+            {routeSource && (
+              <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${routeSource === "google" ? "bg-blue-500/30 text-blue-200" : "bg-amber-500/30 text-amber-200"}`}>
+                {routeSource}
+              </span>
+            )}
+          </div>
           <p className="truncate font-sans text-sm font-semibold">{destinationLabel}</p>
-          {(distanceKm != null || durationMin != null) && (
+          {currentInstruction && (
+            <p className="mt-1 line-clamp-2 text-xs text-white/85">{currentInstruction}</p>
+          )}
+          {(distanceKm != null || etaMin != null) && (
             <p className="mt-0.5 text-xs text-white/75">
               {distanceKm != null && `${distanceKm.toFixed(1)} km`}
-              {distanceKm != null && durationMin != null && " · "}
-              {durationMin != null && `${Math.round(durationMin)} min`}
+              {distanceKm != null && etaMin != null && " · "}
+              {etaMin != null && `${Math.round(etaMin)} min${durationInTrafficMin ? " (traffic)" : ""}`}
+              {steps.length > 0 && ` · step ${activeStep + 1}/${steps.length}`}
             </p>
           )}
         </div>

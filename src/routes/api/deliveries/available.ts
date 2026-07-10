@@ -20,7 +20,7 @@ export const Route = createFileRoute("/api/deliveries/available")({
         if (dErr) return Response.json({ error: dErr.message }, { status: 500 });
         if (!driver) return Response.json({ deliveries: [] });
         if (driver.verification_status !== "approved") {
-          return Response.json({ error: "Driver not verified" }, { status: 403 });
+          return Response.json({ deliveries: [], warning: "Driver not verified" });
         }
 
         const { data: rows, error } = await supabaseAdmin

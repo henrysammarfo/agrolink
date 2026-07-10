@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { watchDriverPosition } from "@/lib/native-geolocation";
-import { fetchDrivingRoute } from "@/lib/api/maps";
+import { fetchDrivingRoute as fetchGoogleRoute, type DrivingRoute, type RouteStep } from "@/lib/api/maps";
 import type { DriverProfile } from "@/lib/types/marketplace";
 
 export async function getOrCreateDriverProfile(userId: string): Promise<DriverProfile> {
@@ -44,46 +44,69 @@ export async function updateDriverProfile(userId: string, updates: Partial<Drive
   if (error) throw error;
 }
 
-export type OsrmRoute = {
-  coordinates: [number, number][];
-  distance_km: number;
-  duration_min: number;
-};
+export type DrivingRouteResult = DrivingRoute;
 
-export async function fetchOsrmRoute(
+function parseOsrmSteps(steps: {
+  maneuver?: { instruction?: string; type?: string };
+  distance: number;
+  duration: number;
+  geometry?: { coordinates: [number, number][] };
+}[]): RouteStep[] {
+  return steps.map((s) => {
+    const end = s.geometry?.coordinates?.at(-1);
+    return {
+      instruction: s.maneuver?.instruction ?? "Continue",
+      distance_m: s.distance,
+      duration_min: s.duration / 60,
+      maneuver: s.maneuver?.type,
+      end_lat: end?.[1] ?? 0,
+      end_lng: end?.[0] ?? 0,
+    };
+  });
+}
+
+/** Full road routing — Google Directions (step polylines) with OSRM fallback. */
+export async function fetchDrivingRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
-): Promise<OsrmRoute | null> {
-  const google = await fetchDrivingRoute(from, to);
-  if (google) {
-    return {
-      coordinates: google.coordinates,
-      distance_km: google.distance_km,
-      duration_min: google.duration_min,
-    };
+): Promise<DrivingRouteResult | null> {
+  const google = await fetchGoogleRoute(from, to);
+  if (google?.coordinates?.length) {
+    console.info(`[routing] Google Directions: ${google.coordinates.length} points, ${google.steps?.length ?? 0} steps`);
+    return google;
   }
 
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
     const res = await fetch(url);
+    if (!res.ok) return null;
     const json = (await res.json()) as {
       routes?: {
         distance: number;
         duration: number;
         geometry: { coordinates: [number, number][] };
+        legs?: { steps?: Parameters<typeof parseOsrmSteps>[0] }[];
       }[];
     };
     const route = json.routes?.[0];
     if (!route) return null;
+    const steps = parseOsrmSteps(route.legs?.[0]?.steps ?? []);
+    console.info(`[routing] OSRM fallback: ${route.geometry.coordinates.length} points, ${steps.length} steps`);
     return {
       coordinates: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
       distance_km: route.distance / 1000,
       duration_min: route.duration / 60,
+      source: "osrm",
+      steps,
     };
-  } catch {
+  } catch (err) {
+    console.warn("[routing] OSRM fallback failed:", err);
     return null;
   }
 }
+
+/** @deprecated Use fetchDrivingRoute */
+export const fetchOsrmRoute = fetchDrivingRoute;
 
 export async function goOnlineWithLocation(userId: string): Promise<boolean> {
   const { requestLocationPermission, getCurrentPosition } = await import("@/lib/native-geolocation");

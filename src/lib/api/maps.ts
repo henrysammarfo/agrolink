@@ -12,11 +12,22 @@ export type PlaceSuggestion = {
   mainText: string;
 };
 
+export type RouteStep = {
+  instruction: string;
+  distance_m: number;
+  duration_min: number;
+  maneuver?: string;
+  end_lat: number;
+  end_lng: number;
+};
+
 export type DrivingRoute = {
   coordinates: [number, number][];
   distance_km: number;
   duration_min: number;
+  duration_in_traffic_min?: number;
   source: "google" | "osrm";
+  steps?: RouteStep[];
 };
 
 async function mapsPost<T>(body: Record<string, unknown>): Promise<T> {
