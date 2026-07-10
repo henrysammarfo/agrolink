@@ -35,7 +35,7 @@ export function computeFeedScore(
   const demand = listing.ai_demand_score ?? 0.5;
   const spamPenalty = Math.min(
     0.5,
-    (listing as FeedListing & { report_count?: number }).report_count ?? 0 * 0.1,
+    ((listing as FeedListing & { report_count?: number }).report_count ?? 0) * 0.1,
   );
 
   let proximity = 0.5;

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Search, Check, Trash2, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/app/AppShell";
 import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api/fetch-auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/admin/listings")({
@@ -38,16 +39,18 @@ function AdminListings() {
 
   const filtered = items.filter((r) => !q || r.title.toLowerCase().includes(q.toLowerCase()));
 
-  const approve = async (id: string) => {
-    await supabase.from("listings").update({ status: "active" }).eq("id", id);
-    setItems((curr) => curr.map((r) => (r.id === id ? { ...r, status: "active" } : r)));
-    toast.success("Listing approved");
-  };
-
-  const remove = async (id: string) => {
-    await supabase.from("listings").update({ status: "rejected" }).eq("id", id);
-    setItems((curr) => curr.map((r) => (r.id === id ? { ...r, status: "rejected" } : r)));
-    toast.success("Listing removed");
+  const setStatus = async (id: string, status: "active" | "rejected") => {
+    const res = await apiFetch("/api/admin/listings", {
+      method: "PATCH",
+      body: JSON.stringify({ listingId: id, status }),
+    });
+    const json = (await res.json()) as { error?: string };
+    if (!res.ok) {
+      toast.error(json.error ?? "Update failed");
+      return;
+    }
+    setItems((curr) => curr.map((r) => (r.id === id ? { ...r, status } : r)));
+    toast.success(status === "active" ? "Listing approved" : "Listing rejected");
   };
 
   return (
@@ -97,13 +100,13 @@ function AdminListings() {
                       {r.status === "pending_review" && (
                         <>
                           <button
-                            onClick={() => approve(r.id)}
+                            onClick={() => setStatus(r.id, "active")}
                             className="mr-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs text-emerald-700"
                           >
                             <Check className="h-3 w-3" /> Approve
                           </button>
                           <button
-                            onClick={() => remove(r.id)}
+                            onClick={() => setStatus(r.id, "rejected")}
                             className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-3 py-1 text-xs text-rose-600"
                           >
                             <Trash2 className="h-3 w-3" /> Reject
