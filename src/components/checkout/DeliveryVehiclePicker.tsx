@@ -20,6 +20,7 @@ type Props = {
   weightKg: number;
   value: "bicycle" | "motorcycle" | "car";
   onChange: (v: "bicycle" | "motorcycle" | "car") => void;
+  onAvailabilityChange?: (options: VehicleOption[]) => void;
   etaMin?: number;
   horizontal?: boolean;
 };
@@ -31,7 +32,7 @@ const ETA_FACTOR: Record<VehicleOption["type"], number> = {
 };
 
 export function DeliveryVehiclePicker({
-  pickupLat, pickupLng, deliveryLat, deliveryLng, weightKg, value, onChange, etaMin, horizontal = true,
+  pickupLat, pickupLng, deliveryLat, deliveryLng, weightKg, value, onChange, onAvailabilityChange, etaMin, horizontal = true,
 }: Props) {
   const [options, setOptions] = useState<VehicleOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,9 +49,11 @@ export function DeliveryVehiclePicker({
     apiFetch(`/api/delivery/availability?${params}`)
       .then((r) => r.json())
       .then((j: { options: VehicleOption[] }) => {
-        setOptions(j.options ?? []);
-        const firstAvailable = j.options?.find((o) => o.status === "available");
-        if (firstAvailable && !j.options.some((o) => o.type === value && o.status === "available")) {
+        const opts = j.options ?? [];
+        setOptions(opts);
+        onAvailabilityChange?.(opts);
+        const firstAvailable = opts.find((o) => o.status === "available");
+        if (firstAvailable && !opts.some((o) => o.type === value && o.status === "available")) {
           onChange(firstAvailable.type);
         }
       })

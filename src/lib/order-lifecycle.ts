@@ -48,13 +48,23 @@ export function getDeliverySetupSubstep(input: {
   hasAddress: boolean;
   hasVehicle: boolean;
   hasQuote: boolean;
-  driversNearby: number;
+  driversForVehicle: number;
 }): DeliverySetupSubstepId {
   if (input.fulfillmentMode !== "platform_delivery") return "mode";
   if (!input.hasAddress) return "address";
   if (!input.hasVehicle) return "vehicle";
   if (!input.hasQuote) return "quote";
+  if (input.driversForVehicle <= 0) return "drivers";
   return "drivers";
+}
+
+export function isDeliveryReadyForPayment(input: {
+  fulfillmentMode: string;
+  hasQuote: boolean;
+  driversForVehicle: number;
+}): boolean {
+  if (input.fulfillmentMode !== "platform_delivery") return true;
+  return input.hasQuote && input.driversForVehicle > 0;
 }
 
 export function deliverySetupSubstepIndex(id: DeliverySetupSubstepId): number {

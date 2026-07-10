@@ -25,11 +25,11 @@ function fail(name, detail) {
 
 function testDeliverySetupSubsteps() {
   const cases = [
-    { input: { fulfillmentMode: "farm_pickup", hasAddress: false, hasVehicle: false, hasQuote: false, driversNearby: 0 }, expect: "mode" },
-    { input: { fulfillmentMode: "platform_delivery", hasAddress: false, hasVehicle: true, hasQuote: false, driversNearby: 0 }, expect: "address" },
-    { input: { fulfillmentMode: "platform_delivery", hasAddress: true, hasVehicle: false, hasQuote: false, driversNearby: 0 }, expect: "vehicle" },
-    { input: { fulfillmentMode: "platform_delivery", hasAddress: true, hasVehicle: true, hasQuote: false, driversNearby: 0 }, expect: "quote" },
-    { input: { fulfillmentMode: "platform_delivery", hasAddress: true, hasVehicle: true, hasQuote: true, driversNearby: 3 }, expect: "drivers" },
+    { input: { fulfillmentMode: "farm_pickup", hasAddress: false, hasVehicle: false, hasQuote: false, driversForVehicle: 0 }, expect: "mode" },
+    { input: { fulfillmentMode: "platform_delivery", hasAddress: false, hasVehicle: true, hasQuote: false, driversForVehicle: 0 }, expect: "address" },
+    { input: { fulfillmentMode: "platform_delivery", hasAddress: true, hasVehicle: false, hasQuote: false, driversForVehicle: 0 }, expect: "vehicle" },
+    { input: { fulfillmentMode: "platform_delivery", hasAddress: true, hasVehicle: true, hasQuote: false, driversForVehicle: 0 }, expect: "quote" },
+    { input: { fulfillmentMode: "platform_delivery", hasAddress: true, hasVehicle: true, hasQuote: true, driversForVehicle: 3 }, expect: "drivers" },
   ];
   for (const c of cases) {
     const got = getDeliverySetupSubstep(c.input);

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { verifyAndConfirmPayment } from "@/server/paystack";
+import { verifyAndConfirmPayment, notifyDriversForPaidOrder } from "@/server/paystack";
 import { requireAuth } from "@/server/api-auth";
 
 export const Route = createFileRoute("/api/orders/verify-payment")({
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/api/orders/verify-payment")({
             return Response.json({ error: "Order not found" }, { status: 404 });
           }
           if (order.payment_status === "paid") {
+            await notifyDriversForPaidOrder(order.id);
             return Response.json({ ok: true, message: "Already paid", orderId: order.id });
           }
 
