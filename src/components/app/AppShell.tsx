@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
@@ -9,7 +9,8 @@ import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
 import { useUnreadCounts, useCart } from "@/hooks/use-marketplace";
 import { GlobalSearch, SearchTrigger } from "@/components/app/GlobalSearch";
-import { roleHome, saveActiveWorkspace, normalizeWorkspace } from "@/lib/active-workspace";
+import { roleHome, normalizeWorkspace } from "@/lib/active-workspace";
+import { useWorkspaceSwitch } from "@/hooks/use-workspace-switch";
 
 export type AppRole = AuthRole;
 
@@ -174,7 +175,6 @@ export function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const navigate = useNavigate();
   const { profile, roles, signOut, user } = useAuth();
   const { data: unread } = useUnreadCounts(user?.id);
   const { data: cartItems = [] } = useCart(user?.id);
@@ -193,12 +193,7 @@ export function AppShell({
     ...(roles.includes("admin") ? (["admin"] as AppRole[]) : []),
   ];
 
-  const switchWorkspace = (r: AppRole) => {
-    if (!user?.id) return;
-    const normalized = normalizeWorkspace(r);
-    saveActiveWorkspace(user.id, normalized);
-    navigate({ to: roleHome(normalized) as "/app/buyer" });
-  };
+  const { switchTo: switchWorkspace } = useWorkspaceSwitch();
 
   const mobileTabs = buildMobileTabs(role, cartCount, unreadInbox, roles.includes("farmer"));
 

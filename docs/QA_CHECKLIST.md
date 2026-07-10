@@ -48,6 +48,10 @@ Both must exit 0. **Last verified:** 2026-07-07 — build + stress:comms + test:
 - [ ] Default lands on buyer feed
 - [ ] Settings → enable Seller mode → create listing works
 - [ ] Settings → enable Driver mode → transport map loads
+- [ ] Workspace switcher (sidebar + profile + settings) stays in sync
+- [ ] Profile save (name, phone, username, bio) persists after refresh
+- [ ] Avatar upload updates profile photo
+- [ ] Share profile copies link or opens native share sheet
 
 ### Create + moderation
 - [ ] Upload photo via + button

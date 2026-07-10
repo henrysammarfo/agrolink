@@ -17,7 +17,7 @@ import { useShellRole } from "@/hooks/use-shell-role";
 import { createListing, uploadListingMedia } from "@/lib/api/listings";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { unitsForCrop } from "@/lib/crop-units";
-import type { CropType } from "@/lib/types/marketplace";
+import { useEnableWorkspace } from "@/hooks/use-enable-workspace";
 
 export const Route = createFileRoute("/app/create")({
   head: () => ({ meta: [{ title: "Create · AgroLink" }] }),
@@ -33,8 +33,9 @@ const GHANA_LOCATIONS = [
 ];
 
 function Create() {
-  const { roles, addRole, user, profile } = useAuth();
+  const { roles, user, profile } = useAuth();
   const shellRole = useShellRole();
+  const { enableRole } = useEnableWorkspace();
   const isFarmer = roles.includes("farmer");
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -83,16 +84,12 @@ function Create() {
   }, [price, title]);
 
   if (!isFarmer) {
-    const enableSeller = async () => {
-      try {
-        await addRole("farmer");
-        toast.success("Sell mode enabled", { description: "You can now post produce listings." });
-      } catch (error) {
+    const enableSeller = () =>
+      void enableRole("farmer").catch((error) => {
         toast.error("Could not enable sell mode", {
           description: error instanceof Error ? error.message : "Please try again.",
         });
-      }
-    };
+      });
 
     return (
       <AppShell role={shellRole === "admin" || shellRole === "transport" ? "buyer" : shellRole}>

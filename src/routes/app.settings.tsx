@@ -1,11 +1,11 @@
-import { useNavigate, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { WorkspaceSwitcher } from "@/components/app/WorkspaceSwitcher";
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { useAuth, type AppRole } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { registerForPushNotifications } from "@/lib/push-client";
 import { fetchNotificationPrefs, saveNotificationPrefs } from "@/lib/api/settings";
@@ -13,8 +13,8 @@ import { updateProfile } from "@/lib/api/notifications";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { AvatarCropUpload } from "@/components/profile/AvatarCropUpload";
 import { trackEvent } from "@/lib/analytics";
-import { saveActiveWorkspace, roleHome } from "@/lib/active-workspace";
-import { useActiveWorkspace } from "@/hooks/use-active-workspace";
+import { useShellRole } from "@/hooks/use-shell-role";
+import { useEnableWorkspace } from "@/hooks/use-enable-workspace";
 
 export const Route = createFileRoute("/app/settings")({
   head: () => ({ meta: [{ title: "Settings · AgroLink" }] }),
@@ -22,7 +22,6 @@ export const Route = createFileRoute("/app/settings")({
 });
 
 function Settings() {
-  const navigate = useNavigate();
   const [whatsapp, setWhatsapp] = useState(true);
   const [push, setPush] = useState(true);
   const [marketing, setMarketing] = useState(false);
@@ -39,16 +38,16 @@ function Settings() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [togglingKey, setTogglingKey] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
-  const { roles, addRole, profile, user, refresh } = useAuth();
-  const { active: activeWorkspace } = useActiveWorkspace(user?.id, roles);
-  const role = roles.includes(activeWorkspace) ? activeWorkspace : (roles.includes("admin") ? "admin" : roles.includes("farmer") ? "farmer" : roles.includes("transport") ? "transport" : "buyer");
+  const { roles, profile, user, refresh, session } = useAuth();
+  const role = useShellRole();
+  const { enableRole } = useEnableWorkspace();
 
   useEffect(() => {
     setDisplayName(profile?.display_name ?? "");
     setPhone(profile?.phone ?? "");
     setRegion(profile?.region ?? "Greater Accra");
     setBio(profile?.bio ?? "");
-    setUsername((profile as { username?: string })?.username ?? "");
+    setUsername(profile?.username ?? "");
     setAvatarUrl(profile?.avatar_url ?? null);
   }, [profile?.display_name, profile?.phone, profile?.region, profile?.bio, profile?.avatar_url, profile]);
 
@@ -153,9 +152,17 @@ function Settings() {
       toast.error("Sign in to save your profile");
       return;
     }
+    if (!session?.user) {
+      toast.error("Demo mode — sign in with a real account to save profile changes");
+      return;
+    }
     const uname = username.trim().toLowerCase();
     if (uname && !/^[a-z0-9_]{3,30}$/.test(uname)) {
       toast.error("Username: 3–30 chars, letters, numbers, underscore only");
+      return;
+    }
+    if (uname && usernameOk === null) {
+      toast.error("Still checking username — wait a moment and try again");
       return;
     }
     if (uname && usernameOk === false) {
@@ -177,21 +184,14 @@ function Settings() {
       trackEvent("profile_updated");
       toast.success("Profile saved");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save profile");
+      const msg = err instanceof Error ? err.message : "Could not save profile";
+      if (msg.includes("profiles_username_lower_unique") || msg.includes("duplicate key")) {
+        toast.error("Username is already taken");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSavingProfile(false);
-    }
-  };
-
-  const enableRole = async (next: Exclude<AppRole, "admin">) => {
-    try {
-      await addRole(next);
-      toast.success(`${next === "transport" ? "Drive" : next === "farmer" ? "Sell" : "Shop"} mode enabled`);
-      if (user?.id) saveActiveWorkspace(user.id, next);
-      if (next === "transport") navigate({ to: "/app/transport/register" });
-      else navigate({ to: roleHome(next) as "/app/buyer" });
-    } catch (error) {
-      toast.error("Could not update mode", { description: error instanceof Error ? error.message : "Please try again." });
     }
   };
 
@@ -263,7 +263,11 @@ function Settings() {
                     <button
                       key={key}
                       type="button"
-                      onClick={() => enableRole(key)}
+                      onClick={() => void enableRole(key).catch((error) => {
+                        toast.error("Could not update mode", {
+                          description: error instanceof Error ? error.message : "Please try again.",
+                        });
+                      })}
                       className="rounded-full border border-border px-4 py-2 text-sm hover:border-primary/40"
                     >
                       + {key === "buyer" ? "Shop" : key === "farmer" ? "Sell" : "Drive"}
@@ -290,9 +294,20 @@ function Settings() {
           <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={onMarketingToggle} disabled={togglingKey === "marketing"} />
         </Card>
 
-        <Card title="Payment">
-          <FieldRow label="MoMo number" value={phone} onChange={setPhone} placeholder="+233" />
-          <FieldRow label="Channel" value="MTN MoMo" onChange={() => {}} disabled />
+        <Card title="Contact & payments">
+          <p className="text-sm text-muted-foreground">
+            Your phone above is used for trip calls and order SMS. Save profile to update it.
+          </p>
+          {roles.includes("transport") && (
+            <p className="text-xs text-muted-foreground">
+              Driver payout MoMo is set in{" "}
+              <a href="/app/transport/register" className="text-primary underline-offset-2 hover:underline">
+                driver registration
+              </a>
+              .
+            </p>
+          )}
+          <FieldRow label="Checkout channel" value="MTN MoMo (Paystack)" onChange={() => {}} disabled />
         </Card>
 
         <Card title="Security">
