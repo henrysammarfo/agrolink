@@ -25,6 +25,7 @@ type Props = {
   fitKey?: string;
   etaLabel?: string;
   priceLabel?: string;
+  onLoadError?: () => void;
 };
 
 const COLORS: Record<NonNullable<Pin["kind"]>, string> = {
@@ -54,6 +55,7 @@ export function GoogleCorridorMap({
   fitKey,
   etaLabel,
   priceLabel,
+  onLoadError,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -85,7 +87,10 @@ export function GoogleCorridorMap({
           clickableIcons: false,
         });
       })
-      .catch((err) => console.warn("[GoogleCorridorMap] init failed:", err));
+      .catch((err) => {
+        console.warn("[GoogleCorridorMap] init failed:", err);
+        onLoadError?.();
+      });
 
     return () => {
       cancelled = true;

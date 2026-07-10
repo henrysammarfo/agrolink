@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import { getGoogleMapsClientKey } from "@/lib/google-maps-client";
@@ -39,8 +39,10 @@ function validPins(pins: Pin[]) {
 }
 
 export function CorridorMap(props: Props) {
-  if (getGoogleMapsClientKey()) {
-    return <GoogleCorridorMap {...props} />;
+  const [googleFailed, setGoogleFailed] = useState(false);
+
+  if (getGoogleMapsClientKey() && !googleFailed) {
+    return <GoogleCorridorMap {...props} onLoadError={() => setGoogleFailed(true)} />;
   }
   return <LeafletCorridorMap {...props} />;
 }
