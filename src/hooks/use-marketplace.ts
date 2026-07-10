@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchFeedListings, fetchSellerListings } from "@/lib/api/listings";
 import { fetchCartItems, addToCart, updateCartItemQuantity, removeCartItem, reorderFromOrder } from "@/lib/api/cart";
-import { fetchBuyerOrders, fetchSellerOrders, fetchAvailableDeliveries, fetchDriverDeliveries, loadTransportJobs } from "@/lib/api/orders";
+import { fetchBuyerOrders, fetchSellerOrders, fetchAdminOrders, fetchAvailableDeliveries, fetchDriverDeliveries, loadTransportJobs } from "@/lib/api/orders";
 import { fetchNotifications, fetchMessages, fetchUnreadNotificationCount } from "@/lib/api/notifications";
 import { fetchConversations, fetchUnreadMessageCount } from "@/lib/api/chat";
 import { fetchDriverProfile } from "@/lib/api/driver-onboarding";
@@ -207,6 +207,14 @@ export function useAdminPayments() {
   return useQuery({
     queryKey: ["admin-payments"],
     queryFn: fetchAdminPayments,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useAdminOrders() {
+  return useQuery({
+    queryKey: ["admin-orders"],
+    queryFn: fetchAdminOrders,
     refetchInterval: 30_000,
   });
 }

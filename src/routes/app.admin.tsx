@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CreditCard,
   ListChecks,
+  ClipboardList,
   ArrowRight,
   Loader2,
   Truck,
@@ -97,6 +98,14 @@ function AdminOverview() {
                 title="Listings"
                 count={stats.pendingReview}
                 sub="Pending moderation"
+              />
+              <AdminCard
+                to="/app/admin/orders"
+                icon={ClipboardList}
+                tone="accent"
+                title="Orders"
+                count={stats.orderCount}
+                sub="All platform orders"
               />
               <AdminCard
                 to="/app/admin/payments"

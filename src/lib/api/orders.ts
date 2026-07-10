@@ -43,6 +43,17 @@ export async function fetchSellerOrders(sellerId: string): Promise<OrderRow[]> {
   return (data ?? []) as OrderRow[];
 }
 
+export type AdminOrderRow = OrderRow & {
+  delivery?: { status: string } | { status: string }[] | null;
+};
+
+export async function fetchAdminOrders(): Promise<AdminOrderRow[]> {
+  const res = await apiFetch("/api/admin/orders");
+  const json = (await res.json()) as { orders?: AdminOrderRow[]; error?: string };
+  if (!res.ok) throw new Error(json.error ?? "Failed to load orders");
+  return json.orders ?? [];
+}
+
 export async function fetchOrderById(orderId: string): Promise<OrderRow | null> {
   const { data, error } = await supabase
     .from("orders")

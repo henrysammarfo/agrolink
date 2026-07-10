@@ -17,6 +17,7 @@ const MARKET_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
   { to: "/app/buyer", label: "Overview", icon: Heart },
   { to: "/app/buyer/feed", label: "Feed", icon: Sprout },
   { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
+  { to: "/app/buyer/payments", label: "Payments", icon: CreditCard },
   { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket },
   { to: "/app/inbox", label: "Inbox", icon: Inbox },
 ];
@@ -37,6 +38,7 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
   ],
   admin: [
     { to: "/app/admin", label: "Overview", icon: ShieldCheck },
+    { to: "/app/admin/orders", label: "Orders", icon: ClipboardList },
     { to: "/app/admin/payments", label: "Payments", icon: CreditCard },
     { to: "/app/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { to: "/app/admin/listings", label: "Listings", icon: ListChecks },
@@ -56,13 +58,18 @@ type MobileTab = {
   center?: boolean;
 };
 
-function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number): MobileTab[] {
+function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, isSeller: boolean): MobileTab[] {
   if (role === "buyer" || role === "farmer") {
     return [
       { id: "home", to: "/app/buyer", icon: Home, label: "Home" },
-      { id: "discover", to: "/app/buyer/feed", icon: Sprout, label: "Discover" },
+      { id: "orders", to: "/app/buyer/orders", icon: ClipboardList, label: "Orders" },
       { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
-      { id: "cart", to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount },
+      {
+        id: "payments",
+        to: isSeller ? "/app/farmer/payouts" : "/app/buyer/payments",
+        icon: isSeller ? Wallet : CreditCard,
+        label: isSeller ? "Payouts" : "Payments",
+      },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
     ];
   }
@@ -78,9 +85,9 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number):
   if (role === "admin") {
     return [
       { id: "home", to: "/app/admin", icon: Home, label: "Home" },
-      { id: "payments", to: "/app/admin/payments", icon: CreditCard, label: "Payments" },
-      { id: "disputes", to: "/app/admin/disputes", icon: AlertTriangle, label: "Disputes", center: true },
-      { id: "listings", to: "/app/admin/listings", icon: ListChecks, label: "Listings" },
+      { id: "orders", to: "/app/admin/orders", icon: ClipboardList, label: "Orders" },
+      { id: "payments", to: "/app/admin/payments", icon: CreditCard, label: "Payments", center: true },
+      { id: "disputes", to: "/app/admin/disputes", icon: AlertTriangle, label: "Disputes" },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
     ];
   }
@@ -96,7 +103,9 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number):
 function isMobileTabActive(pathname: string, tab: MobileTab): boolean {
   if (tab.id === "live") return false;
   if (tab.id === "jobs" && pathname.startsWith("/app/transport/jobs")) return true;
-  return pathname === tab.to;
+  if (tab.id === "orders" && (pathname.startsWith("/app/buyer/orders") || pathname.startsWith("/app/farmer/orders") || pathname.startsWith("/app/admin/orders"))) return true;
+  if (tab.id === "payments" && (pathname.startsWith("/app/buyer/payments") || pathname.startsWith("/app/farmer/payouts") || pathname.startsWith("/app/admin/payments"))) return true;
+  return pathname === tab.to || (tab.to !== "/app/buyer" && pathname.startsWith(tab.to));
 }
 
 function MobileTabLink({
@@ -176,7 +185,7 @@ export function AppShell({
     unreadOverride ?? (unread ? unread.notifications + unread.messages : 0);
   const nav = [
     ...NAV[role === "farmer" ? "buyer" : role],
-    ...(roles.includes("farmer") && role === "buyer" ? SELLER_NAV : []),
+    ...(roles.includes("farmer") && (role === "buyer" || role === "farmer") ? SELLER_NAV : []),
   ];
   const immersive = IMMERSIVE_PATHS.some((p) => pathname === p);
 
@@ -193,7 +202,7 @@ export function AppShell({
     navigate({ to: roleHome(normalized) as "/app/buyer" });
   };
 
-  const mobileTabs = buildMobileTabs(role, cartCount, unreadInbox);
+  const mobileTabs = buildMobileTabs(role, cartCount, unreadInbox, roles.includes("farmer"));
 
   if (immersive) {
     const lightChrome = pathname.startsWith("/app/transport");

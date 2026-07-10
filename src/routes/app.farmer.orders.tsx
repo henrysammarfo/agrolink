@@ -51,7 +51,7 @@ function FarmerOrders() {
 
   return (
     <FarmerGate>
-    <AppShell role="farmer">
+    <AppShell role="buyer">
       <PageHeader eyebrow="Fulfillment" title="Incoming" italic="orders" sub="Accept, pack, and hand off to a driver." />
       {isLoading ? (
         <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>

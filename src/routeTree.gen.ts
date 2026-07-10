@@ -42,11 +42,13 @@ import { Route as AppProfileFollowersRouteImport } from './routes/app.profile.fo
 import { Route as AppFarmerPayoutsRouteImport } from './routes/app.farmer.payouts'
 import { Route as AppFarmerOrdersRouteImport } from './routes/app.farmer.orders'
 import { Route as AppFarmerListingsRouteImport } from './routes/app.farmer.listings'
+import { Route as AppBuyerPaymentsRouteImport } from './routes/app.buyer.payments'
 import { Route as AppBuyerOrdersRouteImport } from './routes/app.buyer.orders'
 import { Route as AppBuyerFeedRouteImport } from './routes/app.buyer.feed'
 import { Route as AppBuyerCartRouteImport } from './routes/app.buyer.cart'
 import { Route as AppAdminPricingRouteImport } from './routes/app.admin.pricing'
 import { Route as AppAdminPaymentsRouteImport } from './routes/app.admin.payments'
+import { Route as AppAdminOrdersRouteImport } from './routes/app.admin.orders'
 import { Route as AppAdminListingsRouteImport } from './routes/app.admin.listings'
 import { Route as AppAdminDriversRouteImport } from './routes/app.admin.drivers'
 import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
@@ -73,6 +75,7 @@ import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
 import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAdminPaymentsRouteImport } from './routes/api/admin/payments'
+import { Route as ApiAdminOrdersRouteImport } from './routes/api/admin/orders'
 import { Route as ApiAdminDriversRouteImport } from './routes/api/admin/drivers'
 import { Route as AppUsersSlugFollowersRouteImport } from './routes/app.users.$slug.followers'
 import { Route as AppInboxChatUserIdRouteImport } from './routes/app.inbox.chat.$userId'
@@ -245,6 +248,11 @@ const AppFarmerListingsRoute = AppFarmerListingsRouteImport.update({
   path: '/listings',
   getParentRoute: () => AppFarmerRoute,
 } as any)
+const AppBuyerPaymentsRoute = AppBuyerPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppBuyerRoute,
+} as any)
 const AppBuyerOrdersRoute = AppBuyerOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
@@ -268,6 +276,11 @@ const AppAdminPricingRoute = AppAdminPricingRouteImport.update({
 const AppAdminPaymentsRoute = AppAdminPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminOrdersRoute = AppAdminOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
   getParentRoute: () => AppAdminRoute,
 } as any)
 const AppAdminListingsRoute = AppAdminListingsRouteImport.update({
@@ -402,6 +415,11 @@ const ApiAdminPaymentsRoute = ApiAdminPaymentsRouteImport.update({
   path: '/api/admin/payments',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminOrdersRoute = ApiAdminOrdersRouteImport.update({
+  id: '/api/admin/orders',
+  path: '/api/admin/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminDriversRoute = ApiAdminDriversRouteImport.update({
   id: '/api/admin/drivers',
   path: '/api/admin/drivers',
@@ -461,6 +479,7 @@ export interface FileRoutesByFullPath {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
@@ -487,11 +506,13 @@ export interface FileRoutesByFullPath {
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/drivers': typeof AppAdminDriversRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
+  '/app/admin/orders': typeof AppAdminOrdersRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/admin/pricing': typeof AppAdminPricingRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
+  '/app/buyer/payments': typeof AppBuyerPaymentsRoute
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
@@ -532,6 +553,7 @@ export interface FileRoutesByTo {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
@@ -558,11 +580,13 @@ export interface FileRoutesByTo {
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/drivers': typeof AppAdminDriversRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
+  '/app/admin/orders': typeof AppAdminOrdersRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/admin/pricing': typeof AppAdminPricingRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
+  '/app/buyer/payments': typeof AppBuyerPaymentsRoute
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
@@ -605,6 +629,7 @@ export interface FileRoutesById {
   '/farmers/$slug': typeof FarmersSlugRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/api/admin/drivers': typeof ApiAdminDriversRoute
+  '/api/admin/orders': typeof ApiAdminOrdersRoute
   '/api/admin/payments': typeof ApiAdminPaymentsRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/chat/request': typeof ApiChatRequestRoute
@@ -631,11 +656,13 @@ export interface FileRoutesById {
   '/app/admin/disputes': typeof AppAdminDisputesRoute
   '/app/admin/drivers': typeof AppAdminDriversRoute
   '/app/admin/listings': typeof AppAdminListingsRoute
+  '/app/admin/orders': typeof AppAdminOrdersRoute
   '/app/admin/payments': typeof AppAdminPaymentsRoute
   '/app/admin/pricing': typeof AppAdminPricingRoute
   '/app/buyer/cart': typeof AppBuyerCartRoute
   '/app/buyer/feed': typeof AppBuyerFeedRoute
   '/app/buyer/orders': typeof AppBuyerOrdersRouteWithChildren
+  '/app/buyer/payments': typeof AppBuyerPaymentsRoute
   '/app/farmer/listings': typeof AppFarmerListingsRoute
   '/app/farmer/orders': typeof AppFarmerOrdersRoute
   '/app/farmer/payouts': typeof AppFarmerPayoutsRoute
@@ -679,6 +706,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/admin/drivers'
+    | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
     | '/api/chat/request'
@@ -705,11 +733,13 @@ export interface FileRouteTypes {
     | '/app/admin/disputes'
     | '/app/admin/drivers'
     | '/app/admin/listings'
+    | '/app/admin/orders'
     | '/app/admin/payments'
     | '/app/admin/pricing'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
     | '/app/buyer/orders'
+    | '/app/buyer/payments'
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
@@ -750,6 +780,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app'
     | '/api/admin/drivers'
+    | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
     | '/api/chat/request'
@@ -776,11 +807,13 @@ export interface FileRouteTypes {
     | '/app/admin/disputes'
     | '/app/admin/drivers'
     | '/app/admin/listings'
+    | '/app/admin/orders'
     | '/app/admin/payments'
     | '/app/admin/pricing'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
     | '/app/buyer/orders'
+    | '/app/buyer/payments'
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
@@ -822,6 +855,7 @@ export interface FileRouteTypes {
     | '/farmers/$slug'
     | '/app/'
     | '/api/admin/drivers'
+    | '/api/admin/orders'
     | '/api/admin/payments'
     | '/api/admin/pricing'
     | '/api/chat/request'
@@ -848,11 +882,13 @@ export interface FileRouteTypes {
     | '/app/admin/disputes'
     | '/app/admin/drivers'
     | '/app/admin/listings'
+    | '/app/admin/orders'
     | '/app/admin/payments'
     | '/app/admin/pricing'
     | '/app/buyer/cart'
     | '/app/buyer/feed'
     | '/app/buyer/orders'
+    | '/app/buyer/payments'
     | '/app/farmer/listings'
     | '/app/farmer/orders'
     | '/app/farmer/payouts'
@@ -885,6 +921,7 @@ export interface RootRouteChildren {
   ApiMapsRoute: typeof ApiMapsRoute
   ApiModerateRoute: typeof ApiModerateRoute
   ApiAdminDriversRoute: typeof ApiAdminDriversRoute
+  ApiAdminOrdersRoute: typeof ApiAdminOrdersRoute
   ApiAdminPaymentsRoute: typeof ApiAdminPaymentsRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiChatRequestRoute: typeof ApiChatRequestRoute
@@ -1143,6 +1180,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFarmerListingsRouteImport
       parentRoute: typeof AppFarmerRoute
     }
+    '/app/buyer/payments': {
+      id: '/app/buyer/payments'
+      path: '/payments'
+      fullPath: '/app/buyer/payments'
+      preLoaderRoute: typeof AppBuyerPaymentsRouteImport
+      parentRoute: typeof AppBuyerRoute
+    }
     '/app/buyer/orders': {
       id: '/app/buyer/orders'
       path: '/orders'
@@ -1176,6 +1220,13 @@ declare module '@tanstack/react-router' {
       path: '/payments'
       fullPath: '/app/admin/payments'
       preLoaderRoute: typeof AppAdminPaymentsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/app/admin/orders': {
+      id: '/app/admin/orders'
+      path: '/orders'
+      fullPath: '/app/admin/orders'
+      preLoaderRoute: typeof AppAdminOrdersRouteImport
       parentRoute: typeof AppAdminRoute
     }
     '/app/admin/listings': {
@@ -1360,6 +1411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminPaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/orders': {
+      id: '/api/admin/orders'
+      path: '/api/admin/orders'
+      fullPath: '/api/admin/orders'
+      preLoaderRoute: typeof ApiAdminOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/drivers': {
       id: '/api/admin/drivers'
       path: '/api/admin/drivers'
@@ -1409,6 +1467,7 @@ interface AppAdminRouteChildren {
   AppAdminDisputesRoute: typeof AppAdminDisputesRoute
   AppAdminDriversRoute: typeof AppAdminDriversRoute
   AppAdminListingsRoute: typeof AppAdminListingsRoute
+  AppAdminOrdersRoute: typeof AppAdminOrdersRoute
   AppAdminPaymentsRoute: typeof AppAdminPaymentsRoute
   AppAdminPricingRoute: typeof AppAdminPricingRoute
 }
@@ -1417,6 +1476,7 @@ const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminDisputesRoute: AppAdminDisputesRoute,
   AppAdminDriversRoute: AppAdminDriversRoute,
   AppAdminListingsRoute: AppAdminListingsRoute,
+  AppAdminOrdersRoute: AppAdminOrdersRoute,
   AppAdminPaymentsRoute: AppAdminPaymentsRoute,
   AppAdminPricingRoute: AppAdminPricingRoute,
 }
@@ -1445,12 +1505,14 @@ interface AppBuyerRouteChildren {
   AppBuyerCartRoute: typeof AppBuyerCartRoute
   AppBuyerFeedRoute: typeof AppBuyerFeedRoute
   AppBuyerOrdersRoute: typeof AppBuyerOrdersRouteWithChildren
+  AppBuyerPaymentsRoute: typeof AppBuyerPaymentsRoute
 }
 
 const AppBuyerRouteChildren: AppBuyerRouteChildren = {
   AppBuyerCartRoute: AppBuyerCartRoute,
   AppBuyerFeedRoute: AppBuyerFeedRoute,
   AppBuyerOrdersRoute: AppBuyerOrdersRouteWithChildren,
+  AppBuyerPaymentsRoute: AppBuyerPaymentsRoute,
 }
 
 const AppBuyerRouteWithChildren = AppBuyerRoute._addFileChildren(
@@ -1593,6 +1655,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMapsRoute: ApiMapsRoute,
   ApiModerateRoute: ApiModerateRoute,
   ApiAdminDriversRoute: ApiAdminDriversRoute,
+  ApiAdminOrdersRoute: ApiAdminOrdersRoute,
   ApiAdminPaymentsRoute: ApiAdminPaymentsRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiChatRequestRoute: ApiChatRequestRoute,
