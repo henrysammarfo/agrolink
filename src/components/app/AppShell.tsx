@@ -354,7 +354,7 @@ export function AppShell({
         </header>
 
         <main
-          className={`flex-1 ${
+          className={`flex-1 w-full min-w-0 overflow-x-hidden ${
             compact ? "px-4 py-4 md:px-8 md:py-8" : "px-4 py-5 sm:px-6 md:p-10"
           } ${hideMobileNav ? "pb-6 md:pb-10" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-10"}`}
         >

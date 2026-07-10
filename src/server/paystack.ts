@@ -679,6 +679,99 @@ export async function initiatePaymentForOrder(params: {
   };
 }
 
+/** Cancel unpaid reserved checkout — restores inventory and cart items. */
+export async function cancelPendingCheckoutOrder(params: {
+  userId: string;
+  orderId: string;
+}): Promise<{ ok: true }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: order } = await supabaseAdmin
+    .from("orders")
+    .select(
+      `
+      *,
+      delivery:deliveries(id, status, driver_id),
+      items:order_items(*, listing:listings(id, quantity, status))
+    `,
+    )
+    .eq("id", params.orderId)
+    .eq("buyer_id", params.userId)
+    .maybeSingle();
+
+  if (!order) throw new Error("Order not found");
+  if (order.payment_status === "paid") throw new Error("Cannot cancel a paid order");
+  if (order.status === "cancelled") return { ok: true };
+
+  const delivery = Array.isArray(order.delivery) ? order.delivery[0] : order.delivery;
+
+  for (const item of order.items ?? []) {
+    const listing = item.listing as { id: string; quantity: number; status: string } | null;
+    if (!listing) continue;
+    const restoredQty = Number(listing.quantity) + Number(item.quantity);
+    await supabaseAdmin
+      .from("listings")
+      .update({
+        quantity: restoredQty,
+        status: restoredQty > 0 && listing.status === "sold_out" ? "active" : listing.status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", listing.id);
+  }
+
+  let { data: cart } = await supabaseAdmin
+    .from("carts")
+    .select("id")
+    .eq("user_id", params.userId)
+    .maybeSingle();
+  if (!cart) {
+    const { data: created, error: cartErr } = await supabaseAdmin
+      .from("carts")
+      .insert({ user_id: params.userId })
+      .select("id")
+      .single();
+    if (cartErr) throw cartErr;
+    cart = created;
+  }
+
+  for (const item of order.items ?? []) {
+    const listing = item.listing as { id: string } | null;
+    if (!listing) continue;
+    const { data: existing } = await supabaseAdmin
+      .from("cart_items")
+      .select("id, quantity")
+      .eq("cart_id", cart!.id)
+      .eq("listing_id", listing.id)
+      .maybeSingle();
+    if (existing) {
+      await supabaseAdmin
+        .from("cart_items")
+        .update({ quantity: Number(existing.quantity) + Number(item.quantity) })
+        .eq("id", existing.id);
+    } else {
+      await supabaseAdmin.from("cart_items").insert({
+        cart_id: cart!.id,
+        listing_id: listing.id,
+        quantity: item.quantity,
+      });
+    }
+  }
+
+  if (delivery?.id) {
+    await supabaseAdmin
+      .from("deliveries")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("id", delivery.id);
+  }
+
+  await supabaseAdmin
+    .from("orders")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", params.orderId);
+
+  return { ok: true };
+}
+
 export async function confirmOrderPayment(reference: string): Promise<{ ok: boolean; message: string; orderId?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 

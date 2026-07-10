@@ -77,6 +77,7 @@ import { Route as ApiDeliveriesAcceptRouteImport } from './routes/api/deliveries
 import { Route as ApiCommsNotifyRouteImport } from './routes/api/comms/notify'
 import { Route as ApiCheckoutReserveRouteImport } from './routes/api/checkout/reserve'
 import { Route as ApiCheckoutPayRouteImport } from './routes/api/checkout/pay'
+import { Route as ApiCheckoutCancelRouteImport } from './routes/api/checkout/cancel'
 import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
 import { Route as ApiChatRequestRouteImport } from './routes/api/chat/request'
 import { Route as ApiBuyerOrdersRouteImport } from './routes/api/buyer/orders'
@@ -435,6 +436,11 @@ const ApiCheckoutPayRoute = ApiCheckoutPayRouteImport.update({
   path: '/pay',
   getParentRoute: () => ApiCheckoutRoute,
 } as any)
+const ApiCheckoutCancelRoute = ApiCheckoutCancelRouteImport.update({
+  id: '/cancel',
+  path: '/cancel',
+  getParentRoute: () => ApiCheckoutRoute,
+} as any)
 const ApiChatSendRoute = ApiChatSendRouteImport.update({
   id: '/api/chat/send',
   path: '/api/chat/send',
@@ -548,6 +554,7 @@ export interface FileRoutesByFullPath {
   '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
+  '/api/checkout/cancel': typeof ApiCheckoutCancelRoute
   '/api/checkout/pay': typeof ApiCheckoutPayRoute
   '/api/checkout/reserve': typeof ApiCheckoutReserveRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
@@ -632,6 +639,7 @@ export interface FileRoutesByTo {
   '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
+  '/api/checkout/cancel': typeof ApiCheckoutCancelRoute
   '/api/checkout/pay': typeof ApiCheckoutPayRoute
   '/api/checkout/reserve': typeof ApiCheckoutReserveRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
@@ -718,6 +726,7 @@ export interface FileRoutesById {
   '/api/buyer/orders': typeof ApiBuyerOrdersRoute
   '/api/chat/request': typeof ApiChatRequestRoute
   '/api/chat/send': typeof ApiChatSendRoute
+  '/api/checkout/cancel': typeof ApiCheckoutCancelRoute
   '/api/checkout/pay': typeof ApiCheckoutPayRoute
   '/api/checkout/reserve': typeof ApiCheckoutReserveRoute
   '/api/comms/notify': typeof ApiCommsNotifyRoute
@@ -805,6 +814,7 @@ export interface FileRouteTypes {
     | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
+    | '/api/checkout/cancel'
     | '/api/checkout/pay'
     | '/api/checkout/reserve'
     | '/api/comms/notify'
@@ -889,6 +899,7 @@ export interface FileRouteTypes {
     | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
+    | '/api/checkout/cancel'
     | '/api/checkout/pay'
     | '/api/checkout/reserve'
     | '/api/comms/notify'
@@ -974,6 +985,7 @@ export interface FileRouteTypes {
     | '/api/buyer/orders'
     | '/api/chat/request'
     | '/api/chat/send'
+    | '/api/checkout/cancel'
     | '/api/checkout/pay'
     | '/api/checkout/reserve'
     | '/api/comms/notify'
@@ -1553,6 +1565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCheckoutPayRouteImport
       parentRoute: typeof ApiCheckoutRoute
     }
+    '/api/checkout/cancel': {
+      id: '/api/checkout/cancel'
+      path: '/cancel'
+      fullPath: '/api/checkout/cancel'
+      preLoaderRoute: typeof ApiCheckoutCancelRouteImport
+      parentRoute: typeof ApiCheckoutRoute
+    }
     '/api/chat/send': {
       id: '/api/chat/send'
       path: '/api/chat/send'
@@ -1853,11 +1872,13 @@ const FarmersRouteWithChildren =
   FarmersRoute._addFileChildren(FarmersRouteChildren)
 
 interface ApiCheckoutRouteChildren {
+  ApiCheckoutCancelRoute: typeof ApiCheckoutCancelRoute
   ApiCheckoutPayRoute: typeof ApiCheckoutPayRoute
   ApiCheckoutReserveRoute: typeof ApiCheckoutReserveRoute
 }
 
 const ApiCheckoutRouteChildren: ApiCheckoutRouteChildren = {
+  ApiCheckoutCancelRoute: ApiCheckoutCancelRoute,
   ApiCheckoutPayRoute: ApiCheckoutPayRoute,
   ApiCheckoutReserveRoute: ApiCheckoutReserveRoute,
 }

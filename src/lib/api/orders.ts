@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { OrderRow, DeliveryRow } from "@/lib/types/marketplace";
+import { normalizeOrderRow } from "@/lib/order-normalize";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { fetchOpenDeliveries, fetchDriverActiveDeliveries, loadTransportJobs } from "@/lib/api/transport-jobs";
 
@@ -50,7 +51,7 @@ export async function fetchOrderById(orderId: string): Promise<OrderRow | null> 
   const json = (await res.json()) as { order?: OrderRow; error?: string };
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(json.error ?? "Failed to load order");
-  return (json.order ?? null) as OrderRow | null;
+  return json.order ? normalizeOrderRow(json.order as OrderRow & { delivery?: DeliveryRow | DeliveryRow[] }) : null;
 }
 
 export async function updateOrderStatus(orderId: string, status: string) {

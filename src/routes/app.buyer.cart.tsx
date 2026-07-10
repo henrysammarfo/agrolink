@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Smartphone, ChevronLeft, Flag, User, ChevronRight } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Wallet, Loader2, Smartphone, ChevronLeft, Flag, User, ChevronRight, X } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
@@ -23,7 +23,9 @@ import type { MapLocation } from "@/lib/api/maps";
 import { DeliveryVehiclePicker, mapQuoteVehicle } from "@/components/checkout/DeliveryVehiclePicker";
 import { ACCRA_CENTER, isInGreaterAccra, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
 import { LifecycleStepper } from "@/components/order/LifecycleStepper";
-import { fetchOrderById } from "@/lib/api/orders";
+import { fetchOrderById, subscribeToDelivery } from "@/lib/api/orders";
+import { normalizeOrderRow, orderHasDriver } from "@/lib/order-normalize";
+import { clearCheckoutSession, loadCheckoutSession, saveCheckoutSession } from "@/lib/checkout-session";
 import {
   CHECKOUT_MAIN_STEPS,
   CHECKOUT_STEPS_PICKUP,
@@ -33,8 +35,23 @@ import {
   isDriverMatchedForPayment,
 } from "@/lib/order-lifecycle";
 import type { VehicleOption } from "@/components/checkout/DeliveryVehiclePicker";
+import type { OrderRow } from "@/lib/types/marketplace";
 
 const DEFAULT_DELIVERY: MapLocation = GHANA_LOCATIONS[0];
+
+type OrderSnapshot = {
+  subtotal: number;
+  deliveryFee: number;
+  platformFee: number;
+  total: number;
+  pickupLat: number;
+  pickupLng: number;
+  pickupLabel: string;
+  deliveryLat: number;
+  deliveryLng: number;
+  deliveryLabel: string;
+  deliveryId: string | null;
+};
 
 export const Route = createFileRoute("/app/buyer/cart")({
   head: () => ({ meta: [{ title: "Cart · AgroLink" }] }),
@@ -79,8 +96,11 @@ function Cart() {
   const [routeEtaMin, setRouteEtaMin] = useState<number | null>(null);
   const [driversNearby, setDriversNearby] = useState(0);
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
+  const [orderSnapshot, setOrderSnapshot] = useState<OrderSnapshot | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const sessionRestored = useRef(false);
 
-  const subtotal = items.reduce(
+  const subtotal = orderSnapshot?.subtotal ?? items.reduce(
     (s, i) => s + Number(i.listing?.price_per_unit ?? 0) * Number(i.quantity),
     0,
   );
@@ -94,13 +114,13 @@ function Cart() {
     driversForVehicle,
   });
   const driverAccepted = !needsDelivery || driverMatched;
-  const delivery = needsDelivery ? (deliveryQuote?.total ?? 0) : 0;
-  const platformFee = Math.round(subtotal * 0.06 * 100) / 100;
-  const total = subtotal + delivery + platformFee;
+  const delivery = orderSnapshot?.deliveryFee ?? (needsDelivery ? (deliveryQuote?.total ?? 0) : 0);
+  const platformFee = orderSnapshot?.platformFee ?? (Math.round(subtotal * 0.06 * 100) / 100);
+  const total = orderSnapshot?.total ?? (subtotal + delivery + platformFee);
   const needsOtp = total >= HIGH_VALUE_OTP_THRESHOLD_GHS;
   const paymentStep = needsDelivery ? 4 : 3;
   const canPay =
-    items.length > 0 &&
+    (items.length > 0 || !!pendingOrderId) &&
     !quoteLoading &&
     isDriverMatchedForPayment({ fulfillmentMode, driverMatched: driverAccepted }) &&
     (!needsOtp || otpVerified);
@@ -112,48 +132,182 @@ function Cart() {
     step === 1 ? "cart" : step === 2 ? "delivery" : needsDelivery && step === 3 ? "driver" : "payment";
 
   const pickupStops = useMemo(() => {
+    if (orderSnapshot) {
+      return [{ lat: orderSnapshot.pickupLat, lng: orderSnapshot.pickupLng, label: orderSnapshot.pickupLabel }];
+    }
     const stops = items
       .map((i) => i.listing)
       .filter((l): l is NonNullable<typeof l> => !!l?.lat && !!l?.lng && isValidMapCoord(l.lat, l.lng))
       .map((l) => ({ lat: l.lat, lng: l.lng, label: l.location_name }));
     return [...new Map(stops.map((s) => [`${s.lat},${s.lng}`, s])).values()];
-  }, [items]);
+  }, [items, orderSnapshot]);
+
+  const activeDeliveryLocation = useMemo((): MapLocation => {
+    if (orderSnapshot) {
+      return {
+        name: orderSnapshot.deliveryLabel,
+        lat: orderSnapshot.deliveryLat,
+        lng: orderSnapshot.deliveryLng,
+      };
+    }
+    return deliveryLocation;
+  }, [orderSnapshot, deliveryLocation]);
 
   const mapCenter = useMemo((): [number, number] => {
     const points = [
       ...pickupStops,
-      isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng) ? deliveryLocation : null,
+      isValidMapCoord(activeDeliveryLocation.lat, activeDeliveryLocation.lng) ? activeDeliveryLocation : null,
     ].filter(Boolean) as { lat: number; lng: number }[];
     if (!points.length) return ACCRA_CENTER;
     const lat = points.reduce((s, p) => s + p.lat, 0) / points.length;
     const lng = points.reduce((s, p) => s + p.lng, 0) / points.length;
     return [lat, lng];
-  }, [pickupStops, deliveryLocation]);
+  }, [pickupStops, activeDeliveryLocation]);
 
-  const mapFitKey = `${deliveryLocation.lat},${deliveryLocation.lng}:${routeCoords.length}:${driversNearby}`;
+  const mapFitKey = `${activeDeliveryLocation.lat},${activeDeliveryLocation.lng}:${routeCoords.length}:${driversNearby}:${pendingOrderId ?? "cart"}`;
 
   const mapPins = useMemo(() => {
     const pins: { lat: number; lng: number; label: string; kind: "farm" | "buyer" | "driver" }[] = [];
     for (const s of pickupStops) {
       pins.push({ lat: s.lat, lng: s.lng, label: s.label ?? "Farm", kind: "farm" });
     }
-    if (isValidMapCoord(deliveryLocation.lat, deliveryLocation.lng)) {
-      pins.push({ lat: deliveryLocation.lat, lng: deliveryLocation.lng, label: "You", kind: "buyer" });
+    if (isValidMapCoord(activeDeliveryLocation.lat, activeDeliveryLocation.lng)) {
+      pins.push({ lat: activeDeliveryLocation.lat, lng: activeDeliveryLocation.lng, label: "You", kind: "buyer" });
     }
     return pins;
-  }, [pickupStops, deliveryLocation]);
+  }, [pickupStops, activeDeliveryLocation]);
 
   const routeSegments = useMemo(() => buildTrafficSegments(routeCoords), [routeCoords]);
 
-  const pickupLabel = pickupStops[0]?.label ?? items[0]?.listing?.location_name ?? "Farm pickup";
+  const pickupLabel = pickupStops[0]?.label ?? items[0]?.listing?.location_name ?? orderSnapshot?.pickupLabel ?? "Farm pickup";
+
+  const mapCheckoutStep = step === 2 || (step === 3 && needsDelivery);
 
   useEffect(() => {
-    if (step !== 2 || !needsDelivery || !pickupStops[0]) {
-      setRouteCoords([]);
-      setRouteEtaMin(null);
+    if (!user?.id || sessionRestored.current) return;
+    sessionRestored.current = true;
+    const session = loadCheckoutSession(user.id);
+    if (!session) return;
+    setStep(session.step);
+    setPendingOrderId(session.pendingOrderId);
+    setDriverMatched(session.driverMatched);
+    setMatchedDriverName(session.matchedDriverName);
+    setDeliveryLocation(session.deliveryLocation);
+    setFulfillmentMode(session.fulfillmentMode);
+    setSelectedVehicle(session.selectedVehicle);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (step === 1 && !pendingOrderId) {
+      clearCheckoutSession(user.id);
       return;
     }
-    const dest = deliveryLocation;
+    saveCheckoutSession(user.id, {
+      step,
+      pendingOrderId,
+      driverMatched,
+      matchedDriverName,
+      deliveryLocation,
+      fulfillmentMode,
+      selectedVehicle,
+    });
+  }, [user?.id, step, pendingOrderId, driverMatched, matchedDriverName, deliveryLocation, fulfillmentMode, selectedVehicle]);
+
+  function applyPendingOrder(raw: OrderRow | null) {
+    if (!raw) return;
+    const order = normalizeOrderRow(raw);
+    if (order.status === "cancelled") {
+      setPendingOrderId(null);
+      setOrderSnapshot(null);
+      setDriverMatched(false);
+      setMatchedDriverName(null);
+      setStep(1);
+      if (user?.id) clearCheckoutSession(user.id);
+      return;
+    }
+    if (order.payment_status === "paid") {
+      void navigate({ to: "/app/buyer/orders/$orderId/track", params: { orderId: order.id }, replace: true });
+      return;
+    }
+    const d = order.delivery;
+    setOrderSnapshot({
+      subtotal: Number(order.subtotal),
+      deliveryFee: Number(order.delivery_fee),
+      platformFee: Number(order.platform_fee),
+      total: Number(order.total_amount),
+      pickupLat: d?.pickup_lat ?? order.delivery_lat ?? ACCRA_CENTER[0],
+      pickupLng: d?.pickup_lng ?? order.delivery_lng ?? ACCRA_CENTER[1],
+      pickupLabel: d?.pickup_address ?? "Farm pickup",
+      deliveryLat: d?.delivery_lat ?? order.delivery_lat ?? activeDeliveryLocation.lat,
+      deliveryLng: d?.delivery_lng ?? order.delivery_lng ?? activeDeliveryLocation.lng,
+      deliveryLabel: d?.delivery_address ?? order.delivery_address ?? "Delivery",
+      deliveryId: d?.id ?? null,
+    });
+    if (orderHasDriver(order)) {
+      setDriverMatched(true);
+      setMatchedDriverName(d?.driver?.profile?.display_name ?? "Driver");
+    }
+    if (order.delivery_lat != null && order.delivery_lng != null) {
+      setDeliveryLocation({
+        name: order.delivery_address ?? "Delivery",
+        lat: order.delivery_lat,
+        lng: order.delivery_lng,
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (!pendingOrderId) {
+      setOrderSnapshot(null);
+      return;
+    }
+    let cancelled = false;
+    const sync = async () => {
+      try {
+        const order = await fetchOrderById(pendingOrderId);
+        if (cancelled) return;
+        applyPendingOrder(order);
+      } catch {
+        /* retry on next poll */
+      }
+    };
+    void sync();
+    const interval = setInterval(sync, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pendingOrderId]);
+
+  useEffect(() => {
+    const deliveryId = orderSnapshot?.deliveryId;
+    if (!deliveryId || driverMatched) return;
+    let unsub: (() => void) | undefined;
+    void subscribeToDelivery(deliveryId, (row) => {
+      if (row.driver_id) {
+        setDriverMatched(true);
+        void fetchOrderById(pendingOrderId!).then((o) => {
+          if (!o) return;
+          const order = normalizeOrderRow(o);
+          setMatchedDriverName(order.delivery?.driver?.profile?.display_name ?? "Driver");
+        });
+      }
+    }).then((fn) => {
+      unsub = fn;
+    });
+    return () => unsub?.();
+  }, [orderSnapshot?.deliveryId, driverMatched, pendingOrderId]);
+
+  useEffect(() => {
+    if (!mapCheckoutStep || !needsDelivery || !pickupStops[0]) {
+      if (!mapCheckoutStep) {
+        setRouteCoords([]);
+        setRouteEtaMin(null);
+      }
+      return;
+    }
+    const dest = activeDeliveryLocation;
     if (!isValidMapCoord(dest.lat, dest.lng)) return;
     let cancelled = false;
     fetchDrivingRoute(
@@ -167,7 +321,7 @@ function Cart() {
     return () => {
       cancelled = true;
     };
-  }, [step, needsDelivery, deliveryLocation.lat, deliveryLocation.lng, pickupStops]);
+  }, [mapCheckoutStep, needsDelivery, activeDeliveryLocation.lat, activeDeliveryLocation.lng, pickupStops]);
 
   useEffect(() => {
     void getCurrentPosition().then(async (p) => {
@@ -241,26 +395,30 @@ function Cart() {
     return () => clearInterval(interval);
   }, [step, needsDelivery, pickupStops, deliveryLocation.lat, deliveryLocation.lng, items]);
 
-  useEffect(() => {
-    if (step !== 3 || !needsDelivery || !pendingOrderId) return;
-    let cancelled = false;
-    const poll = async () => {
-      try {
-        const order = await fetchOrderById(pendingOrderId);
-        if (cancelled || !order?.delivery?.driver_id) return;
-        setDriverMatched(true);
-        setMatchedDriverName(order.delivery.driver?.profile?.display_name ?? "Driver");
-      } catch {
-        /* retry on next poll */
-      }
-    };
-    void poll();
-    const interval = setInterval(poll, 3000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [step, needsDelivery, pendingOrderId]);
+  async function cancelRide() {
+    if (!user?.id || !pendingOrderId) return;
+    setCancelling(true);
+    try {
+      const res = await apiFetch("/api/checkout/cancel", {
+        method: "POST",
+        body: JSON.stringify({ orderId: pendingOrderId }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not cancel trip");
+      clearCheckoutSession(user.id);
+      setPendingOrderId(null);
+      setOrderSnapshot(null);
+      setDriverMatched(false);
+      setMatchedDriverName(null);
+      setStep(1);
+      void queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
+      toast.success("Trip cancelled — items returned to your cart");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not cancel trip");
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   async function requestDriver() {
     if (!user?.id) {
@@ -294,6 +452,7 @@ function Cart() {
       setDriverMatched(false);
       setMatchedDriverName(null);
       void queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
+      void fetchOrderById(data.orderId).then((o) => applyPendingOrder(o));
       setStep(3);
       toast.success("Drivers notified — waiting for one to accept your trip");
     } catch (e) {
@@ -446,8 +605,8 @@ function Cart() {
   }
 
   return (
-    <AppShell role="buyer" compact hideMobileNav={step === 2 && needsDelivery}>
-      {!(step === 2 && needsDelivery) && (
+    <AppShell role="buyer" compact hideMobileNav={mapCheckoutStep && needsDelivery}>
+      {!mapCheckoutStep && (
         <>
           <div className="mb-4 flex items-center justify-between gap-3">
             <button
@@ -688,11 +847,32 @@ function Cart() {
       )}
 
       {step === 3 && needsDelivery && (
-        <div className="mx-auto max-w-md space-y-5">
-          <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="h-4 w-4" /> Back to delivery
-          </button>
-          <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="relative -mx-4 sm:-mx-6 md:-mx-10">
+          <div className="relative h-[42vh] min-h-[280px] max-h-[420px]">
+            <CorridorMap
+              pins={mapPins}
+              route={routeCoords}
+              routeSegments={routeSegments}
+              fitKey={mapFitKey}
+              center={mapCenter}
+              zoom={STREET_ZOOM}
+              corridorOnly
+              dark={false}
+              height="100%"
+              etaLabel={routeEtaMin != null ? `${routeEtaMin} min` : undefined}
+            />
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="absolute left-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-background/95 shadow-md"
+              aria-label="Back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="relative z-10 -mt-6 rounded-t-3xl border border-border bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-4 shadow-[0_-8px_30px_rgba(0,0,0,.08)]">
+            <LifecycleStepper steps={CHECKOUT_MAIN_STEPS} currentStepId="driver" compact className="mb-3" />
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Driver matching</p>
             {driverMatched ? (
               <div className="mt-4">
@@ -702,27 +882,46 @@ function Cart() {
                 </p>
               </div>
             ) : (
-              <div className="mt-4">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <div>
-                    <p className="font-medium">Waiting for a driver to accept</p>
-                    <p className="text-xs text-muted-foreground">Nearby couriers were notified. Payment unlocks after accept.</p>
-                  </div>
+              <div className="mt-4 flex items-center gap-3">
+                <Loader2 className="h-8 w-8 shrink-0 animate-spin text-primary" />
+                <div>
+                  <p className="font-medium">Waiting for a driver to accept</p>
+                  <p className="text-xs text-muted-foreground">Nearby couriers were notified. Payment unlocks after accept.</p>
                 </div>
               </div>
             )}
+            <div className="mt-4">
+              <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
+            </div>
           </div>
-          <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
-          <button
-            type="button"
-            disabled={!driverMatched}
-            onClick={() => setStep(4)}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-          >
-            {driverMatched ? "Continue to payment" : "Waiting for driver accept…"}
-            {driverMatched && <ArrowRight className="h-4 w-4" />}
-          </button>
+
+          <div className="fixed inset-x-0 bottom-[max(env(safe-area-inset-bottom),0.5rem)] z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
+            <div className="mx-auto flex max-w-lg items-center gap-2">
+              <button
+                type="button"
+                disabled={cancelling}
+                onClick={() => void cancelRide()}
+                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-border px-4 py-3 text-sm font-medium text-muted-foreground hover:text-destructive disabled:opacity-50"
+              >
+                {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!driverMatched}
+                onClick={() => setStep(4)}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {driverMatched ? (
+                  <>
+                    Continue to payment <ArrowRight className="h-4 w-4" />
+                  </>
+                ) : (
+                  "Waiting for driver…"
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
