@@ -34,7 +34,7 @@ function Listings() {
 
   return (
     <FarmerGate>
-      <AppShell role="farmer">
+      <AppShell role="buyer">
         <PageHeader
           eyebrow="Catalog"
           title="Your"

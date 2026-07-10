@@ -20,7 +20,7 @@ function Payouts() {
 
   return (
     <FarmerGate>
-    <AppShell role="farmer">
+    <AppShell role="buyer">
       <PageHeader
         eyebrow="Earnings"
         title="Your"

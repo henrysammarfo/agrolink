@@ -29,7 +29,7 @@ function FarmerOverview() {
 
   return (
     <FarmerGate>
-    <AppShell role="farmer" compact>
+    <AppShell role="buyer" compact>
       <PageHeader
         eyebrow="Overview"
         title="Good morning,"

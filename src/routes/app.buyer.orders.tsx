@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, RotateCcw } from "lucide-react";
+import { Search, RotateCcw, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { StatusBadge } from "./app.buyer";
@@ -113,6 +113,7 @@ function Orders() {
                 <th className="px-5 py-4 text-left">Order</th>
                 <th className="px-5 py-4 text-left">Placed</th>
                 <th className="px-5 py-4 text-right">Total</th>
+                <th className="px-5 py-4 text-right">Payment</th>
                 <th className="px-5 py-4 text-right">Status</th>
                 <th className="px-5 py-4 text-right" />
               </tr>
@@ -125,17 +126,27 @@ function Orders() {
                     {new Date(o.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-5 py-4 text-right font-sans font-semibold">GHS {o.total_amount}</td>
+                  <td className="px-5 py-4 text-right text-xs capitalize">{o.payment_status}</td>
                   <td className="px-5 py-4 text-right">
                     <StatusBadge status={o.status} />
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <button
-                      onClick={() => handleReorder(o.id)}
-                      disabled={reorder.isPending}
-                      className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
-                    >
-                      <RotateCcw className="h-3 w-3" /> Reorder
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        to="/app/buyer/orders/$orderId/track"
+                        params={{ orderId: o.id }}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        Track <ArrowRight className="h-3 w-3" />
+                      </Link>
+                      <button
+                        onClick={() => handleReorder(o.id)}
+                        disabled={reorder.isPending}
+                        className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
+                      >
+                        <RotateCcw className="h-3 w-3" /> Reorder
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
