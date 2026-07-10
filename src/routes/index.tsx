@@ -141,12 +141,24 @@ function Hero() {
 }
 
 function StatsStrip() {
-  const { data: stats } = useMarketingStats();
+  const { data: stats, isLoading } = useMarketingStats();
   const items = [
-    { value: stats?.sellers ? `${stats.sellers}+` : "—", label: "Sellers on platform" },
-    { value: formatGmv(stats?.gmv ?? 0), label: "Paid out to farms" },
-    { value: stats?.completedOrders ? `${stats.completedOrders}` : "—", label: "Completed orders" },
-    { value: stats?.activeListings ? `${stats.activeListings}` : "—", label: "Live listings" },
+    {
+      value: isLoading ? "…" : stats && stats.sellers > 0 ? `${stats.sellers}+` : stats ? "0" : "—",
+      label: "Sellers on platform",
+    },
+    {
+      value: isLoading ? "…" : stats ? formatGmv(stats.gmv) : "—",
+      label: "Paid out to farms",
+    },
+    {
+      value: isLoading ? "…" : stats != null ? String(stats.completedOrders) : "—",
+      label: "Completed orders",
+    },
+    {
+      value: isLoading ? "…" : stats != null ? String(stats.activeListings) : "—",
+      label: "Live listings",
+    },
   ];
   return (
     <section className="border-y border-border bg-card/40">

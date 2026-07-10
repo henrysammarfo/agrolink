@@ -22,5 +22,5 @@ export const TESTIMONIALS = [
 export function formatGmv(ghs: number): string {
   if (ghs >= 1_000_000) return `GHS ${(ghs / 1_000_000).toFixed(1)}M`;
   if (ghs >= 1_000) return `GHS ${Math.round(ghs / 1_000)}k`;
-  return ghs > 0 ? `GHS ${Math.round(ghs)}` : "GHS —";
+  return `GHS ${Math.round(ghs)}`;
 }

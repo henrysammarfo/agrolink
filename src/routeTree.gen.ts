@@ -54,6 +54,7 @@ import { Route as AppAdminDriversRouteImport } from './routes/app.admin.drivers'
 import { Route as AppAdminDisputesRouteImport } from './routes/app.admin.disputes'
 import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks/paystack'
 import { Route as ApiVerifyGhanaCardRouteImport } from './routes/api/verify/ghana-card'
+import { Route as ApiStatsMarketingRouteImport } from './routes/api/stats/marketing'
 import { Route as ApiSocialFollowingRouteImport } from './routes/api/social/following'
 import { Route as ApiSocialFollowersRouteImport } from './routes/api/social/followers'
 import { Route as ApiSettingsNotificationsRouteImport } from './routes/api/settings/notifications'
@@ -310,6 +311,11 @@ const ApiVerifyGhanaCardRoute = ApiVerifyGhanaCardRouteImport.update({
   path: '/api/verify/ghana-card',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStatsMarketingRoute = ApiStatsMarketingRouteImport.update({
+  id: '/api/stats/marketing',
+  path: '/api/stats/marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSocialFollowingRoute = ApiSocialFollowingRouteImport.update({
   id: '/api/social/following',
   path: '/api/social/following',
@@ -515,6 +521,7 @@ export interface FileRoutesByFullPath {
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
   '/api/social/followers': typeof ApiSocialFollowersRoute
   '/api/social/following': typeof ApiSocialFollowingRoute
+  '/api/stats/marketing': typeof ApiStatsMarketingRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
@@ -591,6 +598,7 @@ export interface FileRoutesByTo {
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
   '/api/social/followers': typeof ApiSocialFollowersRoute
   '/api/social/following': typeof ApiSocialFollowingRoute
+  '/api/stats/marketing': typeof ApiStatsMarketingRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
@@ -669,6 +677,7 @@ export interface FileRoutesById {
   '/api/settings/notifications': typeof ApiSettingsNotificationsRoute
   '/api/social/followers': typeof ApiSocialFollowersRoute
   '/api/social/following': typeof ApiSocialFollowingRoute
+  '/api/stats/marketing': typeof ApiStatsMarketingRoute
   '/api/verify/ghana-card': typeof ApiVerifyGhanaCardRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/app/admin/disputes': typeof AppAdminDisputesRoute
@@ -748,6 +757,7 @@ export interface FileRouteTypes {
     | '/api/settings/notifications'
     | '/api/social/followers'
     | '/api/social/following'
+    | '/api/stats/marketing'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
@@ -824,6 +834,7 @@ export interface FileRouteTypes {
     | '/api/settings/notifications'
     | '/api/social/followers'
     | '/api/social/following'
+    | '/api/stats/marketing'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
@@ -901,6 +912,7 @@ export interface FileRouteTypes {
     | '/api/settings/notifications'
     | '/api/social/followers'
     | '/api/social/following'
+    | '/api/stats/marketing'
     | '/api/verify/ghana-card'
     | '/api/webhooks/paystack'
     | '/app/admin/disputes'
@@ -969,6 +981,7 @@ export interface RootRouteChildren {
   ApiSettingsNotificationsRoute: typeof ApiSettingsNotificationsRoute
   ApiSocialFollowersRoute: typeof ApiSocialFollowersRoute
   ApiSocialFollowingRoute: typeof ApiSocialFollowingRoute
+  ApiStatsMarketingRoute: typeof ApiStatsMarketingRoute
   ApiVerifyGhanaCardRoute: typeof ApiVerifyGhanaCardRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
 }
@@ -1288,6 +1301,13 @@ declare module '@tanstack/react-router' {
       path: '/api/verify/ghana-card'
       fullPath: '/api/verify/ghana-card'
       preLoaderRoute: typeof ApiVerifyGhanaCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stats/marketing': {
+      id: '/api/stats/marketing'
+      path: '/api/stats/marketing'
+      fullPath: '/api/stats/marketing'
+      preLoaderRoute: typeof ApiStatsMarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/social/following': {
@@ -1729,6 +1749,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSettingsNotificationsRoute: ApiSettingsNotificationsRoute,
   ApiSocialFollowersRoute: ApiSocialFollowersRoute,
   ApiSocialFollowingRoute: ApiSocialFollowingRoute,
+  ApiStatsMarketingRoute: ApiStatsMarketingRoute,
   ApiVerifyGhanaCardRoute: ApiVerifyGhanaCardRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,
 }
