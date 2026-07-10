@@ -13,6 +13,7 @@
     "cap:sync": "npm run build && npx cap sync",
     "cap:android": "npx cap open android",
     "seed:demo": "node scripts/seed-demo-listings.mjs",
+    "grant:admin": "node scripts/grant-admin.mjs",
     "upload:media": "node scripts/upload-listing-media.mjs",
     "stress:comms": "node scripts/stress-comms.mjs",
     "db:migrate": "node scripts/apply-migrations.mjs",

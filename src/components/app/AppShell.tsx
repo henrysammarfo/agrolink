@@ -62,14 +62,9 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, 
   if (role === "buyer" || role === "farmer") {
     return [
       { id: "home", to: "/app/buyer", icon: Home, label: "Home" },
-      { id: "orders", to: "/app/buyer/orders", icon: ClipboardList, label: "Orders" },
+      { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "Feed" },
       { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
-      {
-        id: "payments",
-        to: isSeller ? "/app/farmer/payouts" : "/app/buyer/payments",
-        icon: isSeller ? Wallet : CreditCard,
-        label: isSeller ? "Payouts" : "Payments",
-      },
+      { id: "orders", to: "/app/buyer/orders", icon: ClipboardList, label: "Orders" },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
     ];
   }
@@ -103,6 +98,7 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, 
 function isMobileTabActive(pathname: string, tab: MobileTab): boolean {
   if (tab.id === "live") return false;
   if (tab.id === "jobs" && pathname.startsWith("/app/transport/jobs")) return true;
+  if (tab.id === "feed" && pathname.startsWith("/app/buyer/feed")) return true;
   if (tab.id === "orders" && (pathname.startsWith("/app/buyer/orders") || pathname.startsWith("/app/farmer/orders") || pathname.startsWith("/app/admin/orders"))) return true;
   if (tab.id === "payments" && (pathname.startsWith("/app/buyer/payments") || pathname.startsWith("/app/farmer/payouts") || pathname.startsWith("/app/admin/payments"))) return true;
   return pathname === tab.to || (tab.to !== "/app/buyer" && pathname.startsWith(tab.to));

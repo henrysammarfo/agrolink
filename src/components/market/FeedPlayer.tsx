@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle } from "react";
 import { VerticalFeed, type VerticalFeedRef, type VideoItem } from "react-vertical-feed";
 import "@/styles/riyils-overrides.css";
 import {
@@ -60,6 +60,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
   const [showGrid, setShowGrid] = useState(false);
   const [category, setCategory] = useState("all");
   const feedRef = useRef<VerticalFeedRef>(null);
+  const photoFeedRef = useRef<{ scrollToItem: (i: number, behavior?: ScrollBehavior) => void }>(null);
 
   const filteredListings = useMemo(
     () => filterByCategory(rankedListings, category),
@@ -73,15 +74,17 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
     trackEvent("feed_view");
   }, []);
 
+  const hasVideoListings = filteredListings.some((l) => !!l.video_url);
+
   useEffect(() => {
-    if (filteredListings.length && feedRef.current) {
-      feedRef.current.scrollToItem(initialIndex, "auto");
-    }
-  }, [initialIndex, filteredListings.length]);
+    if (!filteredListings.length) return;
+    if (hasVideoListings) feedRef.current?.scrollToItem(initialIndex, "auto");
+    else photoFeedRef.current?.scrollToItem(initialIndex, "auto");
+  }, [initialIndex, filteredListings.length, hasVideoListings]);
 
   const feedItems: VideoItem[] = filteredListings.map((l) => ({
     id: l.id,
-    src: l.video_url ?? l.image_url ?? "",
+    src: l.video_url ?? "",
     poster: l.image_url ?? undefined,
     muted,
     autoPlay: true,
@@ -115,6 +118,80 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
         >
           Post a listing
         </Link>
+      </div>
+    );
+  }
+
+  const gridOverlay = showGrid ? (
+    <div className="absolute inset-0 z-30 bg-background/95 backdrop-blur-xl">
+      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <h3 className="font-serif text-2xl">Browse all</h3>
+        <button
+          onClick={() => setShowGrid(false)}
+          className="grid h-10 w-10 place-items-center rounded-full hover:bg-secondary"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+      <div
+        className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4"
+        style={{ maxHeight: "calc(100% - 60px)" }}
+      >
+        {filteredListings.map((l, i) => (
+          <button
+            key={l.id}
+            onClick={() => {
+              setShowGrid(false);
+              setActive(i);
+              if (hasVideoListings) feedRef.current?.scrollToItem(i, "smooth");
+              else photoFeedRef.current?.scrollToItem(i, "smooth");
+            }}
+            className="relative aspect-[9/16] overflow-hidden rounded-2xl"
+          >
+            <img
+              src={l.image_url ?? "/media/demo/tomato.jpg"}
+              alt={l.title}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="scrim-bottom-dark" />
+            <div className="absolute inset-x-0 bottom-0 p-2 text-left">
+              <div className="font-serif text-sm text-white">{l.title}</div>
+              <div className="text-[10px] text-white/70">
+                GHS {l.price_per_unit}/{l.unit}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  if (!hasVideoListings) {
+    return (
+      <div className={wrapperClass}>
+        <PhotoSnapFeed
+          ref={photoFeedRef}
+          listings={filteredListings}
+          active={active}
+          onActiveChange={setActive}
+          inAppFeed={inAppFeed}
+          muted={muted}
+          onToggleMute={() => setMuted((m) => !m)}
+          onOpenGrid={() => setShowGrid(true)}
+          category={category}
+          onCategoryChange={setCategory}
+        />
+        <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex z-20">
+          {filteredListings.map((_, i) => (
+            <span
+              key={i}
+              className={`block h-6 w-1 rounded-full transition-all ${i === active ? "bg-white" : "bg-white/30"}`}
+            />
+          ))}
+        </div>
+        {gridOverlay}
       </div>
     );
   }
@@ -158,52 +235,94 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
         ))}
       </div>
 
-      {showGrid && (
-        <div className="absolute inset-0 z-30 bg-background/95 backdrop-blur-xl">
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h3 className="font-serif text-2xl">Browse all</h3>
-            <button
-              onClick={() => setShowGrid(false)}
-              className="grid h-10 w-10 place-items-center rounded-full hover:bg-secondary"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div
-            className="grid grid-cols-2 gap-2 overflow-y-auto p-3 md:grid-cols-3 lg:grid-cols-4"
-            style={{ maxHeight: "calc(100% - 60px)" }}
-          >
-            {filteredListings.map((l, i) => (
-              <button
-                key={l.id}
-                onClick={() => {
-                  setShowGrid(false);
-                  feedRef.current?.scrollToItem(i, "smooth");
-                }}
-                className="relative aspect-[9/16] overflow-hidden rounded-2xl"
-              >
-                <img
-                  src={l.image_url ?? "/placeholder-produce.jpg"}
-                  alt={l.title}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-                <div className="scrim-bottom-dark" />
-                <div className="absolute inset-x-0 bottom-0 p-2 text-left">
-                  <div className="font-serif text-sm text-white">{l.title}</div>
-                  <div className="text-[10px] text-white/70">
-                    GHS {l.price_per_unit}/{l.unit}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {gridOverlay}
     </div>
   );
 }
+
+type PhotoSnapFeedProps = {
+  listings: FeedListing[];
+  active: number;
+  onActiveChange: (i: number) => void;
+  inAppFeed: boolean;
+  muted: boolean;
+  onToggleMute: () => void;
+  onOpenGrid: () => void;
+  category: string;
+  onCategoryChange: (c: string) => void;
+};
+
+const PhotoSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: ScrollBehavior) => void }, PhotoSnapFeedProps>(
+  function PhotoSnapFeed(
+    { listings, active, onActiveChange, inAppFeed, muted, onToggleMute, onOpenGrid, category, onCategoryChange },
+    ref,
+  ) {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useImperativeHandle(ref, () => ({
+      scrollToItem: (index, behavior = "smooth") => {
+        const el = containerRef.current?.querySelector(`[data-photo-index="${index}"]`);
+        el?.scrollIntoView({ behavior, block: "start" });
+      },
+    }));
+
+    useEffect(() => {
+      const root = containerRef.current;
+      if (!root) return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              const idx = Number(entry.target.getAttribute("data-photo-index"));
+              if (!Number.isNaN(idx)) onActiveChange(idx);
+            }
+          }
+        },
+        { threshold: 0.6, root },
+      );
+      root.querySelectorAll("[data-photo-index]").forEach((el) => observer.observe(el));
+      return () => observer.disconnect();
+    }, [listings.length, onActiveChange]);
+
+    return (
+      <div
+        ref={containerRef}
+        role="feed"
+        aria-label="Produce feed"
+        className="h-full w-full overflow-y-auto snap-y snap-mandatory overscroll-y-contain"
+        style={{ scrollSnapType: "y mandatory" }}
+      >
+        {listings.map((listing, i) => (
+          <div
+            key={listing.id}
+            data-photo-index={i}
+            className="relative h-[100dvh] min-h-[100dvh] w-full shrink-0 snap-start snap-always"
+          >
+            <img
+              src={listing.image_url ?? "/media/demo/tomato.jpg"}
+              alt={listing.title}
+              className="absolute inset-0 h-full w-full object-cover"
+              loading={i <= 2 ? "eager" : "lazy"}
+            />
+            <FeedCardOverlay
+              item={listing}
+              isActive={i === active}
+              muted={muted}
+              onToggleMute={onToggleMute}
+              onOpenGrid={onOpenGrid}
+              progress={`${i + 1} / ${listings.length}`}
+              showImageOnly={false}
+              inAppFeed={inAppFeed}
+              category={category}
+              onCategoryChange={onCategoryChange}
+              showCategories={i === 0}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  },
+);
 
 function FeedCardOverlay({
   item,
@@ -472,7 +591,7 @@ function FeedCardOverlay({
       />
       {showImageOnly && (
         <img
-          src={item.image_url ?? "/media/demo/tomato.svg"}
+          src={item.image_url ?? "/media/demo/tomato.jpg"}
           alt={item.title}
           className={`feed-pass-through pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ${isActive ? "scale-105" : "scale-100"}`}
         />
