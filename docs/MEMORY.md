@@ -5,10 +5,9 @@ Last updated: 2026-07-27
 ## Active revamp
 
 - Spec: `docs/UI_REVAMP_SPEC.md`
-- Branch: `cursor/ui-revamp-phase1-cc54` (local — ask before push)
-- Phase 1 done: Feed-first shell, RightDrawer, pay-then-match
-- Phase 2 done: Seller Studio rail, Mapbox HTML pins, admin/spacing
-- Phase 3 done: Create under Studio; buyer Overview → feed; own-slug → `/app/profile`; Drive idle HUD; spacing tokens on profile/settings/inbox/orders
+- Branch: merged via PR #48 (`main`)
+- Phase 1–3 done: Feed-first, RightDrawer, pay-then-match, Seller Studio, Mapbox pins, routing/HUD polish
+- **No GitHub Actions CI** — billing blocked; rely on Vercel builds only (do not re-add workflows)
 - Farmer alerts: WhatsApp + push + email (no SMS for launch)
 - Research: `docs/research/tavily-mapbox-markers.json`
 
