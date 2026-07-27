@@ -255,7 +255,7 @@ function Auth() {
           )}
 
           <div className="my-6 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> judge one-tap{" "}
+            <span className="h-px flex-1 bg-border" /> quick demo{" "}
             <span className="h-px flex-1 bg-border" />
           </div>
           <div className="grid gap-2 sm:grid-cols-2">

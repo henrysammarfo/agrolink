@@ -4,6 +4,7 @@ import {
   ChevronUp,
   ClipboardList,
   Home,
+  Info,
   Search,
   ShoppingBasket,
   Sprout,
@@ -30,7 +31,7 @@ type Props = {
 const PUBLIC_NAV = [
   { to: "/market", label: "For You", icon: Home, match: (p: string) => p === "/market" },
   { to: "/farmers", label: "Farmers", icon: Users, match: (p: string) => p.startsWith("/farmers") },
-  { to: "/how-it-works", label: "How it works", icon: Search, match: (p: string) => p.startsWith("/how") },
+  { to: "/how-it-works", label: "How it works", icon: Info, match: (p: string) => p.startsWith("/how") },
 ] as const;
 
 const APP_NAV = [

@@ -1070,7 +1070,7 @@ function OtpBlock({
     <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
         <Smartphone className="h-4 w-4 text-primary" />
-        B2B verification (GHS {HIGH_VALUE_OTP_THRESHOLD_GHS}+)
+        Confirm your number (orders over GHS {HIGH_VALUE_OTP_THRESHOLD_GHS})
       </div>
       {!verified ? (
         <div className="mt-4 space-y-3">

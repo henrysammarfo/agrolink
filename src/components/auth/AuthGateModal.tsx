@@ -43,7 +43,7 @@ export function AuthGateModal({ open, onOpenChange, reason }: Props) {
             className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
           >
             <Mail className="h-4 w-4" />
-            Use phone or email
+            Use email or Google
           </Link>
           <Link
             to="/auth"

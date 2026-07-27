@@ -140,13 +140,13 @@ function DriverMatchPage() {
           <p className="mt-1 text-sm text-muted-foreground">Track your delivery live below.</p>
           <div className="mt-4 space-y-4 rounded-2xl border border-border bg-card p-4">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Payment tracking</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
               <div className="mt-2">
                 <LifecycleStepper steps={PAYMENT_TRACKING_STEPS} currentStepId={paymentStep} />
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Order pipeline</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Order status</p>
               <div className="mt-2">
                 <LifecycleStepper
                   steps={BUYER_ORDER_PIPELINE.filter((s) => !["cart", "delivery_setup", "payment_checkout"].includes(s.id))}
@@ -183,11 +183,8 @@ function DriverMatchPage() {
     );
   }
 
-  const radius = (delivery as { search_radius_km?: number })?.search_radius_km ?? 20;
-  const round = (delivery as { offer_round?: number })?.offer_round ?? 1;
-
-  const pipelineStep = getBuyerPipelineStep(order);
   const paymentStep = getPaymentTrackingStep(order.payment_status);
+  const pipelineStep = getBuyerPipelineStep(order);
 
   return (
     <AppShell role="buyer" hideMobileNav>
@@ -205,11 +202,11 @@ function DriverMatchPage() {
           <div className="mx-auto max-w-lg rounded-3xl border border-border bg-background/95 p-6 shadow-2xl backdrop-blur">
             <div className="mb-4 space-y-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Payment tracking</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
                 <LifecycleStepper steps={PAYMENT_TRACKING_STEPS} currentStepId={paymentStep} compact />
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Order pipeline</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Order status</p>
                 <LifecycleStepper
                   steps={BUYER_ORDER_PIPELINE.filter((s) => !["cart", "delivery_setup", "payment_checkout"].includes(s.id))}
                   currentStepId={pipelineStep}
@@ -223,10 +220,10 @@ function DriverMatchPage() {
                 <MapPin className="h-6 w-6 text-primary animate-pulse" />
               </span>
               <div>
-                <h1 className="font-serif text-xl">Searching for drivers</h1>
+                <h1 className="font-serif text-xl">Finding a driver</h1>
                 <p className="text-xs text-muted-foreground">
-                  Round {round} · within {radius} km
-                  {driversNearby > 0 && " · couriers in area"}
+                  Looking nearby
+                  {driversNearby > 0 && " · drivers in your area"}
                 </p>
               </div>
             </div>
