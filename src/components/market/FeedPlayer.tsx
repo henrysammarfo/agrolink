@@ -617,7 +617,10 @@ function FeedCardOverlay({
   };
 
   const shareListing = async () => {
-    const url = `${location.origin}/market?listing=${item.id}`;
+    const path = inAppFeed
+      ? `/app/buyer/feed?listing=${item.id}`
+      : `/market?listing=${item.id}`;
+    const url = `${location.origin}${path}`;
     try {
       if (navigator.share) await navigator.share({ title: item.title, url });
       else await navigator.clipboard.writeText(url);
@@ -946,7 +949,10 @@ function FeedCardOverlay({
             <button
               type="button"
               onClick={() => {
-                navigator.clipboard?.writeText(`${location.origin}/market?listing=${item.id}`);
+                const path = inAppFeed
+                  ? `/app/buyer/feed?listing=${item.id}`
+                  : `/market?listing=${item.id}`;
+                navigator.clipboard?.writeText(`${location.origin}${path}`);
                 toast.success("Copied");
               }}
               className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"

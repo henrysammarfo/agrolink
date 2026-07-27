@@ -7,6 +7,7 @@ import {
   Image as ImageIcon,
   Inbox,
   Plus,
+  Sprout,
   User,
   Wallet,
 } from "lucide-react";
@@ -85,13 +86,17 @@ export function SellerStudioLayout({ children }: { children: ReactNode }) {
 
           <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-background/95 pb-[max(env(safe-area-inset-bottom),0px)] backdrop-blur md:hidden">
             {[
-              { to: "/app/farmer", icon: Home, label: "Home" },
-              { to: "/app/farmer/listings", icon: ImageIcon, label: "Posts" },
-              { to: "/app/create", icon: Plus, label: "Create", center: true },
-              { to: "/app/farmer/orders", icon: BarChart3, label: "Sales" },
-              { to: "/app/farmer/payouts", icon: Wallet, label: "Money" },
+              { to: "/app/buyer/feed", icon: Sprout, label: "Shop", exact: false },
+              { to: "/app/farmer/listings", icon: ImageIcon, label: "Posts", exact: false },
+              { to: "/app/create", icon: Plus, label: "Create", center: true, exact: false },
+              { to: "/app/farmer/orders", icon: BarChart3, label: "Sales", exact: false },
+              { to: "/app/farmer/payouts", icon: Wallet, label: "Money", exact: false },
             ].map((t) => {
-              const active = pathname === t.to || (t.to !== "/app/farmer" && pathname.startsWith(t.to));
+              const active = t.center
+                ? pathname.startsWith("/app/create")
+                : t.to === "/app/buyer/feed"
+                  ? pathname.startsWith("/app/buyer/feed")
+                  : pathname === t.to || pathname.startsWith(`${t.to}/`);
               const Icon = t.icon;
               if (t.center) {
                 return (

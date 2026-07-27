@@ -5,7 +5,7 @@ import { useAuth, type AppRole } from "@/lib/auth";
 import { roleHome, saveActiveWorkspace } from "@/lib/active-workspace";
 import { useActiveWorkspace } from "@/hooks/use-active-workspace";
 
-/** Enable Shop / Sell / Drive workspace on the account. */
+/** Enable Shop / Sell / Drive capability on the account. */
 export function useEnableWorkspace() {
   const navigate = useNavigate();
   const { user, roles, addRole } = useAuth();
@@ -15,12 +15,15 @@ export function useEnableWorkspace() {
     async (next: Exclude<AppRole, "admin">) => {
       await addRole(next);
       if (user?.id) {
-        setWorkspace(next);
-        saveActiveWorkspace(user.id, next);
+        // Sell is a Studio capability under Market workspace, not its own dashboard
+        const workspace = next === "farmer" ? "buyer" : next;
+        setWorkspace(workspace);
+        saveActiveWorkspace(user.id, workspace);
       }
       toast.success(`${next === "transport" ? "Drive" : next === "farmer" ? "Sell" : "Shop"} mode enabled`);
       if (next === "transport") navigate({ to: "/app/transport/register" });
-      else navigate({ to: roleHome(next) as "/app/buyer" });
+      else if (next === "farmer") navigate({ to: "/app/create" });
+      else navigate({ to: roleHome(next) as "/app/buyer/feed" });
     },
     [addRole, user?.id, setWorkspace, navigate],
   );

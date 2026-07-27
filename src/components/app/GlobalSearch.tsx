@@ -65,10 +65,11 @@ export function GlobalSearch({ role, open, onOpenChange }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onOpenChange]);
 
-  const go = (to: string, params?: Record<string, string>) => {
+  const go = (to: string, params?: Record<string, string>, search?: Record<string, string>) => {
     onOpenChange(false);
     setQ("");
     if (params) navigate({ to: to as "/app/users/$slug", params: params as { slug: string } });
+    else if (search) navigate({ to: to as "/app/buyer/feed", search: search as { listing?: string } });
     else navigate({ to: to as "/app/buyer/feed" });
   };
 
@@ -84,7 +85,7 @@ export function GlobalSearch({ role, open, onOpenChange }: Props) {
         {results && results.listings.length > 0 && (
           <CommandGroup heading="Produce">
             {results.listings.map((l) => (
-              <CommandItem key={l.id} onSelect={() => go("/app/buyer/feed")}>
+              <CommandItem key={l.id} onSelect={() => go("/app/buyer/feed", undefined, { listing: l.id })}>
                 <Sprout className="mr-2 h-4 w-4 text-primary" />
                 <span>{l.title}</span>
                 <span className="ml-auto text-xs text-muted-foreground">GHS {l.price_per_unit}/{l.unit}</span>

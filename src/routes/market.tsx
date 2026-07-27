@@ -1,8 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { FeedPlayer } from "@/components/market/FeedPlayer";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/market")({
+  validateSearch: (search: Record<string, unknown>): { listing?: string } => ({
+    listing: typeof search.listing === "string" && search.listing ? search.listing : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Market · AgroLink" },
@@ -15,10 +19,19 @@ export const Route = createFileRoute("/market")({
 });
 
 function Market() {
+  const { user, loading } = useAuth();
+  const { listing } = Route.useSearch();
+
+  if (!loading && user) {
+    throw redirect({
+      to: "/app/buyer/feed",
+      search: listing ? { listing } : {},
+    });
+  }
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
-      <FeedPlayer fullscreen chrome="public" />
-      {/* Mobile-only back chip — desktop uses left TikTok rail */}
+      <FeedPlayer fullscreen chrome="public" listingId={listing} />
       <Link
         to="/"
         className="absolute left-4 top-[max(env(safe-area-inset-top),12px)] z-20 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg ring-2 ring-white/40 backdrop-blur-sm lg:hidden"

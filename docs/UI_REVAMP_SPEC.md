@@ -1,7 +1,7 @@
 # AgroLink UI revamp spec
 
 Last updated: 2026-07-27  
-Branch: `cursor/ui-revamp-phase1-cc54` (local iterate — ask before push)
+Branch: `cursor/nav-unmix-cc54` (ask before push)
 
 ## Locked decisions
 
@@ -11,6 +11,19 @@ Branch: `cursor/ui-revamp-phase1-cc54` (local iterate — ask before push)
 4. No TikTok clones without AgroLink use case.
 5. Farmer alerts = WhatsApp + push + email (no launch SMS).
 6. Admin: human **driver KYC**; auto listings + POD payouts.
+7. **Three modes** — Market / Studio / Drive (not mashed into one sidebar).
+
+## Mode map
+
+| Mode | Home | Chrome |
+|------|------|--------|
+| Market (shop) | `/app/buyer/feed` | `AppShell` + `FeedDesktopShell` |
+| Studio (sell) | `/app/farmer` | `SellerStudioLayout` only |
+| Drive | `/app/transport` | `AppShell` transport nav |
+
+**Home rule:** post-login / `/app` / `roleHome` → For You (unless Drive-only or Admin). Studio via Create or **Open Studio**. Enable Sell → `/app/create`.
+
+Signed-in `/market` redirects to `/app/buyer/feed` (guests stay public).
 
 ## Phase status
 
@@ -18,8 +31,9 @@ Branch: `cursor/ui-revamp-phase1-cc54` (local iterate — ask before push)
 |-------|--------|-------|
 | 0 Spec + memory | Done | This file + MEMORY / FINAL_FACTCHECK |
 | 1 Shell + drawer + pay-then-match | Done | AppShell slim, RightDrawer, cart/paystack |
-| 2 Seller Studio + Mapbox pins + admin/spacing | Done | `SellerStudioLayout`, `map-icons` HTML markers, PageHeader/StatCard rhythm, admin copy |
-| 3 Routing cleanup + polish | Done | Create under Studio; `/app/buyer` → feed; own `/app/users/$me` → `/app/profile`; Drive idle HUD; spacing tokens on key pages |
+| 2 Seller Studio + Mapbox pins + admin/spacing | Done | `SellerStudioLayout`, `map-icons` HTML markers |
+| 3 Routing cleanup + polish | Done | buyer→feed, own-slug→profile, Drive HUD |
+| 4 Nav unmix | Done | No SELLER_NAV in Market; Studio Shop escape; tab active fixes |
 
 ## Seller Studio map (TikTok Studio → AgroLink)
 
@@ -31,10 +45,9 @@ Branch: `cursor/ui-revamp-phase1-cc54` (local iterate — ask before push)
 | Analytics / Sales | `/app/farmer/orders` |
 | Monetization | `/app/farmer/payouts` |
 | Inbox | `/app/inbox` |
+| Escape (mobile) | Shop → `/app/buyer/feed` |
 
-Chrome: [`SellerStudioLayout.tsx`](../src/components/seller/SellerStudioLayout.tsx) — 72px icon rail desktop, 5-tab mobile.
-
-## Routing (Phase 3)
+## Routing
 
 | From | To |
 |------|----|
@@ -42,11 +55,7 @@ Chrome: [`SellerStudioLayout.tsx`](../src/components/seller/SellerStudioLayout.t
 | Own `/app/users/$slug` | `/app/profile` |
 | Own `/app/users/$slug/followers` | `/app/profile/followers` |
 | `/discover` | `/market` |
-
-## Mapbox markers
-
-Custom HTML markers via Mapbox GL `Marker` (Tavily + Mapbox docs: custom-marker-icons).  
-Kinds: farm / buyer / hub / job + driver car — [`src/lib/map-icons.ts`](../src/lib/map-icons.ts).
+| Signed-in `/market` | `/app/buyer/feed` |
 
 ## Checkout state machine
 
@@ -54,17 +63,7 @@ Kinds: farm / buyer / hub / job + driver car — [`src/lib/map-icons.ts`](../src
 Cart → Fulfillment → Pay (MoMo) → Match driver → Track → POD → Auto payouts
 ```
 
-## Spacing tokens
-
-`:root` in `src/styles.css`: `--space-section`, `--space-block`, `--space-tight`, `--content-max`.  
-Used by `PageHeader`, profile/settings/inbox/orders, Studio create.
-
-## Drive idle HUD
-
-Offline: dark glass sheet on map (“Offline — map still open”) + single **Go live**.  
-Online waiting: soft “Listening for jobs” (no empty-wallet dead end).
-
 ## Do / don’t
 
-**Do:** Feed-first, breathing room, right drawers, Mapbox icons, clear money.  
-**Don’t:** Dual fat sidebars, Overview-as-home, driver-before-pay, SMS claims, Coins/LIVE toys.
+**Do:** Feed-first, separate Studio chrome, right drawers, Mapbox icons, clear money.  
+**Don’t:** Dual fat sidebars, Studio items in Market nav, Overview-as-home, driver-before-pay, GitHub Actions CI.
