@@ -2,6 +2,13 @@
 
 Last updated: 2026-07-27
 
+## Active revamp
+
+- Spec: `docs/UI_REVAMP_SPEC.md`
+- Branch: `cursor/ui-revamp-phase1-cc54`
+- Phase 1: Feed-first shell, RightDrawer comments, **pay-then-match**, POD auto-payout
+- Farmer alerts: WhatsApp + push + email (no SMS for launch)
+
 ## Stack (actual, not build guide)
 
 - **Frontend:** TanStack Start + React 19 + Tailwind 4 + shadcn/ui

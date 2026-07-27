@@ -12,7 +12,7 @@ export function roleHome(role: AppRole): string {
   const r = normalizeWorkspace(role);
   if (r === "transport") return "/app/transport";
   if (r === "admin") return "/app/admin";
-  return "/app/buyer";
+  return "/app/buyer/feed";
 }
 
 export function loadActiveWorkspace(userId: string, roles: AppRole[]): AppRole {

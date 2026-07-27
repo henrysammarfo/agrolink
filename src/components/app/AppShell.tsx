@@ -15,38 +15,38 @@ import { useWorkspaceSwitch } from "@/hooks/use-workspace-switch";
 export type AppRole = AuthRole;
 
 const MARKET_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
-  { to: "/app/buyer", label: "Overview", icon: Heart },
-  { to: "/app/buyer/feed", label: "Feed", icon: Sprout },
-  { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
-  { to: "/app/buyer/payments", label: "Payments", icon: CreditCard },
+  { to: "/app/buyer/feed", label: "For You", icon: Sprout },
   { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket },
+  { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
   { to: "/app/inbox", label: "Inbox", icon: Inbox },
+  { to: "/app/profile", label: "Profile", icon: User },
 ];
 
 const SELLER_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
-  { to: "/app/farmer/listings", label: "My listings", icon: ImageIcon },
-  { to: "/app/farmer/payouts", label: "Payouts", icon: Wallet },
+  { to: "/app/create", label: "Create", icon: Plus },
+  { to: "/app/farmer/listings", label: "Listings", icon: ImageIcon },
   { to: "/app/farmer/orders", label: "Sales", icon: Tractor },
+  { to: "/app/farmer/payouts", label: "Payouts", icon: Wallet },
 ];
 
 const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]> = {
   buyer: MARKET_NAV,
   farmer: MARKET_NAV,
   transport: [
-    { to: "/app/buyer/feed", label: "Market", icon: Sprout },
+    { to: "/app/buyer/feed", label: "For You", icon: Sprout },
     { to: "/app/transport", label: "Map", icon: MapPin },
     { to: "/app/transport/jobs", label: "Jobs", icon: Truck },
     { to: "/app/inbox", label: "Inbox", icon: Inbox },
+    { to: "/app/profile", label: "Profile", icon: User },
   ],
   admin: [
     { to: "/app/admin", label: "Overview", icon: ShieldCheck },
-    { to: "/app/buyer/feed", label: "Market feed", icon: Sprout },
+    { to: "/app/buyer/feed", label: "For You", icon: Sprout },
     { to: "/app/admin/orders", label: "Orders", icon: ClipboardList },
     { to: "/app/admin/payments", label: "Payments", icon: CreditCard },
     { to: "/app/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { to: "/app/admin/listings", label: "Listings", icon: ListChecks },
     { to: "/app/admin/drivers", label: "Drivers", icon: Truck },
-    { to: "/app/admin/pricing", label: "Surge", icon: Zap },
   ],
 };
 
@@ -64,8 +64,8 @@ type MobileTab = {
 function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, isSeller: boolean): MobileTab[] {
   if (role === "buyer" || role === "farmer") {
     return [
-      { id: "home", to: "/app/buyer", icon: Home, label: "Home" },
-      { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "Feed" },
+      { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "For You" },
+      { id: "cart", to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount },
       { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
       { id: "orders", to: "/app/buyer/orders", icon: ClipboardList, label: "Orders" },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
@@ -101,6 +101,7 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, 
 function isMobileTabActive(pathname: string, tab: MobileTab): boolean {
   if (tab.id === "live") return false;
   if (tab.id === "jobs" && pathname.startsWith("/app/transport/jobs")) return true;
+  if (tab.id === "cart" && pathname.startsWith("/app/buyer/cart")) return true;
   if (tab.id === "feed" && pathname.startsWith("/app/buyer/feed")) return true;
   if (tab.id === "orders" && (pathname.startsWith("/app/buyer/orders") || pathname.startsWith("/app/farmer/orders") || pathname.startsWith("/app/admin/orders"))) return true;
   if (tab.id === "payments" && (pathname.startsWith("/app/buyer/payments") || pathname.startsWith("/app/farmer/payouts") || pathname.startsWith("/app/admin/payments"))) return true;

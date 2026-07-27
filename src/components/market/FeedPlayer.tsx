@@ -1,7 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle, type ReactNode } from "react";
 import useEmblaCarousel from "embla-carousel-react";
-import { createPortal } from "react-dom";
 import "@/styles/riyils-overrides.css";
 import {
   Heart,
@@ -39,6 +38,7 @@ import {
 import type { FeedListing } from "@/lib/types/marketplace";
 import type { FeedComment } from "@/lib/types/marketplace";
 import { isSeedListingId } from "@/lib/demo-listings";
+import { RightDrawer } from "@/components/ui/RightDrawer";
 import { isValidUserId } from "@/lib/api/cart";
 import { getCurrentPosition } from "@/lib/native-geolocation";
 import { triggerLikeHaptic } from "@/lib/haptics";
@@ -875,127 +875,96 @@ function FeedCardOverlay({
         )}
       </div>
 
-      {panel && portalReady
-        ? createPortal(
-            <div
-              className="fixed inset-0 z-[10080] flex items-end bg-black/40"
-              style={{
-                paddingBottom: inAppFeed
-                  ? "calc(var(--agrolink-tab-bar, 3.5rem) + env(safe-area-inset-bottom, 0px))"
-                  : "env(safe-area-inset-bottom, 0px)",
-              }}
-              onClick={() => setPanel(null)}
-              role="presentation"
-            >
-              <div
-                className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-background text-foreground shadow-2xl animate-in slide-in-from-bottom duration-300 mx-auto"
-                style={{ height: "min(70dvh, 520px)" }}
-                onClick={(e) => e.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-                aria-label={panel === "comments" ? "Comments" : "Share"}
-              >
-                <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-muted" />
-                <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-                  <h3 className="font-sans text-lg font-semibold">{panel === "comments" ? "Comments" : "Share"}</h3>
-                  <button
-                    type="button"
-                    onClick={() => setPanel(null)}
-                    className="grid h-9 w-9 place-items-center rounded-full hover:bg-secondary"
-                    aria-label="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                {panel === "comments" ? (
-                  <>
-                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
-                      {comments.length === 0 ? (
-                        <p className="py-6 text-center text-sm text-muted-foreground">
-                          No comments yet — be the first.
-                        </p>
-                      ) : (
-                        comments.map((c) => (
-                          <div key={c.id} className="flex gap-3">
-                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-sans font-semibold text-primary">
-                              {c.author[0]}
-                            </span>
-                            <div>
-                              <div className="text-xs font-medium">{c.author}</div>
-                              <p className="mt-1 text-sm">{c.content}</p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <div className="shrink-0 border-t border-border bg-background p-3 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
-                      {user?.id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleAddComment()}
-                            placeholder="Add a comment…"
-                            aria-label="Add a comment"
-                            autoFocus
-                            className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-3 text-base outline-none focus:border-primary"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddComment}
-                            disabled={!commentText.trim() || isDemoListing}
-                            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
-                            aria-label="Post comment"
-                          >
-                            <Send className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="py-2 text-center text-sm text-muted-foreground">
-                          <Link to="/auth" className="font-medium text-primary hover:underline">
-                            Sign in
-                          </Link>{" "}
-                          to comment
-                        </p>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="grid gap-3 p-4 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={shareListing}
-                      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
-                    >
-                      <Share2 className="h-5 w-5 text-primary" />
-                      <span className="text-sm font-medium">Share</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard?.writeText(`${location.origin}/market?listing=${item.id}`);
-                        toast.success("Copied");
-                      }}
-                      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
-                    >
-                      <Copy className="h-5 w-5" />
-                      <span className="text-sm font-medium">Copy link</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleReportListing}
-                      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-destructive/40 sm:col-span-2"
-                    >
-                      <Flag className="h-5 w-5 text-destructive" />
-                      <span className="text-sm font-medium">Report listing</span>
-                    </button>
-                  </div>
-                )}
+      <RightDrawer
+        open={!!panel && portalReady}
+        onClose={() => setPanel(null)}
+        title={panel === "comments" ? "Comments" : "Share"}
+        footer={
+          panel === "comments" ? (
+            user?.id ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleAddComment()}
+                  placeholder="Add a comment…"
+                  aria-label="Add a comment"
+                  autoFocus
+                  className="min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-3 text-base outline-none focus:border-primary"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddComment}
+                  disabled={!commentText.trim() || isDemoListing}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
+                  aria-label="Post comment"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
               </div>
-            </div>,
-            document.body,
-          )
-        : null}
+            ) : (
+              <p className="py-2 text-center text-sm text-muted-foreground">
+                <Link to="/auth" className="font-medium text-primary hover:underline">
+                  Sign in
+                </Link>{" "}
+                to comment
+              </p>
+            )
+          ) : undefined
+        }
+      >
+        {panel === "comments" ? (
+          <div className="space-y-4 px-4 py-4">
+            {comments.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No comments yet — be the first.
+              </p>
+            ) : (
+              comments.map((c) => (
+                <div key={c.id} className="flex gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 font-sans font-semibold text-primary">
+                    {c.author[0]}
+                  </span>
+                  <div>
+                    <div className="text-xs font-medium">{c.author}</div>
+                    <p className="mt-1 text-sm">{c.content}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-3 p-4 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={shareListing}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
+            >
+              <Share2 className="h-5 w-5 text-primary" />
+              <span className="text-sm font-medium">Share</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard?.writeText(`${location.origin}/market?listing=${item.id}`);
+                toast.success("Copied");
+              }}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/40"
+            >
+              <Copy className="h-5 w-5" />
+              <span className="text-sm font-medium">Copy link</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleReportListing}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-destructive/40 sm:col-span-2"
+            >
+              <Flag className="h-5 w-5 text-destructive" />
+              <span className="text-sm font-medium">Report listing</span>
+            </button>
+          </div>
+        )}
+      </RightDrawer>
     </div>
   );
 }

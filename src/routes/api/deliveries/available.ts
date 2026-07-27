@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/deliveries/available")({
         const filtered = (rows ?? []).filter((job) => {
           const order = job.order as { buyer_id?: string; total_amount?: number; payment_status?: string } | null;
           const payStatus = order?.payment_status;
-          if (payStatus && payStatus !== "paid" && payStatus !== "pending") return false;
+          if (payStatus !== "paid") return false;
 
           const declined = ((job.declined_driver_ids ?? []) as string[]);
           if (declined.includes(driver.id)) return false;

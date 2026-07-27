@@ -354,7 +354,7 @@ export async function processCheckout(params: {
       delivery_fee: deliveryFee,
       fee_breakdown: feeBreakdown,
       pickup_stops: quote.orderedStops ?? pickupStops,
-      accept_deadline: acceptDeadlineFromNow(),
+      accept_deadline: null,
       required_vehicle_type: vehicleType,
       search_radius_km: radiusForOfferRound(1),
       offer_round: 1,
@@ -569,7 +569,7 @@ export async function reserveOrderForDriverMatch(params: {
       delivery_fee: deliveryFee,
       fee_breakdown: feeBreakdown,
       pickup_stops: quote.orderedStops ?? pickupStops,
-      accept_deadline: acceptDeadlineFromNow(),
+      accept_deadline: null,
       required_vehicle_type: vehicleType,
       search_radius_km: radiusForOfferRound(1),
       offer_round: 1,
@@ -582,12 +582,11 @@ export async function reserveOrderForDriverMatch(params: {
 
   await supabaseAdmin.from("cart_items").delete().eq("cart_id", cart.id);
 
-  await notifyEligibleDriversForDelivery(delivery.id);
-
+  // Do not notify drivers until payment confirms (pay-then-match)
   return { orderId: order.id, deliveryId: delivery.id };
 }
 
-/** Start payment for a reserved order — requires driver assigned first. */
+/** Start payment for a reserved order (pay-then-match — driver optional). */
 export async function initiatePaymentForOrder(params: {
   userId: string;
   orderId: string;
@@ -614,13 +613,7 @@ export async function initiatePaymentForOrder(params: {
   if (!order) throw new Error("Order not found");
   if (order.payment_status === "paid") throw new Error("Order already paid");
 
-  const isPlatform = order.notes === "platform_delivery";
-  const delivery = order.delivery as { id: string; driver_id: string | null; status: string } | { id: string; driver_id: string | null; status: string }[] | null;
-  const deliveryRow = Array.isArray(delivery) ? delivery[0] : delivery;
-
-  if (isPlatform && !deliveryRow?.driver_id) {
-    throw new Error("A driver must accept your trip before you can pay");
-  }
+  // Pay-then-match: driver may be unassigned until MoMo confirms
 
   const { data: existingPayment } = await supabaseAdmin
     .from("payments")
