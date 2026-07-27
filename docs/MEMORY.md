@@ -1,17 +1,20 @@
 # AgroLink Memory — Source of Truth
 
-Last updated: 2026-07-10
+Last updated: 2026-07-27
 
 ## Stack (actual, not build guide)
 
 - **Frontend:** TanStack Start + React 19 + Tailwind 4 + shadcn/ui
 - **Backend:** Supabase (Postgres, Auth, Storage, Realtime)
 - **Server:** TanStack Start server functions + Nitro API routes (`/api/checkout`, `/api/delivery/quote`, `/api/webhooks/paystack`)
-- **Maps:** Leaflet + OpenStreetMap + OSRM (free routing)
+- **Maps:** Mapbox GL JS + Directions / Geocoding / Map Matching (Leaflet fallback if no token). See `docs/MAPBOX_MEMORY.md` + `docs/MAPBOX_FACTCHECK.md`.
 - **Payments:** Paystack primary (MoMo)
 - **Comms:** Resend email + Meta WhatsApp Cloud API (free tier)
 - **AI:** OpenAI (moderation + pricing), TinyFish (market data)
 - **Deploy:** Vercel (Nitro `vercel` preset) — see `docs/DEPLOY_VERCEL.md`
+- **Feed:** Embla vertical ±1 paging (TikTok-style) in `FeedPlayer.tsx`
+- **Research:** Tavily key in `.env.local` for session fact-checks; competitor UX in `docs/UX_PARITY_COMPETITORS.md` + `docs/research/`
+- **Mapbox agent tooling:** `.cursor/mcp.json` + `.agents/skills/mapbox-*` (restart Cursor + OAuth)
 
 ## Phase status
 

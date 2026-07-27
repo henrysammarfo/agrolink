@@ -28,18 +28,28 @@
 | `VITE_POSTHOG_KEY` | Analytics | posthog.com | **1M events/month** |
 | `TINYFISH_API_KEY` | Market prices | agent.tinyfish.ai | You have access |
 
+## P1 — Maps (Mapbox primary)
+
+| Variable | Feature | How to obtain | Free? |
+|----------|---------|---------------|-------|
+| `VITE_MAPBOX_ACCESS_TOKEN` | Mapbox GL JS client maps | [account.mapbox.com](https://account.mapbox.com) → Access tokens (public, URL-restrict) | Free tier |
+| `MAPBOX_ACCESS_TOKEN` | Directions, Geocoding, Map Matching (server) | Same token or a secret token | Free tier |
+
+Rotate Mapbox tokens after finals. Do not commit `.env.local`.
+
 ## P2 — Optional
 
 | Variable | Feature | Free? |
 |----------|---------|-------|
 | `VITE_SENTRY_DSN` | Error tracking | Free tier |
-| `GOOGLE_MAPS_API_KEY` | Turn-by-turn nav | You have GCP credits |
+| `GOOGLE_MAPS_API_KEY` / `VITE_GOOGLE_MAPS_API_KEY` | Legacy fallback only | GCP credits |
 | `VENICE_API_KEY` | Backup AI | Paid |
 
 ## Removed (no longer needed)
 
 | Old key | Replaced by |
 |---------|-------------|
+| Google Maps as primary map stack | Mapbox GL JS + Directions / Geocoding / Matching |
 | `WATI_API_TOKEN` | Meta WhatsApp Cloud API (direct, free) |
 | `WATI_API_URL` | Meta Graph API |
 | `HUBTEL_CLIENT_ID` (SMS) | Resend email (free) |

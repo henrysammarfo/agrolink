@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { ACCRA_CENTER, DEFAULT_MAP_ZOOM, GHANA_MIN_ZOOM, GHANA_NE, GHANA_OVERVIEW_ZOOM, GHANA_SW, GREATER_ACCRA_NE, GREATER_ACCRA_SW, GREATER_ACCRA_ZOOM, isValidMapCoord, STREET_ZOOM } from "@/lib/map-coords";
-import { getGoogleMapsClientKey } from "@/lib/google-maps-client";
+import { getMapboxClientToken } from "@/lib/mapbox-client";
 import { DRIVER_CAR_ICON_ANCHOR, DRIVER_CAR_ICON_HTML, DRIVER_CAR_ICON_SIZE } from "@/lib/map-icons";
-import { GoogleCorridorMap } from "@/components/map/GoogleCorridorMap";
+import { MapboxCorridorMap } from "@/components/map/MapboxCorridorMap";
 import type { RouteSegment } from "@/lib/route-display";
 
 type Pin = { lat: number; lng: number; label: string; kind?: "farm" | "buyer" | "hub" | "driver" };
@@ -41,10 +41,10 @@ function validPins(pins: Pin[]) {
 }
 
 export function CorridorMap(props: Props) {
-  const [googleFailed, setGoogleFailed] = useState(false);
+  const [mapboxFailed, setMapboxFailed] = useState(false);
 
-  if (getGoogleMapsClientKey() && !googleFailed) {
-    return <GoogleCorridorMap {...props} onLoadError={() => setGoogleFailed(true)} />;
+  if (getMapboxClientToken() && !mapboxFailed) {
+    return <MapboxCorridorMap {...props} onLoadError={() => setMapboxFailed(true)} />;
   }
   return <LeafletCorridorMap {...props} />;
 }

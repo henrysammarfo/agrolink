@@ -7,7 +7,7 @@ type Props = {
   distanceKm?: number;
   durationMin?: number;
   durationInTrafficMin?: number;
-  routeSource?: "google" | "osrm";
+  routeSource?: "mapbox" | "osrm" | "haversine";
   destination: { lat: number; lng: number };
   currentPosition?: { lat: number; lng: number } | null;
   steps?: RouteStep[];
@@ -109,7 +109,7 @@ export function DriverNavHud({
           <div className="flex items-center gap-2">
             <p className="text-[10px] uppercase tracking-widest text-white/60">Navigating to</p>
             {routeSource && (
-              <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${routeSource === "google" ? "bg-blue-500/30 text-blue-200" : "bg-amber-500/30 text-amber-200"}`}>
+              <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${routeSource === "mapbox" ? "bg-blue-500/30 text-blue-200" : "bg-amber-500/30 text-amber-200"}`}>
                 {routeSource}
               </span>
             )}

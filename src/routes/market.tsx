@@ -17,10 +17,11 @@ export const Route = createFileRoute("/market")({
 function Market() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
-      <FeedPlayer fullscreen />
+      <FeedPlayer fullscreen chrome="public" />
+      {/* Mobile-only back chip — desktop uses left TikTok rail */}
       <Link
         to="/"
-        className="absolute left-4 top-[max(env(safe-area-inset-top),12px)] z-20 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg ring-2 ring-white/40 backdrop-blur-sm"
+        className="absolute left-4 top-[max(env(safe-area-inset-top),12px)] z-20 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg ring-2 ring-white/40 backdrop-blur-sm lg:hidden"
       >
         <ArrowLeft className="h-4 w-4" /> Back to home
       </Link>

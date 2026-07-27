@@ -233,7 +233,7 @@ function DriverMatchPage() {
             <p className="mt-4 text-sm text-muted-foreground">
               {order.payment_status === "paid"
                 ? "Nearby verified drivers are being notified. You'll see your driver here once they accept."
-                : "Complete payment on Paystack — drivers are notified after payment confirms."}
+                : "Nearby drivers were notified when you requested a ride. Payment unlocks after a driver accepts."}
             </p>
             {delivery && (
               <div className="mt-3 text-xs text-muted-foreground">

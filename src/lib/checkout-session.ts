@@ -1,11 +1,13 @@
 import type { FulfillmentMode } from "@/lib/fulfillment";
 import type { MapLocation } from "@/lib/api/maps";
+import type { DriverCardInfo } from "@/components/transport/DriverProfileCard";
 
 export type CheckoutSession = {
   step: 1 | 2 | 3 | 4;
   pendingOrderId: string | null;
   driverMatched: boolean;
   matchedDriverName: string | null;
+  matchedDriver: DriverCardInfo | null;
   deliveryLocation: MapLocation;
   fulfillmentMode: FulfillmentMode;
   selectedVehicle: "bicycle" | "motorcycle" | "car";

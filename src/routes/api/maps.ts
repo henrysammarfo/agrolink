@@ -5,11 +5,11 @@ import {
   reverseGeocode,
   placeAutocomplete,
   placeDetails,
-  fetchGoogleDirections,
+  fetchMapboxDirections,
   fetchDistanceMatrix,
   snapToRoads,
-  getGoogleMapsApiKey,
-} from "@/server/google-maps";
+  getMapboxAccessToken,
+} from "@/server/mapbox";
 
 export const Route = createFileRoute("/api/maps")({
   server: {
@@ -19,8 +19,8 @@ export const Route = createFileRoute("/api/maps")({
           const auth = await requireAuth(request);
           if (auth instanceof Response) return auth;
 
-          if (!getGoogleMapsApiKey()) {
-            return Response.json({ error: "Google Maps API key not configured" }, { status: 503 });
+          if (!getMapboxAccessToken()) {
+            return Response.json({ error: "Mapbox access token not configured" }, { status: 503 });
           }
 
           const body = (await request.json()) as {
@@ -79,7 +79,7 @@ export const Route = createFileRoute("/api/maps")({
               if (!body.origin || !body.destination) {
                 return Response.json({ error: "origin and destination required" }, { status: 400 });
               }
-              const route = await fetchGoogleDirections(
+              const route = await fetchMapboxDirections(
                 body.origin,
                 body.destination,
                 body.waypoints,

@@ -15,7 +15,7 @@ function Feed() {
 
   return (
     <AppShell role="buyer">
-      <FeedPlayer fullscreen inAppFeed listingId={listing || undefined} />
+      <FeedPlayer fullscreen inAppFeed chrome="app" listingId={listing || undefined} />
     </AppShell>
   );
 }

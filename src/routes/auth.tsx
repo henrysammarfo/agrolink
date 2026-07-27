@@ -167,6 +167,29 @@ function Auth() {
     }
   }
 
+  async function demoSignIn(
+    demoEmail: string,
+    demoPassword: string,
+    dest: "/app/buyer/feed" | "/app/farmer" | "/app/admin",
+  ) {
+    setErr(null);
+    setMode("signin");
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: demoEmail,
+        password: demoPassword,
+      });
+      if (error) throw error;
+      navigate({ to: dest });
+    } catch (e: unknown) {
+      setErr(friendlyAuthError(e instanceof Error ? e.message : "Demo sign-in failed"));
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       <div className="relative hidden lg:block">
@@ -230,6 +253,40 @@ function Auth() {
               </button>
             </>
           )}
+
+          <div className="my-6 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+            <span className="h-px flex-1 bg-border" /> judge one-tap{" "}
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void demoSignIn("ama-farm@demo.agrolink.app", "AgroLinkDemo!2026", "/app/buyer/feed")}
+              className="rounded-full border border-border bg-card px-4 py-3 text-left text-sm transition hover:bg-secondary disabled:opacity-60"
+            >
+              <span className="block font-semibold text-foreground">Shop feed</span>
+              <span className="text-[11px] text-muted-foreground">ama-farm demo</span>
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void demoSignIn("ama-farm@demo.agrolink.app", "AgroLinkDemo!2026", "/app/farmer")}
+              className="rounded-full border border-border bg-card px-4 py-3 text-left text-sm transition hover:bg-secondary disabled:opacity-60"
+            >
+              <span className="block font-semibold text-foreground">Sell as farmer</span>
+              <span className="text-[11px] text-muted-foreground">ama-farm demo</span>
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void demoSignIn("e2e@agrolink.app", "AgroLinkE2e!2026", "/app/admin")}
+              className="rounded-full border border-border bg-card px-4 py-3 text-left text-sm transition hover:bg-secondary disabled:opacity-60 sm:col-span-2"
+            >
+              <span className="block font-semibold text-foreground">Admin / E2E</span>
+              <span className="text-[11px] text-muted-foreground">e2e@agrolink.app</span>
+            </button>
+          </div>
 
           <div className="my-6 flex items-center gap-3 text-[11px] uppercase tracking-widest text-muted-foreground">
             <span className="h-px flex-1 bg-border" /> or{" "}

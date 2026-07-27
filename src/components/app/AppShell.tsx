@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import {
   ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
   ChevronLeft, Bell, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
@@ -201,11 +201,11 @@ export function AppShell({
     const lightChrome = pathname.startsWith("/app/transport");
     return (
       <div
-        className={`agrolink-immersive-feed relative h-[100dvh] w-full overflow-hidden ${lightChrome ? "bg-background" : "bg-black"}`}
-        style={{ "--agrolink-tab-bar": "3.5rem" } as React.CSSProperties}
+        className={`agrolink-immersive-feed relative h-[100dvh] w-full overflow-hidden lg:[--agrolink-tab-bar:0px] ${lightChrome ? "bg-background" : "bg-black"}`}
+        style={{ "--agrolink-tab-bar": "3.5rem" } as CSSProperties}
       >
         <div className="absolute inset-0">{children ?? <Outlet />}</div>
-        <nav className={`agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t pb-[max(env(safe-area-inset-bottom),0px)] ${
+        <nav className={`agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t pb-[max(env(safe-area-inset-bottom),0px)] lg:hidden ${
           lightChrome
             ? "border-border bg-background/95 backdrop-blur-md"
             : "border-white/5 bg-black/55 backdrop-blur-md"

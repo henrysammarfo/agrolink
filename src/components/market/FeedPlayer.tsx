@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle, type ReactNode } from "react";
+import useEmblaCarousel from "embla-carousel-react";
 import { createPortal } from "react-dom";
 import "@/styles/riyils-overrides.css";
 import {
@@ -41,6 +42,9 @@ import { getCurrentPosition } from "@/lib/native-geolocation";
 import { triggerLikeHaptic } from "@/lib/haptics";
 import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
 import { CategoryChips, filterByCategory } from "@/components/feed/CategoryChips";
+import { formatFeedAge } from "@/lib/relative-time";
+import { AuthGateProvider, useAuthGate } from "@/components/auth/auth-gate";
+import { FeedDesktopShell } from "@/components/market/FeedDesktopShell";
 
 export { FEED_ALGORITHM_COPY };
 
@@ -51,9 +55,18 @@ type Props = {
   inAppFeed?: boolean;
   /** Jump to a specific listing in the feed */
   listingId?: string;
+  /** TikTok desktop chrome: left rail + centered phone stage */
+  chrome?: "public" | "app" | "none";
 };
 
-export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = false, listingId }: Props) {
+export function FeedPlayer({
+  initialIndex = 0,
+  fullscreen = true,
+  inAppFeed = false,
+  listingId,
+  chrome = "none",
+}: Props) {
+  const { user } = useAuth();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | undefined>();
   const { data, isLoading, error, refetch, isFetching } = useFeed(coords?.lat, coords?.lng);
   const rankedListings = data?.listings ?? [];
@@ -95,16 +108,42 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
     ? `h-full w-full bg-black${inAppFeed ? " agrolink-tiktok-feed" : ""}`
     : "relative mx-auto aspect-[9/16] w-full max-w-[420px] overflow-hidden rounded-[2rem] border border-border bg-black shadow-[var(--shadow-cinema)]";
 
+  const goTo = (i: number) => {
+    const next = Math.max(0, Math.min((filteredListings.length || 1) - 1, i));
+    setActive(next);
+    feedRef.current?.scrollToItem(next, "smooth");
+  };
+
+  const wrapFeed = (node: ReactNode) => (
+    <AuthGateProvider isSignedIn={!!user}>
+      {chrome === "none" ? (
+        node
+      ) : (
+        <FeedDesktopShell
+          chrome={chrome}
+          isSignedIn={!!user}
+          activeIndex={active}
+          total={Math.max(filteredListings.length, rankedListings.length, 1)}
+          onPrev={() => goTo(active - 1)}
+          onNext={() => goTo(active + 1)}
+          className={fullscreen ? "h-full w-full" : undefined}
+        >
+          {node}
+        </FeedDesktopShell>
+      )}
+    </AuthGateProvider>
+  );
+
   if (isLoading) {
-    return (
+    return wrapFeed(
       <div className={wrapperClass}>
         <FeedSkeleton />
-      </div>
+      </div>,
     );
   }
 
   if (error && rankedListings.length === 0) {
-    return (
+    return wrapFeed(
       <div className={`${wrapperClass} grid place-items-center p-8 text-center`}>
         <p className="text-white font-sans text-2xl font-semibold">Couldn&apos;t load feed</p>
         <p className="mt-2 text-sm text-white/70">
@@ -118,12 +157,12 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
         >
           {isFetching ? "Retrying…" : "Retry"}
         </button>
-      </div>
+      </div>,
     );
   }
 
   if (rankedListings.length === 0) {
-    return (
+    return wrapFeed(
       <div className={`${wrapperClass} grid place-items-center p-8 text-center`}>
         <p className="text-white font-sans text-2xl font-semibold">No listings yet</p>
         <p className="mt-2 text-sm text-white/70">
@@ -135,12 +174,12 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
         >
           Post a listing
         </Link>
-      </div>
+      </div>,
     );
   }
 
   if (categoryFilteredEmpty) {
-    return (
+    return wrapFeed(
       <div className={wrapperClass}>
         <div className="relative flex h-full flex-col items-center justify-center p-8 text-center">
           {inAppFeed && (
@@ -158,7 +197,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
             Show all
           </button>
         </div>
-      </div>
+      </div>,
     );
   }
 
@@ -207,7 +246,7 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
     </div>
   ) : null;
 
-  return (
+  return wrapFeed(
     <div className={wrapperClass}>
       <ProduceSnapFeed
         ref={feedRef}
@@ -221,16 +260,18 @@ export function FeedPlayer({ initialIndex = 0, fullscreen = true, inAppFeed = fa
         category={category}
         onCategoryChange={setCategory}
       />
-      <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 flex-col gap-1.5 md:flex z-20">
-        {filteredListings.map((_, i) => (
-          <span
-            key={i}
-            className={`block h-6 w-1 rounded-full transition-all ${i === active ? "bg-white" : "bg-white/30"}`}
-          />
-        ))}
-      </div>
+      {chrome === "none" && (
+        <div className="pointer-events-none absolute right-2 top-1/2 z-20 hidden -translate-y-1/2 flex-col gap-1.5 md:flex">
+          {filteredListings.map((_, i) => (
+            <span
+              key={i}
+              className={`block h-6 w-1 rounded-full transition-all ${i === active ? "bg-white" : "bg-white/30"}`}
+            />
+          ))}
+        </div>
+      )}
       {gridOverlay}
-    </div>
+    </div>,
   );
 }
 
@@ -251,39 +292,47 @@ const ProduceSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: Scroll
     { listings, active, onActiveChange, inAppFeed, muted, onToggleMute, onOpenGrid, category, onCategoryChange },
     ref,
   ) {
-    const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+    const [emblaRef, emblaApi] = useEmblaCarousel({
+      axis: "y",
+      loop: false,
+      dragFree: false,
+      containScroll: "trimSnaps",
+      skipSnaps: false,
+      duration: 20,
+    });
 
     useImperativeHandle(ref, () => ({
       scrollToItem: (index, behavior = "smooth") => {
-        const el = containerRef.current?.querySelector(`[data-feed-index="${index}"]`);
-        el?.scrollIntoView({ behavior, block: "start" });
+        emblaApi?.scrollTo(index, behavior === "auto");
       },
-    }));
+    }), [emblaApi]);
 
     useEffect(() => {
-      const root = containerRef.current;
-      if (!root) return;
-      const observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            if (entry.isIntersecting) {
-              const idx = Number(entry.target.getAttribute("data-feed-index"));
-              if (!Number.isNaN(idx)) onActiveChange(idx);
-            }
-          }
-        },
-        { threshold: 0.6, root },
-      );
-      root.querySelectorAll("[data-feed-index]").forEach((el) => observer.observe(el));
-      return () => observer.disconnect();
-    }, [listings.length, onActiveChange]);
+      if (!emblaApi) return;
+      const onSelect = () => {
+        onActiveChange(emblaApi.selectedScrollSnap());
+      };
+      emblaApi.on("select", onSelect);
+      emblaApi.on("settle", onSelect);
+      onSelect();
+      return () => {
+        emblaApi.off("select", onSelect);
+        emblaApi.off("settle", onSelect);
+      };
+    }, [emblaApi, onActiveChange]);
+
+    useEffect(() => {
+      if (!emblaApi) return;
+      if (emblaApi.selectedScrollSnap() !== active) {
+        emblaApi.scrollTo(active);
+      }
+    }, [active, emblaApi]);
 
     useEffect(() => {
       videoRefs.current.length = listings.length;
     }, [listings.length]);
 
-    // Sync mute + play/pause for video listings
     useEffect(() => {
       videoRefs.current.forEach((video, idx) => {
         if (!video) return;
@@ -299,7 +348,7 @@ const ProduceSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: Scroll
     const handleToggleMute = (e: React.MouseEvent) => {
       e.stopPropagation();
       const nextMuted = !muted;
-      onToggleMute();
+      onToggleMute(e);
       const video = videoRefs.current[active];
       if (video) {
         video.muted = nextMuted;
@@ -309,57 +358,59 @@ const ProduceSnapFeed = forwardRef<{ scrollToItem: (i: number, behavior?: Scroll
 
     return (
       <div
-        ref={containerRef}
+        ref={emblaRef}
         role="feed"
         aria-label="Produce feed"
-        className="h-full w-full overflow-y-auto snap-y snap-mandatory overscroll-y-contain"
-        style={{ scrollSnapType: "y mandatory" }}
+        className="h-full w-full overflow-hidden overscroll-y-contain"
       >
-        {listings.map((listing, i) => {
-          const isVideo = !!listing.video_url;
-          return (
-            <div
-              key={listing.id}
-              data-feed-index={i}
-              className="relative h-[100dvh] min-h-[100dvh] w-full shrink-0 snap-start snap-always bg-black"
-            >
-              {isVideo ? (
-                <video
-                  ref={(el) => {
-                    videoRefs.current[i] = el;
-                  }}
-                  src={listing.video_url!}
-                  poster={listing.image_url ?? undefined}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  playsInline
-                  loop
+        <div className="flex h-full flex-col">
+          {listings.map((listing, i) => {
+            const isVideo = !!listing.video_url;
+            return (
+              <div
+                key={listing.id}
+                data-feed-index={i}
+                className="relative h-full min-h-0 w-full shrink-0 grow-0 basis-full bg-black"
+                style={{ flex: "0 0 100%" }}
+              >
+                {isVideo ? (
+                  <video
+                    ref={(el) => {
+                      videoRefs.current[i] = el;
+                    }}
+                    src={listing.video_url!}
+                    poster={listing.image_url ?? undefined}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    playsInline
+                    loop
+                    muted={muted}
+                    preload="metadata"
+                  />
+                ) : (
+                  <img
+                    src={listing.image_url ?? "/media/demo/tomato.jpg"}
+                    alt={listing.title}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading={i <= 2 ? "eager" : "lazy"}
+                  />
+                )}
+                <FeedCardOverlay
+                  item={listing}
+                  isActive={i === active}
                   muted={muted}
-                  preload="metadata"
+                  onToggleMute={handleToggleMute}
+                  onOpenGrid={onOpenGrid}
+                  progress={`${i + 1} / ${listings.length}`}
+                  hasVideo={isVideo}
+                  inAppFeed={inAppFeed}
+                  category={category}
+                  onCategoryChange={onCategoryChange}
+                  showCategories={i === 0}
                 />
-              ) : (
-                <img
-                  src={listing.image_url ?? "/media/demo/tomato.jpg"}
-                  alt={listing.title}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  loading={i <= 2 ? "eager" : "lazy"}
-                />
-              )}
-              <FeedCardOverlay
-                item={listing}
-                isActive={i === active}
-                muted={muted}
-                onToggleMute={handleToggleMute}
-                onOpenGrid={onOpenGrid}
-                progress={`${i + 1} / ${listings.length}`}
-                hasVideo={isVideo}
-                inAppFeed={inAppFeed}
-                category={category}
-                onCategoryChange={onCategoryChange}
-                showCategories={i === 0}
-              />
-            </div>
-          );
-        })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   },
@@ -391,6 +442,7 @@ function FeedCardOverlay({
   showCategories?: boolean;
 }) {
   const { user, profile } = useAuth();
+  const { requireAuth } = useAuthGate();
   const navigate = useNavigate();
   const addToCartMut = useAddToCart();
   const [liked, setLiked] = useState(false);
@@ -409,7 +461,7 @@ function FeedCardOverlay({
   const followKey = sellerSlug ?? item.seller_id ?? "";
   const sellerHandle = (item.seller_slug ?? item.seller_name ?? "seller").replace(/-/g, "").slice(0, 20);
   const isSelf = user?.id === item.seller_id;
-  const hoursAgo = Math.round((Date.now() - new Date(item.created_at).getTime()) / 3_600_000);
+  const postedAge = formatFeedAge(item.created_at);
   const isDemoListing = isSeedListingId(item.id);
 
   useEffect(() => {
@@ -452,10 +504,8 @@ function FeedCardOverlay({
   }, [panel, item.id, isDemoListing]);
 
   const handleLike = async () => {
-    if (!user?.id) {
-      toast.error("Sign in to like");
-      return;
-    }
+    if (!requireAuth("Sign in to like this produce.")) return;
+    if (!user?.id) return;
     const next = !liked;
     setLiked(next);
     setLikes((n) => Math.max(0, n + (next ? 1 : -1)));
@@ -489,10 +539,8 @@ function FeedCardOverlay({
   };
 
   const handleSave = async () => {
-    if (!user?.id) {
-      toast.error("Sign in to save");
-      return;
-    }
+    if (!requireAuth("Sign in to save listings.")) return;
+    if (!user?.id) return;
     const next = !saved;
     setSaved(next);
     if (isDemoListing) {
@@ -510,10 +558,8 @@ function FeedCardOverlay({
   };
 
   const handleAddComment = async () => {
-    if (!user?.id) {
-      toast.error("Sign in to comment");
-      return;
-    }
+    if (!requireAuth("Sign in to comment.")) return;
+    if (!user?.id) return;
     if (isDemoListing) {
       toast.error("This is an offline preview listing");
       return;
@@ -541,10 +587,8 @@ function FeedCardOverlay({
       toast.error("This produce is sold out");
       return;
     }
-    if (!user?.id) {
-      toast.error("Sign in to add to cart");
-      return;
-    }
+    if (!requireAuth("Sign in to add produce to your cart.")) return;
+    if (!user?.id) return;
     if (!isValidUserId(user.id)) {
       toast.error("Sign in with your account to use the cart");
       return;
@@ -599,10 +643,8 @@ function FeedCardOverlay({
   const handleFollow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!user?.id) {
-      toast.error("Sign in to follow");
-      return;
-    }
+    if (!requireAuth("Sign in to follow this farmer.")) return;
+    if (!user?.id) return;
     if (!followKey) {
       toast.error("Follow unavailable for this seller");
       return;
@@ -735,13 +777,16 @@ function FeedCardOverlay({
           label={formatCount(commentCount)}
           onClick={() => setPanel("comments")}
         />
-        <Action
-          icon={Bookmark}
-          label="Save"
-          active={saved}
-          activeClass="text-amber-sun fill-amber-sun"
-          onClick={handleSave}
-        />
+        {/* Save stays desktop-only; phones keep TikTok-dense rail + bottom Add to cart */}
+        <div className="hidden sm:block">
+          <Action
+            icon={Bookmark}
+            label="Save"
+            active={saved}
+            activeClass="text-amber-sun fill-amber-sun"
+            onClick={handleSave}
+          />
+        </div>
         <Action
           icon={ShoppingBasket}
           label={soldOut ? "Sold" : "Buy"}
@@ -782,7 +827,7 @@ function FeedCardOverlay({
         <p className="mt-1 line-clamp-1 text-xs text-white/75">
           {item.location_name}
           {item.distance_km != null && ` · ${item.distance_km.toFixed(1)} km`}
-          {" · "}{hoursAgo}h ago
+          {postedAge ? ` · ${postedAge}` : ""}
         </p>
         {inAppFeed ? (
           <button
