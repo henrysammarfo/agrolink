@@ -61,7 +61,7 @@ In **Vercel → Project → Settings → Environment Variables**, add everything
 
 ### Scheduled jobs (delivery reassign)
 
-GitHub Actions billing may block workflows — **do not rely on GitHub cron**.
+**No GitHub Actions** — org billing blocks workflows. Do not add `.github/workflows` CI or cron.
 
 Use **Supabase pg_cron** (runs inside your database, every 5 min):
 

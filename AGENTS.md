@@ -3,3 +3,4 @@
 
 - Keep `main` deployable; run `npm run build` before merging.
 - Feature branches: `cursor/<description>-cc54` for agent work.
+- **No GitHub Actions** — billing blocked; do not add `.github/workflows` CI/cron. Deploy + checks via Vercel only.
