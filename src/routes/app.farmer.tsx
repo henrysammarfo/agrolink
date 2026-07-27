@@ -14,7 +14,7 @@ export const Route = createFileRoute("/app/farmer")({
 
 function FarmerOverview() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { data: orders = [] } = useSellerOrders(user?.id);
   const { data: listings = [] } = useSellerListings(user?.id);
   const { data: revenue, isLoading } = useFarmerRevenue(user?.id);
@@ -25,7 +25,6 @@ function FarmerOverview() {
   const max = Math.max(...series.map((r) => r.ghs), 1);
   const total = revenue?.total ?? 0;
   const pending = orders.filter((o) => o.status === "pending" || o.status === "confirmed").length;
-  const name = profile?.display_name?.split(" ")[0] ?? "Farmer";
 
   return (
     <SellerStudioLayout>
