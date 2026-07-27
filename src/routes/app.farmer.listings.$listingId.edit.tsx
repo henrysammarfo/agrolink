@@ -145,7 +145,7 @@ function EditListing() {
   return (
     <FarmerGate>
       <AppShell role="buyer">
-        <PageHeader eyebrow="Catalog" title="Edit" italic="listing" sub="Update price, stock, or caption — like TikTok." />
+        <PageHeader eyebrow="Catalog" title="Edit" italic="listing" sub="Update price, stock, or caption." />
 
         <form onSubmit={submit} className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
           <div className="rounded-3xl border border-border bg-card aspect-[4/5] relative overflow-hidden">

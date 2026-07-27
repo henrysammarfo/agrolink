@@ -12,7 +12,16 @@ Live pitch = 3–5 min walkthrough + Q&A. Demo video already submitted.
 - [ ] Dual device / two browsers: buyer account + driver account logged in
 - [ ] Offline backup: screenshots of feed, checkout driver card, live track, admin GMV
 
-## Happy-path script
+## Pitch lock (post-judge review 2026-07-27)
+
+See **`docs/FINAL_FACTCHECK.md`** (Tavily + primary sources).
+
+- Corridor: Dodowa → Tema/Accra  
+- Buyers: restaurants + chop bars  
+- Crops: tomato + leafy greens  
+- Innovation: same-day dispatch + MoMo + POD (feed = discovery only)  
+- Farmer channel: **SMS** (never email-first)  
+
 
 1. Landing → sign in as farmer → post a listing (or use seeded produce)
 2. Switch / open buyer feed — swipe one item at a time (no skip)

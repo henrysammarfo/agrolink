@@ -191,3 +191,15 @@ export async function fetchIsFollowing(followerId: string, farmerSlug: string): 
     .maybeSingle();
   return !!data;
 }
+
+export async function reportListing(listingId: string, reason = "user_flag") {
+  const res = await apiFetch("/api/listings/report", {
+    method: "POST",
+    body: JSON.stringify({ listingId, reason }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? "Could not report listing");
+  }
+  return (await res.json()) as { ok: boolean; alreadyReported?: boolean };
+}

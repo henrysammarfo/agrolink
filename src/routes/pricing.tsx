@@ -22,7 +22,7 @@ const TRANSPORT = [
 ];
 
 const ROLES = [
-  { icon: Sparkles, t: "Farmers", price: "Free", sub: "Keep 94% of every sale.", features: ["Unlimited listings", "AI pricing suggestions", "Same-evening MoMo payout"] },
+  { icon: Sparkles, t: "Farmers", price: "Free", sub: "Keep 94% of every sale.", features: ["Unlimited listings", "Optional market price tip", "Same-evening MoMo payout"] },
   { icon: BadgePercent, t: "Buyers", price: "Free", sub: "Pay only produce + delivery.", features: ["Swipe the feed", "Mobile-money checkout", "Live order tracking"] },
   { icon: Truck, t: "Transport partners", price: "Free", sub: "Keep 88% of every job.", features: ["Live job board", "Auto-routed multi-pickups", "Daily MoMo payouts"] },
 ];

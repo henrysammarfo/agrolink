@@ -45,7 +45,7 @@ function Listings() {
           eyebrow="Catalog"
           title="Your"
           italic="listings"
-          sub="Edit, delete, or post new produce — just like TikTok."
+          sub="Edit, delete, or post new produce — photo or short video."
           action={
             <Link
               to="/app/create"

@@ -18,6 +18,7 @@ import {
   Copy,
   Plus,
   UserCheck,
+  Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useFeed, useAddToCart } from "@/hooks/use-marketplace";
@@ -33,6 +34,7 @@ import {
   fetchUserBookmarked,
   toggleFollow,
   fetchIsFollowing,
+  reportListing,
 } from "@/lib/api/engagement";
 import type { FeedListing } from "@/lib/types/marketplace";
 import type { FeedComment } from "@/lib/types/marketplace";
@@ -626,6 +628,22 @@ function FeedCardOverlay({
     }
   };
 
+  const handleReportListing = async () => {
+    if (!requireAuth("Sign in to report this listing.")) return;
+    if (isDemoListing) {
+      toast.info("Demo listing — nothing to report");
+      return;
+    }
+    try {
+      const result = await reportListing(item.id, "feed_flag");
+      trackEvent("feed_report", { listing_id: item.id });
+      toast.success(result.alreadyReported ? "Already reported" : "Thanks — we’ll review this listing");
+      setPanel(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not report");
+    }
+  };
+
   const openSellerProfile = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -962,6 +980,14 @@ function FeedCardOverlay({
                     >
                       <Copy className="h-5 w-5" />
                       <span className="text-sm font-medium">Copy link</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleReportListing}
+                      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-destructive/40 sm:col-span-2"
+                    >
+                      <Flag className="h-5 w-5 text-destructive" />
+                      <span className="text-sm font-medium">Report listing</span>
                     </button>
                   </div>
                 )}

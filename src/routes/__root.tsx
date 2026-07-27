@@ -84,7 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "author", content: "AgroLink" },
       { name: "theme-color", content: "#0f1a14" },
       { property: "og:title", content: "AgroLink — Fresh produce, delivered" },
-      { property: "og:description", content: "A TikTok-style produce marketplace for the Greater Accra supply corridor." },
+      { property: "og:description", content: "Same-day farm-to-kitchen delivery for the Dodowa–Tema–Accra corridor." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

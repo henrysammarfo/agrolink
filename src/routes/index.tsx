@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "AgroLink — Fresh produce, delivered across Accra" },
-      { name: "description", content: "TikTok-style produce marketplace connecting Accra farmers, buyers and transport partners. Discover, order, deliver." },
+      { name: "description", content: "Same-day farm-to-kitchen delivery for Dodowa–Tema–Accra. Tomato, leafy greens, MoMo, and POD." },
       { property: "og:title", content: "AgroLink — Fresh produce, delivered" },
       { property: "og:description", content: "A produce marketplace for the Greater Accra supply corridor." },
       { property: "og:image", content: produceHero },
@@ -71,7 +71,7 @@ function Hero() {
         <div className="flex flex-1 flex-col items-center justify-start px-6 pt-4 text-center sm:pt-6 md:pt-8 lg:pt-10">
           <span className="cinema-fade inline-flex max-w-[min(100%,28rem)] items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-1.5 text-xs font-light text-white/90 backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
-            <span className="truncate">Greater Accra · Agbogbloshie → Tema corridor</span>
+            <span className="truncate">Dodowa → Tema / Accra · same-day dispatch</span>
           </span>
 
           <h1
@@ -89,11 +89,11 @@ function Hero() {
             className="cinema-fade mt-4 max-w-md text-sm font-light leading-relaxed text-white/70 md:mt-5 md:text-base"
             style={{ animationDelay: "0.25s" }}
           >
-            A TikTok-style marketplace that links smallholder farmers to
+            Peri-urban farms to Accra restaurants and chop bars —
             <span className="hidden sm:inline">
               <br />
             </span>{" "}
-            Accra's chefs, shops and households — with delivery built in.
+            MoMo pay, same-day pickup, delivery with proof of delivery.
           </p>
 
           <div

@@ -98,7 +98,7 @@ function Create() {
           <Sparkles className="mx-auto h-8 w-8 text-primary" />
           <h2 className="mt-4 font-serif text-3xl">Start selling on AgroLink</h2>
           <p className="mt-3 mx-auto max-w-md text-sm text-muted-foreground">
-            Same account — just like TikTok Shop. Enable Sell mode to post produce with photo or
+            Same account — enable Sell mode to post produce with photo or
             video.
           </p>
           <button
@@ -213,14 +213,14 @@ function Create() {
         eyebrow="Create"
         title="New"
         italic="listing"
-        sub="Photo or video · price · quantity · location · post"
+        sub="Photo or video · price · quantity · location · post. WhatsApp when it sells."
       />
 
       <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-8 flex items-start gap-3 text-xs text-foreground/80">
         <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
         <p>
-          AI checks every post for community rules before it goes live. Keep photos honest and
-          prices fair.
+          We check posts for community rules before they go live. Honest photos and fair prices —
+          tomato, leafy greens, and pepper sell best on this corridor.
         </p>
       </div>
 
@@ -374,7 +374,7 @@ function Create() {
             <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
               <div className="flex items-center gap-2 text-primary">
                 <Tag className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-widest">AI price tip</span>
+                <span className="text-xs uppercase tracking-widest">Market price tip (optional)</span>
               </div>
               <p className="mt-2 text-sm text-foreground/80">{priceAdvice}</p>
             </div>

@@ -818,6 +818,26 @@ export async function confirmOrderPayment(reference: string): Promise<{ ok: bool
     link: "/app/buyer/orders",
   });
 
+  // Farmers: SMS/WhatsApp sale alert (judges — phone-first, not email)
+  const { data: soldItems } = await supabaseAdmin
+    .from("order_items")
+    .select("seller_id, listing:listings(title)")
+    .eq("order_id", payment.order_id);
+  const notifiedSellers = new Set<string>();
+  for (const row of soldItems ?? []) {
+    const sellerId = row.seller_id as string;
+    if (!sellerId || notifiedSellers.has(sellerId)) continue;
+    notifiedSellers.add(sellerId);
+    const listing = row.listing as { title?: string } | null;
+    await notifyUser(sellerId, {
+      type: "farmer_sale",
+      title: "New order for your produce",
+      body: `A buyer ordered your ${listing?.title ?? "produce"}. Prepare for pickup.`,
+      link: "/app/farmer/orders",
+      whatsappExtras: { crop: listing?.title ?? "produce" },
+    });
+  }
+
   await supabaseAdmin.from("audit_log").insert({
     action: "payment_confirmed",
     entity_type: "payment",
