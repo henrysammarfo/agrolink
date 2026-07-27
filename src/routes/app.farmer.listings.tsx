@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Trash2, Pencil, Eye, Heart, MessageCircle, Loader2 } from "lucide-react";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { FarmerGate } from "@/components/app/RoleGate";
+import { PageHeader } from "@/components/app/AppShell";
+import { SellerStudioLayout } from "@/components/seller/SellerStudioLayout";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useAuth } from "@/lib/auth";
 import { useSellerListings } from "@/hooks/use-marketplace";
@@ -39,8 +39,7 @@ function Listings() {
   };
 
   return (
-    <FarmerGate>
-      <AppShell role="buyer">
+    <SellerStudioLayout>
         <PageHeader
           eyebrow="Catalog"
           title="Your"
@@ -120,8 +119,7 @@ function Listings() {
             onConfirm={confirmDelete}
           />
         )}
-      </AppShell>
-    </FarmerGate>
+    </SellerStudioLayout>
   );
 }
 

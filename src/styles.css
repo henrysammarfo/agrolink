@@ -58,6 +58,12 @@
 :root {
   --radius: 0.875rem;
 
+  /* Spacing rhythm (revamp Phase 2) */
+  --space-section: 2.5rem;
+  --space-block: 1.5rem;
+  --space-tight: 0.75rem;
+  --content-max: 72rem;
+
   --background: oklch(0.985 0.005 90);
   --foreground: oklch(0.18 0.012 145);
 

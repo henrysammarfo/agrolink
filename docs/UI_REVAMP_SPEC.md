@@ -1,50 +1,55 @@
-# AgroLink UI revamp spec (Phase 0)
+# AgroLink UI revamp spec
 
 Last updated: 2026-07-27  
-Status: **Phase 1 in progress**
+Branch: `cursor/ui-revamp-phase1-cc54` (local iterate — ask before push)
 
 ## Locked decisions
 
-1. Landing `/` stays for marketing. Logged-in home = **Feed** (`/app/buyer/feed`).
-2. Checkout for platform delivery = **pay first → then match driver** (Bolt/DoorDash). No unpaid driver offers.
-3. Comments/share on desktop = **right drawer** bound to active listing.
-4. No TikTok feature clones without AgroLink use case (no Coins, LIVE tools, Get App chrome).
-5. Farmer alerts = **WhatsApp + push + email** (not SMS for launch).
-6. Admin keeps **driver KYC approve**. Happy-path listings + POD payouts are automatic.
+1. Landing `/` stays. Logged-in home = **Feed** (`/app/buyer/feed`).
+2. Checkout = **pay first → match driver** (Bolt/DoorDash).
+3. Comments/share = **RightDrawer** (desktop right / mobile bottom).
+4. No TikTok clones without AgroLink use case.
+5. Farmer alerts = WhatsApp + push + email (no launch SMS).
+6. Admin: human **driver KYC**; auto listings + POD payouts.
 
-## Phase 1 scope
+## Phase status
 
-- Slim sticky shell + ≤5 mobile tabs (Feed-first)
-- RightDrawer for comments/share
-- Cart totals always visible; pay-then-match
-- POD → `processOrderPayouts` (already wired; verify + surface)
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 0 Spec + memory | Done | This file + MEMORY / FINAL_FACTCHECK |
+| 1 Shell + drawer + pay-then-match | Done | AppShell slim, RightDrawer, cart/paystack |
+| 2 Seller Studio + Mapbox pins + admin/spacing | In progress | `SellerStudioLayout`, `map-icons` HTML markers, PageHeader/StatCard rhythm, admin copy |
+| 3 Full routing cleanup + every-page polish | Pending | |
 
-## Phase 2+
+## Seller Studio map (TikTok Studio → AgroLink)
 
-- Seller Studio icon rail (Create, Listings, Sales, Comments, Payouts)
-- Mapbox Drive marker/vehicle polish
-- Admin restyle + routing cleanup
-
-## Nav map (buyer / seller)
-
-| Rail | Route |
-|------|-------|
-| For You | `/app/buyer/feed` |
-| Cart | `/app/buyer/cart` |
-| Orders | `/app/buyer/orders` |
+| Studio | AgroLink |
+|--------|----------|
+| Upload (+) | `/app/create` |
+| Home | `/app/farmer` overview |
+| Content/Posts | `/app/farmer/listings` |
+| Analytics / Sales | `/app/farmer/orders` |
+| Monetization | `/app/farmer/payouts` |
 | Inbox | `/app/inbox` |
-| Profile | `/app/profile` |
-| + Create | `/app/create` (seller) |
-| Listings / Payouts / Sales | under Profile or Sell section (Phase 1: keep short seller links) |
+
+Chrome: [`SellerStudioLayout.tsx`](../src/components/seller/SellerStudioLayout.tsx) — 72px icon rail desktop, 5-tab mobile.
+
+## Mapbox markers
+
+Custom HTML markers via Mapbox GL `Marker` (Tavily + Mapbox docs: custom-marker-icons).  
+Kinds: farm / buyer / hub / job + driver car — [`src/lib/map-icons.ts`](../src/lib/map-icons.ts).
 
 ## Checkout state machine
 
 ```
 Cart → Fulfillment → Pay (MoMo) → Match driver → Track → POD → Auto payouts
-Pickup / own_driver: Cart → Fulfillment → Pay → (no match)
 ```
+
+## Spacing tokens
+
+`:root` in `src/styles.css`: `--space-section`, `--space-block`, `--space-tight`, `--content-max`.
 
 ## Do / don’t
 
-**Do:** Feed-first, breathing room, right drawers, Mapbox for Drive, clear money totals.  
-**Don’t:** Dual sidebars, Overview as home, driver-before-pay, SMS claims, unused TikTok Studio toys.
+**Do:** Feed-first, breathing room, right drawers, Mapbox icons, clear money.  
+**Don’t:** Dual fat sidebars, Overview-as-home, driver-before-pay, SMS claims, Coins/LIVE toys.

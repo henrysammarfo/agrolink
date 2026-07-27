@@ -107,7 +107,7 @@ export function DriverNavHud({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-[10px] uppercase tracking-widest text-white/60">Navigating to</p>
+            <p className="text-[10px] font-medium tracking-wide text-white/55">Navigating to</p>
             {routeSource && (
               <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${routeSource === "mapbox" ? "bg-blue-500/30 text-blue-200" : "bg-amber-500/30 text-amber-200"}`}>
                 {routeSource}

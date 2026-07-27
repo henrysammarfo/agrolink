@@ -34,7 +34,7 @@ AgroLink logistics maps use **Mapbox** as primary (same class as Uber/Bolt/DoorD
 2. **Driver accept:** Buyer sees `DriverProfileCard` (avatar, name, plate, vehicle, rating).
 3. **Buyer track:** Phased route — before pickup `driver→farm`; after `picked_up` `driver→buyer`. Live GPS via Realtime on `driver_profiles`.
 4. **Driver map:** Live self marker + pickup/dropoff + **available job pins** when online; Directions to active leg; throttle re-route (~150m / status change).
-5. **Payment gate:** Server blocks MoMo until `driver_id` set.
+5. **Payment gate:** MoMo **first**, then notify drivers (pay-then-match). Jobs list / accept require `payment_status === paid`.
 
 ## Performance rules (from Mapbox delivery patterns)
 
@@ -58,3 +58,4 @@ AgroLink logistics maps use **Mapbox** as primary (same class as Uber/Bolt/DoorD
 | 2026-07-27 | Google → Mapbox swap; Embla feed; DriverProfileCard; phased track; memory + factcheck docs |
 | 2026-07-27 | Tavily fact-check pass; buyer map shows discreet nearby courier pins; driver map shows available job pins when online |
 | 2026-07-27 | Tokens in `.env.local` (Mapbox pk + Tavily) — rotate after finals; URL-restrict Mapbox token |
+| 2026-07-27 | UI revamp Phase 2: custom HTML farm/buyer/hub/job pins; pay-then-match doc fix; Seller Studio rail |

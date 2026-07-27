@@ -375,13 +375,17 @@ export function PageHeader({ eyebrow, title, italic, sub, action }: {
   eyebrow?: string; title: string; italic?: string; sub?: string; action?: ReactNode;
 }) {
   return (
-    <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        {eyebrow && <span className="text-xs uppercase tracking-widest text-primary/80">{eyebrow}</span>}
-        <h1 className="mt-2 font-serif text-3xl sm:text-4xl md:text-5xl text-foreground">
-          {title} {italic && <span className="italic text-accent">{italic}</span>}
+    <header className="mb-10 flex flex-col gap-5 md:mb-12 md:flex-row md:items-end md:justify-between">
+      <div className="max-w-2xl">
+        {eyebrow && (
+          <span className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
+            {eyebrow}
+          </span>
+        )}
+        <h1 className="mt-3 font-serif text-[2rem] leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-[2.75rem]">
+          {title} {italic && <span className="italic text-primary/90">{italic}</span>}
         </h1>
-        {sub && <p className="mt-2 text-sm text-muted-foreground">{sub}</p>}
+        {sub && <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-[15px]">{sub}</p>}
       </div>
       {action}
     </header>
@@ -399,10 +403,10 @@ export function StatCard({ label, value, sub, tone = "primary" }: {
     : tone === "emerald" ? "text-emerald-600 dark:text-emerald-400"
     : "text-foreground";
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 min-w-0 overflow-hidden">
-      <div className="text-xs uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className={`mt-2 font-serif text-2xl sm:text-3xl md:text-4xl truncate ${toneClass}`}>{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-border/80 bg-card p-5 sm:p-6">
+      <div className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">{label}</div>
+      <div className={`mt-3 truncate font-serif text-2xl tabular-nums sm:text-3xl ${toneClass}`}>{value}</div>
+      {sub && <div className="mt-2 text-xs leading-snug text-muted-foreground">{sub}</div>}
     </div>
   );
 }

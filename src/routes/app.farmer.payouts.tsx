@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Wallet, Download, Loader2 } from "lucide-react";
-import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
-import { FarmerGate } from "@/components/app/RoleGate";
+import { PageHeader, StatCard } from "@/components/app/AppShell";
+import { SellerStudioLayout } from "@/components/seller/SellerStudioLayout";
 import { useAuth } from "@/lib/auth";
 import { usePayouts } from "@/hooks/use-marketplace";
 
@@ -19,8 +19,7 @@ function Payouts() {
   const totalPending = pending.reduce((s, p) => s + Number(p.amount), 0);
 
   return (
-    <FarmerGate>
-    <AppShell role="buyer">
+    <SellerStudioLayout>
       <PageHeader
         eyebrow="Earnings"
         title="Your"
@@ -73,7 +72,6 @@ function Payouts() {
         </table>
       </div>
       )}
-    </AppShell>
-    </FarmerGate>
+    </SellerStudioLayout>
   );
 }

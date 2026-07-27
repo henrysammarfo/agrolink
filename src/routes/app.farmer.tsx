@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, Plus, Loader2 } from "lucide-react";
-import { AppShell, PageHeader, StatCard } from "@/components/app/AppShell";
-import { FarmerGate } from "@/components/app/RoleGate";
+import { PageHeader, StatCard } from "@/components/app/AppShell";
+import { SellerStudioLayout } from "@/components/seller/SellerStudioLayout";
 import { useAuth } from "@/lib/auth";
 import { useSellerOrders, useSellerListings, useFarmerRevenue } from "@/hooks/use-marketplace";
 import { StatusBadge } from "./app.buyer";
@@ -28,13 +28,12 @@ function FarmerOverview() {
   const name = profile?.display_name?.split(" ")[0] ?? "Farmer";
 
   return (
-    <FarmerGate>
-    <AppShell role="buyer" compact>
+    <SellerStudioLayout>
       <PageHeader
-        eyebrow="Overview"
-        title="Good morning,"
-        italic={`${name}.`}
-        sub={`${pending} orders need your attention.`}
+        eyebrow="Studio"
+        title="Seller"
+        italic="home"
+        sub={`${pending} order${pending === 1 ? "" : "s"} need attention · tomato & greens sell best.`}
         action={
           <Link to="/app/create" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
             <Plus className="h-4 w-4" /> New listing
@@ -42,7 +41,7 @@ function FarmerOverview() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Revenue this week" value={`GHS ${total.toLocaleString()}`} />
         <StatCard label="Active listings" value={String(listings.filter((l) => l.status === "active").length)} tone="accent" />
         <StatCard label="Pending orders" value={String(pending)} />
@@ -136,7 +135,6 @@ function FarmerOverview() {
           )}
         </div>
       </section>
-    </AppShell>
-    </FarmerGate>
+    </SellerStudioLayout>
   );
 }

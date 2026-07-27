@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Package, Truck, Check, Loader2, Phone, MessageCircle, Clock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { FarmerGate } from "@/components/app/RoleGate";
+import { PageHeader } from "@/components/app/AppShell";
+import { SellerStudioLayout } from "@/components/seller/SellerStudioLayout";
 import { FarmerOrderStepper } from "@/components/order/FarmerOrderStepper";
 import { StatusBadge } from "./app.buyer";
 import { useAuth } from "@/lib/auth";
@@ -72,8 +72,7 @@ function FarmerOrders() {
   };
 
   return (
-    <FarmerGate>
-      <AppShell role="buyer">
+    <SellerStudioLayout>
         <PageHeader
           eyebrow="Fulfillment"
           title="Incoming"
@@ -230,7 +229,6 @@ function FarmerOrders() {
             )}
           </div>
         )}
-      </AppShell>
-    </FarmerGate>
+    </SellerStudioLayout>
   );
 }

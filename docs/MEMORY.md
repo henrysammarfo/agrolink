@@ -5,9 +5,11 @@ Last updated: 2026-07-27
 ## Active revamp
 
 - Spec: `docs/UI_REVAMP_SPEC.md`
-- Branch: `cursor/ui-revamp-phase1-cc54`
-- Phase 1: Feed-first shell, RightDrawer comments, **pay-then-match**, POD auto-payout
+- Branch: `cursor/ui-revamp-phase1-cc54` (local — ask before push)
+- Phase 1 done: Feed-first shell, RightDrawer, pay-then-match
+- Phase 2 in progress: Seller Studio rail, Mapbox HTML pins, admin/spacing
 - Farmer alerts: WhatsApp + push + email (no SMS for launch)
+- Research: `docs/research/tavily-mapbox-markers.json`
 
 ## Stack (actual, not build guide)
 
