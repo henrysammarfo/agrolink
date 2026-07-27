@@ -336,7 +336,6 @@ export async function processCheckout(params: {
   }
 
   if (needsDelivery) {
-    const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
     const { radiusForOfferRound } = await import("@/lib/vehicle-types");
     const vehicleType = buyerVehicleToRequired(params.vehicleType);
     await supabaseAdmin.from("deliveries").insert({
@@ -551,7 +550,6 @@ export async function reserveOrderForDriverMatch(params: {
     }).eq("id", listing.id);
   }
 
-  const { acceptDeadlineFromNow } = await import("@/server/delivery-reassign");
   const { radiusForOfferRound } = await import("@/lib/vehicle-types");
   const vehicleType = buyerVehicleToRequired(params.vehicleType);
 

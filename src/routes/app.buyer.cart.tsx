@@ -191,7 +191,7 @@ function Cart() {
 
   const pickupLabel = pickupStops[0]?.label ?? items[0]?.listing?.location_name ?? orderSnapshot?.pickupLabel ?? "Farm pickup";
 
-  const mapCheckoutStep = step === 2 || (step === 3 && needsDelivery);
+  const mapCheckoutStep = step === 2 && needsDelivery;
 
   useEffect(() => {
     if (!user?.id || sessionRestored.current) return;
@@ -391,7 +391,7 @@ function Cart() {
   }, [items, pickupStops, deliveryLocation, needsDelivery, selectedVehicle, step]);
 
   useEffect(() => {
-    if (step !== 2 && !(step === 3 && needsDelivery && !driverMatched)) {
+    if (step !== 2) {
       if (step === 1) {
         setDriversNearby(0);
         setNearbyDriverPins([]);
