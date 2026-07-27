@@ -1,4 +1,8 @@
-import { fetchDrivingDistanceKm, fetchGoogleDirections, getGoogleMapsApiKey } from "@/server/google-maps";
+import {
+  fetchDrivingDistanceKm,
+  fetchMapboxDirections,
+  getMapboxAccessToken,
+} from "@/server/mapbox";
 
 export type LatLng = { lat: number; lng: number; label?: string };
 
@@ -58,42 +62,42 @@ export async function computeMultiStopDistanceKm(
 ): Promise<{
   distanceKm: number;
   orderedStops: LatLng[];
-  routingSource: "google" | "osrm" | "haversine";
+  routingSource: "mapbox" | "osrm" | "haversine";
 }> {
   const orderedStops = orderPickupStops(pickups);
 
-  if (getGoogleMapsApiKey() && orderedStops.length > 0) {
+  if (getMapboxAccessToken() && orderedStops.length > 0) {
     try {
-      const route = await fetchGoogleDirections(
+      const route = await fetchMapboxDirections(
         orderedStops[0],
         delivery,
         orderedStops.length > 1 ? orderedStops.slice(1) : undefined,
       );
       if (route) {
-        return { distanceKm: route.distance_km, orderedStops, routingSource: "google" };
+        return { distanceKm: route.distance_km, orderedStops, routingSource: "mapbox" };
       }
     } catch (err) {
-      console.warn("[BatchRouting] Google Directions failed:", err);
+      console.warn("[BatchRouting] Mapbox Directions failed:", err);
     }
   }
 
   let total = 0;
-  let source: "google" | "osrm" | "haversine" = "haversine";
+  let source: "mapbox" | "osrm" | "haversine" = "haversine";
   let prev: LatLng | null = null;
   for (const stop of orderedStops) {
     if (prev) {
       const seg = await fetchDrivingDistanceKm(prev, stop);
       total += seg.distanceKm;
-      if (seg.source === "google") source = "google";
-      else if (seg.source === "osrm" && source !== "google") source = "osrm";
+      if (seg.source === "mapbox") source = "mapbox";
+      else if (seg.source === "osrm" && source !== "mapbox") source = "osrm";
     }
     prev = stop;
   }
   if (prev) {
     const last = await fetchDrivingDistanceKm(prev, delivery);
     total += last.distanceKm;
-    if (last.source === "google") source = "google";
-    else if (last.source === "osrm" && source !== "google") source = "osrm";
+    if (last.source === "mapbox") source = "mapbox";
+    else if (last.source === "osrm" && source !== "mapbox") source = "osrm";
   }
   return { distanceKm: total, orderedStops, routingSource: source };
 }

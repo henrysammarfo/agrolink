@@ -6,7 +6,7 @@ export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
       { title: "Pricing · AgroLink" },
-      { name: "description", content: "Free for everyone. A thin platform fee on completed orders. See the math vs. middlemen." },
+      { name: "description", content: "Free for everyone. A thin service fee on completed orders. See the math vs. middlemen." },
       { property: "og:title", content: "Pricing · AgroLink" },
       { property: "og:description", content: "Free for everyone. A thin fee on completed orders." },
     ],

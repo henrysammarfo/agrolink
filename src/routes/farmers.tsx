@@ -38,7 +38,7 @@ function Farmers() {
           </div>
         ) : farmers.length === 0 ? (
           <div className="mt-16 rounded-3xl border border-dashed border-border p-16 text-center text-muted-foreground">
-            No seller profiles yet. Enable Sell mode in settings to be the first.
+            No farms listed yet. Check back soon — or start shopping the live feed.
           </div>
         ) : (
           <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">

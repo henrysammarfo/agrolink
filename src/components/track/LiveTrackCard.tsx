@@ -3,6 +3,10 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Phone, MessageCircle, Navigation, ChevronUp, ChevronDown, UserPlus, ChevronRight } from "lucide-react";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { ChatThread } from "@/components/chat/ChatThread";
+import {
+  DriverProfileCard,
+  driverCardFromDeliveryDriver,
+} from "@/components/transport/DriverProfileCard";
 import { fetchDrivingRoute } from "@/lib/api/driver";
 import { subscribeToDelivery, subscribeToDriverLocation } from "@/lib/api/orders";
 import { toggleFollow, fetchIsFollowing } from "@/lib/api/engagement";
@@ -12,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import type { DeliveryRow, OrderRow } from "@/lib/types/marketplace";
 import { dialPhone, pickDriverPhone } from "@/lib/trip-contact";
 import { toast } from "sonner";
+import { isValidMapCoord } from "@/lib/map-coords";
 
 import { DRIVER_DELIVERY_SUBSTEPS, driverDeliverySubstepIndex } from "@/lib/order-lifecycle";
 import { LifecycleStepper } from "@/components/order/LifecycleStepper";
@@ -20,6 +25,31 @@ const FARMER_STEPS = ["confirmed", "processing", "dispatched"] as const;
 
 type Props = { order: OrderRow; fullscreen?: boolean };
 
+function phaseLabel(status: string | undefined): string {
+  if (!status) return "Assigned";
+  if (["driver_assigned", "driver_enroute_pickup"].includes(status)) return "Heading to the farm";
+  if (status === "picked_up" || status === "enroute_delivery") return "Bringing your order";
+  if (status === "delivered") return "Delivered";
+  return status.replace(/_/g, " ");
+}
+
+/** Uber Eats–style: duration + clock arrival (“by 5:40pm”). */
+function formatEtaClock(etaMin: number, now = new Date()): string {
+  const arrive = new Date(now.getTime() + etaMin * 60_000);
+  const time = arrive.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `~${etaMin} min · by ${time}`;
+}
+
+function mergeDelivery(prev: DeliveryRow | undefined, updated: DeliveryRow): DeliveryRow {
+  return {
+    ...prev,
+    ...updated,
+    driver: updated.driver ?? prev?.driver,
+    order: updated.order ?? prev?.order,
+    tracking_updates: updated.tracking_updates ?? prev?.tracking_updates ?? [],
+  };
+}
+
 export function LiveTrackCard({ order, fullscreen }: Props) {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
@@ -27,7 +57,6 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   const delivery = liveDelivery;
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
-  const [routeSource, setRouteSource] = useState<"google" | "osrm" | null>(null);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [etaMin, setEtaMin] = useState<number | null>(null);
   const [tripChatOpen, setTripChatOpen] = useState(false);
@@ -66,20 +95,52 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
     setLiveDelivery(order.delivery);
   }, [order.delivery, order.id]);
 
+  // Phased routing: driver→farm before pickup, driver→buyer after (throttle GPS re-routes)
   useEffect(() => {
     if (!delivery) return;
-    fetchDrivingRoute(
-      { lat: delivery.pickup_lat, lng: delivery.pickup_lng },
-      { lat: delivery.delivery_lat, lng: delivery.delivery_lng },
-    ).then((r) => {
-      if (r) {
+    const status = delivery.status;
+    const enroutePickup = ["driver_assigned", "driver_enroute_pickup", "requested"].includes(status);
+    const enrouteBuyer = ["picked_up", "enroute_delivery"].includes(status);
+
+    let from: { lat: number; lng: number };
+    let to: { lat: number; lng: number };
+
+    if (enrouteBuyer && driverPos && isValidMapCoord(driverPos.lat, driverPos.lng)) {
+      from = driverPos;
+      to = { lat: delivery.delivery_lat, lng: delivery.delivery_lng };
+    } else if (enroutePickup && driverPos && isValidMapCoord(driverPos.lat, driverPos.lng)) {
+      from = driverPos;
+      to = { lat: delivery.pickup_lat, lng: delivery.pickup_lng };
+    } else {
+      from = { lat: delivery.pickup_lat, lng: delivery.pickup_lng };
+      to = { lat: delivery.delivery_lat, lng: delivery.delivery_lng };
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      fetchDrivingRoute(from, to).then((r) => {
+        if (cancelled || !r) return;
         setRouteCoords(r.coordinates);
         setRouteSteps(r.steps ?? []);
         setEtaMin(Math.round(r.duration_in_traffic_min ?? r.duration_min));
-        setRouteSource(r.source);
-      }
-    });
-  }, [delivery?.id, delivery?.pickup_lat, delivery?.pickup_lng, delivery?.delivery_lat, delivery?.delivery_lng]);
+      });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    delivery?.id,
+    delivery?.status,
+    delivery?.pickup_lat,
+    delivery?.pickup_lng,
+    delivery?.delivery_lat,
+    delivery?.delivery_lng,
+    // Round GPS to ~50m to avoid Directions spam
+    driverPos ? Math.round(driverPos.lat * 2000) / 2000 : null,
+    driverPos ? Math.round(driverPos.lng * 2000) / 2000 : null,
+  ]);
 
   const routeSegments = useMemo(
     () => buildTrafficSegments(routeCoords, routeSteps),
@@ -89,7 +150,7 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   useEffect(() => {
     if (!delivery?.id) return;
     return subscribeToDelivery(delivery.id, (updated) =>
-      setLiveDelivery((prev) => (prev ? { ...prev, ...updated } : updated)),
+      setLiveDelivery((prev) => mergeDelivery(prev, updated)),
     );
   }, [delivery?.id]);
 
@@ -113,8 +174,8 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
   };
 
   const messageDriver = () => {
-    const driverUserId = delivery?.driver?.user_id;
-    if (!driverUserId) {
+    const id = delivery?.driver?.user_id;
+    if (!id) {
       toast.info("Driver not assigned yet");
       return;
     }
@@ -124,7 +185,7 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
     }
     navigate({
       to: "/app/inbox/chat/$userId",
-      params: { userId: driverUserId },
+      params: { userId: id },
       search: { order: order.id, delivery: delivery.id },
     });
   };
@@ -188,12 +249,11 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
 
   const mapHeight = fullscreen ? "min-h-[55vh] h-[55vh]" : "280px";
   const driverName = delivery.driver?.profile?.display_name ?? "Driver";
-  const vehicleDesc = [
-    delivery.driver?.vehicle_color,
-    delivery.driver?.vehicle_make,
-    delivery.driver?.vehicle_model,
-  ].filter(Boolean).join(" ") || delivery.driver?.vehicle_type || "Vehicle";
-  const plate = delivery.driver?.plate_number ?? "—";
+  const phase = phaseLabel(delivery.status);
+  const driverCard = driverCardFromDeliveryDriver(delivery.driver, {
+    etaLabel: etaMin != null ? formatEtaClock(etaMin) : null,
+    phaseLabel: phase,
+  });
 
   return (
     <div className={`overflow-hidden ${fullscreen ? "bg-black" : "rounded-3xl border border-border bg-card shadow-sm"}`}>
@@ -202,13 +262,13 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
           pins={pins}
           route={routeCoords}
           routeSegments={routeSegments}
-          fitKey={delivery.id}
+          fitKey={`${delivery.id}-${delivery.status}`}
           animateDriver={!!driverPos}
           driverPosition={driverPos}
           driverLabel="Driver"
           dark={false}
           height={mapHeight}
-          etaLabel={etaMin != null ? `${etaMin} min` : undefined}
+          etaLabel={etaMin != null ? formatEtaClock(etaMin) : undefined}
           priceLabel={`GHS ${Math.round(order.total_amount)}`}
         />
       </div>
@@ -217,60 +277,33 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="flex items-center gap-1 font-sans text-lg font-bold">
-              {etaMin != null ? `Arriving in ~${etaMin} min` : delivery.status.replace(/_/g, " ")}
+              {etaMin != null ? `${phase} · ${formatEtaClock(etaMin)}` : phase}
               <ChevronRight className="h-4 w-4 opacity-60" />
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground capitalize">
-              {vehicleDesc}
-              {routeSource && (
-                <span className={`ml-2 text-[10px] uppercase font-semibold ${routeSource === "google" ? "text-blue-500" : "text-amber-600"}`}>
-                  · {routeSource} route
-                </span>
-              )}
+              {delivery.pickup_address} → {delivery.delivery_address}
             </p>
-          </div>
-          <div className={`shrink-0 rounded-xl px-3 py-2 text-center ${fullscreen ? "bg-white/10" : "bg-muted"}`}>
-            <div className="font-mono text-sm font-bold">{plate}</div>
-            <div className="text-[10px] uppercase tracking-widest opacity-60">Plate</div>
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
-          <div className="relative">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-primary/15 font-sans text-xl font-bold text-primary">
-              {driverName[0]}
-            </div>
-            {delivery.driver?.rating != null && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-background px-1.5 py-0.5 text-[10px] font-semibold shadow">
-                {Number(delivery.driver.rating).toFixed(2)}
-              </span>
-            )}
+        {driverCard && (
+          <div className="mt-4">
+            <DriverProfileCard driver={driverCard} dark={!!fullscreen} />
           </div>
-          <div className="min-w-0 flex-1">
-            {driverUserId && driverHandle ? (
-              <Link to="/app/users/$slug" params={{ slug: driverHandle }} className="truncate font-sans font-semibold block hover:underline">
-                {driverName}
-              </Link>
-            ) : (
-              <div className="truncate font-sans font-semibold">{driverName}</div>
-            )}
-            <div className={`text-xs ${fullscreen ? "text-white/70" : "text-muted-foreground"}`}>
-              {delivery.pickup_address} → {delivery.delivery_address}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {driverUserId && user?.id && user.id !== driverUserId && (
-              <button onClick={followDriver} className="grid h-11 w-11 place-items-center rounded-full border border-border" aria-label="Follow driver">
-                <UserPlus className={`h-4 w-4 ${followingDriver ? "text-primary" : ""}`} />
-              </button>
-            )}
-            <button onClick={callDriver} className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white" aria-label="Call driver">
-              <Phone className="h-4 w-4" />
+        )}
+
+        <div className="mt-3 flex justify-end gap-2">
+          {driverUserId && user?.id && user.id !== driverUserId && (
+            <button onClick={followDriver} className="grid h-11 w-11 place-items-center rounded-full border border-border" aria-label="Follow driver">
+              <UserPlus className={`h-4 w-4 ${followingDriver ? "text-primary" : ""}`} />
             </button>
-            <button onClick={messageDriver} className="grid h-11 w-11 place-items-center rounded-full border border-border" aria-label="Message driver">
-              <MessageCircle className="h-4 w-4" />
-            </button>
-          </div>
+          )}
+          <button onClick={callDriver} className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white" aria-label="Call driver">
+            <Phone className="h-4 w-4" />
+          </button>
+          <button onClick={messageDriver} className="grid h-11 w-11 place-items-center rounded-full border border-border" aria-label="Message driver">
+            <MessageCircle className="h-4 w-4" />
+          </button>
         </div>
 
         {!fullscreen && delivery.driver?.user_id && user?.id && (

@@ -53,7 +53,7 @@ export function OrderTracker({ order, sourceOrder, showPayment = true, showFullP
 
       {showFullPipeline && sourceOrder && (
         <div className="mt-5 rounded-2xl border border-border bg-background p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Full order pipeline</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Order status</p>
           <div className="mt-3">
             <LifecycleStepper
               steps={BUYER_ORDER_PIPELINE.filter((s) => !["cart", "delivery_setup", "payment_checkout"].includes(s.id))}

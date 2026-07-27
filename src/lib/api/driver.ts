@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { watchDriverPosition } from "@/lib/native-geolocation";
 import {
-  fetchDrivingRoute as fetchGoogleRoute,
+  fetchDrivingRoute as fetchMapboxRoute,
   snapGpsToRoads,
   type DrivingRoute,
   type RouteStep,
@@ -112,15 +112,15 @@ function parseOsrmSteps(steps: {
   });
 }
 
-/** Full road routing — Google Directions (step polylines) with OSRM fallback. */
+/** Full road routing — Mapbox Directions with OSRM fallback. */
 export async function fetchDrivingRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
 ): Promise<DrivingRouteResult | null> {
-  const google = await fetchGoogleRoute(from, to);
-  if (google?.coordinates?.length) {
-    console.info(`[routing] Google Directions: ${google.coordinates.length} points, ${google.steps?.length ?? 0} steps`);
-    return google;
+  const mapbox = await fetchMapboxRoute(from, to);
+  if (mapbox?.coordinates?.length) {
+    console.info(`[routing] Mapbox Directions: ${mapbox.coordinates.length} points, ${mapbox.steps?.length ?? 0} steps`);
+    return mapbox;
   }
 
   try {

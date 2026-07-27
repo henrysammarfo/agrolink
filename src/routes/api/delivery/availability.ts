@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { optionalAuth } from "@/server/api-auth";
 import { haversineKm, radiusForOfferRound, vehicleToFilterBucket } from "@/lib/vehicle-types";
 import { computeDeliveryQuote } from "@/server/delivery-quote";
-import { fetchDistanceMatrix, getGoogleMapsApiKey, type MatrixElement } from "@/server/google-maps";
-import { discreetCoverageNearPickup } from "@/lib/driver-privacy";
+import { fetchDistanceMatrix, getMapboxAccessToken, type MatrixElement } from "@/server/mapbox";
+import { discreetCoverageNearPickup, discreetDriverPinsNearPickup } from "@/lib/driver-privacy";
 
 const BUYER_OPTIONS = [
   { type: "bicycle" as const, label: "Bicycle", icon: "🚲" },
@@ -70,7 +70,7 @@ export const Route = createFileRoute("/api/delivery/availability")({
         const driverPickupEtaMin: Partial<Record<(typeof BUYER_OPTIONS)[number]["type"], number>> =
           {};
 
-        if (getGoogleMapsApiKey()) {
+        if (getMapboxAccessToken()) {
           try {
             const routeMatrix = await fetchDistanceMatrix([pickup], [delivery], "driving");
             routeEtaMin = matrixEtaMin(routeMatrix[0]?.[0]);
@@ -166,14 +166,20 @@ export const Route = createFileRoute("/api/delivery/availability")({
 
         const driversNearby = nearby.length;
         const coverageZone = discreetCoverageNearPickup(pickupLat, pickupLng, driversNearby);
+        const nearbyPins = discreetDriverPinsNearPickup(
+          pickupLat,
+          pickupLng,
+          nearby.map((d) => ({ id: d.id, vehicle_type: d.vehicle_type })),
+        );
 
         return Response.json({
           options,
           radiusKm,
           routeEtaMin: routeEtaMin != null ? Math.round(routeEtaMin) : null,
-          etaSource: routeEtaMin != null ? "google_matrix" : null,
+          etaSource: routeEtaMin != null ? "mapbox_matrix" : null,
           driversNearby,
           coverageZone,
+          nearbyPins,
         });
       },
     },

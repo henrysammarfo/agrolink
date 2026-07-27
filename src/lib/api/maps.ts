@@ -26,7 +26,7 @@ export type DrivingRoute = {
   distance_km: number;
   duration_min: number;
   duration_in_traffic_min?: number;
-  source: "google" | "osrm";
+  source: "mapbox" | "osrm" | "haversine";
   steps?: RouteStep[];
 };
 

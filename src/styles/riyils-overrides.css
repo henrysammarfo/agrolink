@@ -24,13 +24,12 @@
 /* TikTok-style feed — override react-vertical-feed hardcoded 100vh */
 .agrolink-tiktok-feed [role="feed"] {
   height: 100% !important;
-  max-height: 100dvh;
+  max-height: 100%;
 }
 
-.agrolink-tiktok-feed [role="feed"] [data-index] {
-  height: 100dvh !important;
-  min-height: 100dvh !important;
-  scroll-snap-align: start;
+.agrolink-tiktok-feed [role="feed"] [data-feed-index] {
+  height: 100% !important;
+  min-height: 100% !important;
 }
 
 .agrolink-tiktok-feed [role="feed"] video {
@@ -49,7 +48,7 @@
 
 .agrolink-feed-overlay .feed-touch-target {
   pointer-events: auto;
-  touch-action: manipulation;
+  touch-action: pan-y;
 }
 
 .agrolink-feed-overlay .feed-pass-through {

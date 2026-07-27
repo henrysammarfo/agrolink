@@ -45,7 +45,7 @@ const ROLES = [
 ];
 
 const PILLARS = [
-  { icon: BadgePercent, t: "Transparent fee", d: "A 6% platform fee on each completed order. No subscriptions, no listing fee. Ever." },
+  { icon: BadgePercent, t: "Transparent fee", d: "A thin service fee (about 6%) on each completed order. No subscriptions, no listing fee. Ever." },
   { icon: Bell, t: "Real-time alerts", d: "WhatsApp + push for every order, payment and dispatch event. Nobody misses a thing." },
   { icon: ShieldCheck, t: "Verified network", d: "Farmers, buyers and drivers are phone- and ID-verified before they can transact." },
   { icon: Smartphone, t: "Built for the market", d: "Designed for low-bandwidth phones. Big buttons, English + visual cues for market women." },

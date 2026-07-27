@@ -36,6 +36,11 @@ import {
 } from "@/lib/order-lifecycle";
 import type { VehicleOption } from "@/components/checkout/DeliveryVehiclePicker";
 import type { OrderRow } from "@/lib/types/marketplace";
+import {
+  DriverProfileCard,
+  driverCardFromDeliveryDriver,
+  type DriverCardInfo,
+} from "@/components/transport/DriverProfileCard";
 
 const DEFAULT_DELIVERY: MapLocation = GHANA_LOCATIONS[0];
 
@@ -82,12 +87,13 @@ function Cart() {
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [driverMatched, setDriverMatched] = useState(false);
   const [matchedDriverName, setMatchedDriverName] = useState<string | null>(null);
+  const [matchedDriver, setMatchedDriver] = useState<DriverCardInfo | null>(null);
   const [requestingDriver, setRequestingDriver] = useState(false);
   const [deliveryQuote, setDeliveryQuote] = useState<{
     total: number;
     breakdown: string[];
     distanceKm: number;
-    routingSource?: "google" | "osrm" | "haversine";
+    routingSource?: "mapbox" | "osrm" | "haversine";
     orderedStops?: { lat: number; lng: number; label?: string }[];
   } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -95,6 +101,9 @@ function Cart() {
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
   const [routeEtaMin, setRouteEtaMin] = useState<number | null>(null);
   const [driversNearby, setDriversNearby] = useState(0);
+  const [nearbyDriverPins, setNearbyDriverPins] = useState<
+    { lat: number; lng: number; label: string; kind: "driver" }[]
+  >([]);
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
   const [orderSnapshot, setOrderSnapshot] = useState<OrderSnapshot | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -174,8 +183,11 @@ function Cart() {
     if (isValidMapCoord(activeDeliveryLocation.lat, activeDeliveryLocation.lng)) {
       pins.push({ lat: activeDeliveryLocation.lat, lng: activeDeliveryLocation.lng, label: "You", kind: "buyer" });
     }
+    for (const p of nearbyDriverPins) {
+      if (isValidMapCoord(p.lat, p.lng)) pins.push(p);
+    }
     return pins;
-  }, [pickupStops, activeDeliveryLocation]);
+  }, [pickupStops, activeDeliveryLocation, nearbyDriverPins]);
 
   const routeSegments = useMemo(() => buildTrafficSegments(routeCoords), [routeCoords]);
 
@@ -192,6 +204,7 @@ function Cart() {
     setPendingOrderId(session.pendingOrderId);
     setDriverMatched(session.driverMatched);
     setMatchedDriverName(session.matchedDriverName);
+    setMatchedDriver(session.matchedDriver ?? null);
     setDeliveryLocation(session.deliveryLocation);
     setFulfillmentMode(session.fulfillmentMode);
     setSelectedVehicle(session.selectedVehicle);
@@ -208,11 +221,12 @@ function Cart() {
       pendingOrderId,
       driverMatched,
       matchedDriverName,
+      matchedDriver,
       deliveryLocation,
       fulfillmentMode,
       selectedVehicle,
     });
-  }, [user?.id, step, pendingOrderId, driverMatched, matchedDriverName, deliveryLocation, fulfillmentMode, selectedVehicle]);
+  }, [user?.id, step, pendingOrderId, driverMatched, matchedDriverName, matchedDriver, deliveryLocation, fulfillmentMode, selectedVehicle]);
 
   function applyPendingOrder(raw: OrderRow | null) {
     if (!raw) return;
@@ -222,6 +236,7 @@ function Cart() {
       setOrderSnapshot(null);
       setDriverMatched(false);
       setMatchedDriverName(null);
+      setMatchedDriver(null);
       setStep(1);
       if (user?.id) clearCheckoutSession(user.id);
       return;
@@ -246,7 +261,11 @@ function Cart() {
     });
     if (orderHasDriver(order)) {
       setDriverMatched(true);
-      setMatchedDriverName(d?.driver?.profile?.display_name ?? "Driver");
+      const card = driverCardFromDeliveryDriver(d?.driver, {
+        phaseLabel: "Ready — continue to payment",
+      });
+      setMatchedDriverName(card?.displayName ?? "Driver");
+      setMatchedDriver(card);
     }
     if (order.delivery_lat != null && order.delivery_lng != null) {
       setDeliveryLocation({
@@ -290,14 +309,19 @@ function Cart() {
         void fetchOrderById(pendingOrderId!).then((o) => {
           if (!o) return;
           const order = normalizeOrderRow(o);
-          setMatchedDriverName(order.delivery?.driver?.profile?.display_name ?? "Driver");
+          const card = driverCardFromDeliveryDriver(order.delivery?.driver, {
+            etaLabel: routeEtaMin != null ? `~${routeEtaMin} min` : null,
+            phaseLabel: "Ready — continue to payment",
+          });
+          setMatchedDriverName(card?.displayName ?? "Driver");
+          setMatchedDriver(card);
         });
       }
     }).then((fn) => {
       unsub = fn;
     });
     return () => unsub?.();
-  }, [orderSnapshot?.deliveryId, driverMatched, pendingOrderId]);
+  }, [orderSnapshot?.deliveryId, driverMatched, pendingOrderId, routeEtaMin]);
 
   useEffect(() => {
     if (!mapCheckoutStep || !needsDelivery || !pickupStops[0]) {
@@ -369,8 +393,16 @@ function Cart() {
   }, [items, pickupStops, deliveryLocation, needsDelivery, selectedVehicle, step]);
 
   useEffect(() => {
-    if (step !== 2 || !needsDelivery || !pickupStops[0]) {
+    if (step !== 2 && !(step === 3 && needsDelivery && !driverMatched)) {
+      if (step === 1) {
+        setDriversNearby(0);
+        setNearbyDriverPins([]);
+      }
+      return;
+    }
+    if (!needsDelivery || !pickupStops[0]) {
       setDriversNearby(0);
+      setNearbyDriverPins([]);
       return;
     }
     const load = () => {
@@ -383,17 +415,32 @@ function Cart() {
       });
       apiFetch(`/api/delivery/availability?${params}`)
         .then((r) => r.json())
-        .then((j: { driversNearby?: number }) => {
-          setDriversNearby(j.driversNearby ?? 0);
-        })
+        .then(
+          (j: {
+            driversNearby?: number;
+            nearbyPins?: { lat: number; lng: number; label: string; kind: "driver" }[];
+          }) => {
+            setDriversNearby(j.driversNearby ?? 0);
+            setNearbyDriverPins(j.nearbyPins ?? []);
+          },
+        )
         .catch(() => {
           setDriversNearby(0);
+          setNearbyDriverPins([]);
         });
     };
     load();
     const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);
-  }, [step, needsDelivery, pickupStops, deliveryLocation.lat, deliveryLocation.lng, items]);
+  }, [
+    step,
+    needsDelivery,
+    driverMatched,
+    pickupStops,
+    deliveryLocation.lat,
+    deliveryLocation.lng,
+    items,
+  ]);
 
   async function cancelRide() {
     if (!user?.id || !pendingOrderId) return;
@@ -410,6 +457,7 @@ function Cart() {
       setOrderSnapshot(null);
       setDriverMatched(false);
       setMatchedDriverName(null);
+      setMatchedDriver(null);
       setStep(1);
       void queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
       toast.success("Trip cancelled — items returned to your cart");
@@ -451,6 +499,7 @@ function Cart() {
       setPendingOrderId(data.orderId);
       setDriverMatched(false);
       setMatchedDriverName(null);
+      setMatchedDriver(null);
       void queryClient.invalidateQueries({ queryKey: ["cart", user.id] });
       void fetchOrderById(data.orderId).then((o) => applyPendingOrder(o));
       setStep(3);
@@ -875,11 +924,14 @@ function Cart() {
             <LifecycleStepper steps={CHECKOUT_MAIN_STEPS} currentStepId="driver" compact className="mb-3" />
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Driver matching</p>
             {driverMatched ? (
-              <div className="mt-4">
+              <div className="mt-4 space-y-3">
                 <p className="font-serif text-xl text-emerald-700 dark:text-emerald-300">Driver accepted!</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {matchedDriverName ?? "Your driver"} is ready — continue to payment to confirm your order.
-                </p>
+                <p className="text-sm text-muted-foreground">Continue to payment to confirm your order.</p>
+                {matchedDriver ? (
+                  <DriverProfileCard driver={matchedDriver} />
+                ) : (
+                  <p className="text-sm font-medium">{matchedDriverName ?? "Your driver"}</p>
+                )}
               </div>
             ) : (
               <div className="mt-4 flex items-center gap-3">
@@ -930,7 +982,12 @@ function Cart() {
           <button type="button" onClick={() => setStep(needsDelivery ? 3 : 2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-4 w-4" /> {needsDelivery ? "Back to driver" : "Back to delivery"}
           </button>
-          {needsDelivery && matchedDriverName && (
+          {needsDelivery && matchedDriver && (
+            <DriverProfileCard
+              driver={{ ...matchedDriver, phaseLabel: "Accepted — complete payment" }}
+            />
+          )}
+          {needsDelivery && !matchedDriver && matchedDriverName && (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-800 dark:text-emerald-200">
               Driver {matchedDriverName} accepted — complete payment to confirm.
             </div>
@@ -995,7 +1052,7 @@ function OrderTotals({
         </dt>
         <dd>{needsDelivery ? `GHS ${delivery.toFixed(2)}` : "GHS 0.00"}</dd>
       </div>
-      <div className="flex justify-between"><dt className="text-muted-foreground">Platform fee</dt><dd>GHS {platformFee.toFixed(2)}</dd></div>
+      <div className="flex justify-between"><dt className="text-muted-foreground">Service fee</dt><dd>GHS {platformFee.toFixed(2)}</dd></div>
       <div className="flex justify-between border-t border-border pt-2 font-medium">
         <dt>Total</dt><dd className="font-serif text-lg">GHS {total.toFixed(2)}</dd>
       </div>
@@ -1013,7 +1070,7 @@ function OtpBlock({
     <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
         <Smartphone className="h-4 w-4 text-primary" />
-        B2B verification (GHS {HIGH_VALUE_OTP_THRESHOLD_GHS}+)
+        Confirm your number (orders over GHS {HIGH_VALUE_OTP_THRESHOLD_GHS})
       </div>
       {!verified ? (
         <div className="mt-4 space-y-3">

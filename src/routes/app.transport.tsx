@@ -48,7 +48,7 @@ function TransportOverview() {
     distance_km: number;
     duration_min: number;
     duration_in_traffic_min?: number;
-    source: "google" | "osrm";
+    source: "mapbox" | "osrm" | "haversine";
     steps: RouteStep[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,10 +132,13 @@ function TransportOverview() {
     ? `${featured.id}-${featured.status}-${routeCoords.length}`
     : "idle";
 
+  const lastRouteOriginRef = useRef<{ lat: number; lng: number; status: string } | null>(null);
+
   useEffect(() => {
     if (!featured || !isIndex) {
       setRouteCoords([]);
       setRouteMeta(null);
+      lastRouteOriginRef.current = null;
       return;
     }
 
@@ -169,6 +172,16 @@ function TransportOverview() {
 
     if (!isValidMapCoord(origin.lat, origin.lng) || !isValidMapCoord(to.lat, to.lng)) return;
 
+    const prev = lastRouteOriginRef.current;
+    const statusChanged = !prev || prev.status !== featured.status;
+    const driftM = prev
+      ? Math.hypot((origin.lat - prev.lat) * 111_000, (origin.lng - prev.lng) * 111_000 * Math.cos((origin.lat * Math.PI) / 180))
+      : Infinity;
+    // Re-route on status change or >150m drift — not every GPS tick
+    if (!statusChanged && driftM < 150 && routeCoords.length > 1) return;
+
+    lastRouteOriginRef.current = { lat: origin.lat, lng: origin.lng, status: featured.status };
+
     let cancelled = false;
     fetchDrivingRoute(origin, to).then((r) => {
       if (cancelled || !r) return;
@@ -196,6 +209,7 @@ function TransportOverview() {
     livePos?.lat,
     livePos?.lng,
     driverCenter,
+    routeCoords.length,
   ]);
 
   if (!isIndex) return <Outlet />;
@@ -302,15 +316,37 @@ function TransportOverview() {
   };
 
   const mapPins = useMemo(() => {
-    const pins: { lat: number; lng: number; label: string; kind: "farm" | "buyer" | "driver" }[] = [];
-    if (featured && isValidMapCoord(featured.pickup_lat, featured.pickup_lng)) {
-      pins.push({ lat: featured.pickup_lat, lng: featured.pickup_lng, label: "Pickup", kind: "farm" });
-    }
-    if (featured && isValidMapCoord(featured.delivery_lat, featured.delivery_lng)) {
-      pins.push({ lat: featured.delivery_lat, lng: featured.delivery_lng, label: "Dropoff", kind: "buyer" });
+    const pins: { lat: number; lng: number; label: string; kind: "farm" | "buyer" | "driver" | "hub" }[] = [];
+    // When online with no active trip: show all available job pickups on the map
+    if (online && !active) {
+      for (const j of availableJobs.slice(0, 12)) {
+        if (isValidMapCoord(j.pickup_lat, j.pickup_lng)) {
+          pins.push({
+            lat: j.pickup_lat,
+            lng: j.pickup_lng,
+            label: j.pickup_address ?? "Job",
+            kind: "farm",
+          });
+        }
+        if (isValidMapCoord(j.delivery_lat, j.delivery_lng)) {
+          pins.push({
+            lat: j.delivery_lat,
+            lng: j.delivery_lng,
+            label: j.delivery_address ?? "Dropoff",
+            kind: "buyer",
+          });
+        }
+      }
+    } else {
+      if (featured && isValidMapCoord(featured.pickup_lat, featured.pickup_lng)) {
+        pins.push({ lat: featured.pickup_lat, lng: featured.pickup_lng, label: "Pickup", kind: "farm" });
+      }
+      if (featured && isValidMapCoord(featured.delivery_lat, featured.delivery_lng)) {
+        pins.push({ lat: featured.delivery_lat, lng: featured.delivery_lng, label: "Dropoff", kind: "buyer" });
+      }
     }
     return pins;
-  }, [featured]);
+  }, [featured, online, active, availableJobs]);
 
   const navDestination = active
     ? ["picked_up", "enroute_delivery"].includes(active.status)

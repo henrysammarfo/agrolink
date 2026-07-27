@@ -5,7 +5,7 @@ import {
   type PricingConfig,
   type VehicleType,
 } from "@/lib/delivery-pricing";
-import { fetchDrivingDistanceKm } from "@/server/google-maps";
+import { fetchDrivingDistanceKm } from "@/server/mapbox";
 
 export async function getActivePricingConfig(): Promise<PricingConfig> {
   try {
@@ -46,7 +46,7 @@ export async function computeDeliveryQuote(params: {
 }) {
   const to = { lat: params.deliveryLat, lng: params.deliveryLng };
   let distanceKm: number;
-  let routingSource: "google" | "osrm" | "haversine" = "haversine";
+  let routingSource: "mapbox" | "osrm" | "haversine" = "haversine";
   let orderedStops: { lat: number; lng: number; label?: string }[] | undefined;
 
   if (params.pickupStops && params.pickupStops.length > 1) {

@@ -44,8 +44,8 @@ In **Vercel → Project → Settings → Environment Variables**, add everything
 | `VAPID_PRIVATE_KEY` | Web push |
 | `VITE_SENTRY_DSN` | Error tracking |
 | `TINYFISH_API_KEY` | Market prices |
-| `GOOGLE_MAPS_API_KEY` | Optional maps |
-| `VITE_GOOGLE_MAPS_API_KEY` | Same key for client if used |
+| `MAPBOX_ACCESS_TOKEN` | Directions / Geocoding / Matching (server) |
+| `VITE_MAPBOX_ACCESS_TOKEN` | Mapbox GL JS (public token, URL-restrict) |
 | `CRON_SECRET` | Random secret for `/api/deliveries/reassign-expired` cron (Bearer token) |
 
 ### Deploy-specific
