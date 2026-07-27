@@ -1,0 +1,47 @@
+﻿{
+    "query":  "Mapbox GL JS custom Marker HTML vehicle pin best practices delivery driver map 2025",
+    "follow_up_questions":  null,
+    "answer":  null,
+    "images":  [
+
+               ],
+    "results":  [
+                    {
+                        "url":  "https://docs.mapbox.com/mapbox-gl-js/example/custom-marker-icons",
+                        "title":  "Custom Markers with images | Mapbox GL JS | Mapbox",
+                        "content":  "const width = marker.properties.iconSize;  \n const height = marker.properties.iconSize;  \n el.className = \u0027marker\u0027;  \n el.style.backgroundImage = `url(  \n el.style.width = `${width}px`;  \n el.style.height = `${height}px`;  \n el.style.backgroundSize = \u0027100%\u0027;  \n el.style.display = \u0027block\u0027;  \n el.style.border = \u0027none\u0027;  \n el.style.borderRadius = \u002750%\u0027;  \n el.style.cursor = \u0027pointer\u0027;  \n el.style.padding = 0;  \n el.tabIndex = 0; [...] `\u003c!DOCTYPE html\u003e  \n\u003chtml\u003e  \n\u003chead\u003e  \n\u003cmeta charset=\"utf-8\"\u003e  \n\u003ctitle\u003eCustom Markers with images\u003c/title\u003e  \n\u003cmeta name=\"viewport\" content=\"initial-scale=1,maximum-scale=1,user-scalable=no\"\u003e  \n\u003clink href=\" rel=\"stylesheet\"\u003e  \n\u003cscript src=\"  \n\u003cstyle\u003e  \nbody { margin: 0; padding: 0; }  \n#map { position: absolute; top: 0; bottom: 0; width: 100%; }  \n\u003c/style\u003e  \n\u003c/head\u003e  \n\u003cbody\u003e  \n\u003cstyle\u003e  \n .marker {  \n display: block;  \n border: none;  \n border-radius: 50%;  \n cursor: pointer;  \n padding: 0;  \n } [...] # Custom Markers with images\n\nUse `Marker` to add custom icons to your map.\n\n`Marker`\n\nIf you would like to customize your markers with other HTML functionality, see our Custom Markers video tutorial.",
+                        "score":  0.4896749,
+                        "raw_content":  null
+                    },
+                    {
+                        "url":  "https://www.youtube.com/watch?v=T7R-JL5J-QU",
+                        "title":  "How to Add Custom Markers to Your Map Using Mapbox GL JS: A Step-by-Step Tutorial",
+                        "content":  "code from 5-3 of the written tutorial and paste it in the header of your HTML file at line 29 where it says code from Step 5-3 will go here this CSS adds an image to the markers and a adjusts them to a uniform size of 50x 50 pixels it also changes the image of your cursor when the user hovers over the elements so they know that they can interact with that element so now when you refresh your browser you should see the two markers appear again on the coasts with the new image and now with this [...] of Interest let\u0027s start by adding a default marker first and then we\u0027ll customize it in step five to do so we\u0027ll need to include the JavaScript that will create the markers and attach them to the map first copy the code from step four the written guide and replace the comment that says code from step four will go here this is located in the script in the body of HTML file after the end of your map object declaration but before the closing script tag this code will Loop through each feature in [...] 5-1 will go here next let\u0027s pass the empty divs into the markers Constructor to do so replace the code on the line that ends with replace this line with code from step 5-2 with the code from that step this will replace the code that created the default markers and create the reference to our new custom marker instead now that we passed the HTML element let\u0027s style our markers by specifying the style of the marker so the div renders something at each point to do so copy the CSS code from 5-3 of",
+                        "score":  0.477238,
+                        "raw_content":  null
+                    },
+                    {
+                        "url":  "https://docs.mapbox.com/mapbox-gl-js/guides/add-your-data/markers",
+                        "title":  "Markers | Mapbox GL JS",
+                        "content":  "See an interactive example showing how to create a custom marker. Add a custom marker using HTMLâ ... custom marker with CSS when it is added to the map.",
+                        "score":  0.45769477,
+                        "raw_content":  null
+                    },
+                    {
+                        "url":  "https://docs.mapbox.com/help/tutorials/custom-markers-gl-js",
+                        "title":  "Add custom markers in Mapbox GL JS | Help",
+                        "content":  "In this tutorial, you will learn how to build an interactive web map that adds custom markers at specified locations using Mapbox GL JS.",
+                        "score":  0.42005292,
+                        "raw_content":  null
+                    },
+                    {
+                        "url":  "https://docs.mapbox.com/mapbox-gl-js/example/add-a-marker",
+                        "title":  "Add a default marker to a web map | Mapbox GL JS | Mapbox",
+                        "content":  ".addTo(map);  \n  \n // Create a default Marker, colored black, rotated 45 degrees.  \n const marker2 = new mapboxgl.Marker({ color: \u0027black\u0027, rotation: 45 })  \n .setLngLat([12.65147, 55.608166])  \n .addTo(map);  \n\u003c/script\u003e  \n  \n\u003c/body\u003e  \n\u003c/html\u003e`\n`YOUR_MAPBOX_ACCESS_TOKEN`\n`import React, { useEffect, useRef } from \u0027react\u0027;  \nimport  as mapboxgl from \u0027mapbox-gl/esm\u0027;  \n  \nimport \u0027mapbox-gl/dist/mapbox-gl.css\u0027;  \n  \nconst MapboxExample = () =\u003e {  \n const mapContainerRef = useRef(); [...] const mapRef = useRef();  \n  \n useEffect(() =\u003e {  \n mapRef.current = new mapboxgl.Map({  \n // TO MAKE THE MAP APPEAR YOU MUST  \n // ADD YOUR ACCESS TOKEN FROM  \n //   \n accessToken: \u0027YOUR_MAPBOX_ACCESS_TOKEN\u0027,  \n container: \u0027map\u0027,  \n style: \u0027mapbox://styles/mapbox/standard\u0027,  \n center: [12.550343, 55.665957],  \n zoom: 8  \n });  \n  \n new mapboxgl.Marker()  \n .setLngLat([12.554729, 55.70651])  \n .addTo(mapRef.current);  \n  \n new mapboxgl.Marker({ color: \u0027black\u0027, rotation: 45 }) [...] ## Related Linksâ\n\nIf you would like to customize your markers with images or other HTML functionality, see our Custom Markers video tutorial.\n\nSee Add markers to a web map with a symbol layer for a more complex but more flexible approach to visualizing point features using GeoJSON data and a `symbol` layer.\n\n`symbol`",
+                        "score":  0.4011956,
+                        "raw_content":  null
+                    }
+                ],
+    "response_time":  0.91,
+    "request_id":  "ba1c89cd-80d2-4cf3-befd-46baf63ca65d"
+}

@@ -28,11 +28,9 @@ import { normalizeOrderRow, orderHasDriver } from "@/lib/order-normalize";
 import { clearCheckoutSession, loadCheckoutSession, saveCheckoutSession } from "@/lib/checkout-session";
 import {
   CHECKOUT_MAIN_STEPS,
-  CHECKOUT_STEPS_PICKUP,
   DELIVERY_SETUP_SUBSTEPS,
   canRequestDriver,
   getDeliverySetupSubstep,
-  isDriverMatchedForPayment,
 } from "@/lib/order-lifecycle";
 import type { VehicleOption } from "@/components/checkout/DeliveryVehiclePicker";
 import type { OrderRow } from "@/lib/types/marketplace";
@@ -127,18 +125,18 @@ function Cart() {
   const platformFee = orderSnapshot?.platformFee ?? (Math.round(subtotal * 0.06 * 100) / 100);
   const total = orderSnapshot?.total ?? (subtotal + delivery + platformFee);
   const needsOtp = total >= HIGH_VALUE_OTP_THRESHOLD_GHS;
-  const paymentStep = needsDelivery ? 4 : 3;
+  const paymentStep = 3;
   const canPay =
     (items.length > 0 || !!pendingOrderId) &&
     !quoteLoading &&
-    isDriverMatchedForPayment({ fulfillmentMode, driverMatched: driverAccepted }) &&
+    (!needsDelivery || (!!deliveryQuote && hasDriverForVehicle)) &&
     (!needsOtp || otpVerified);
   const canContinueStep2 =
     items.length > 0 && (needsDelivery ? canRequestDriverNow && !quoteLoading : true);
 
-  const checkoutSteps = needsDelivery ? CHECKOUT_MAIN_STEPS : CHECKOUT_STEPS_PICKUP;
+  const checkoutSteps = CHECKOUT_MAIN_STEPS;
   const checkoutStepId =
-    step === 1 ? "cart" : step === 2 ? "delivery" : needsDelivery && step === 3 ? "driver" : "payment";
+    step === 1 ? "cart" : step === 2 ? "delivery" : "payment";
 
   const pickupStops = useMemo(() => {
     if (orderSnapshot) {
@@ -193,7 +191,7 @@ function Cart() {
 
   const pickupLabel = pickupStops[0]?.label ?? items[0]?.listing?.location_name ?? orderSnapshot?.pickupLabel ?? "Farm pickup";
 
-  const mapCheckoutStep = step === 2 || (step === 3 && needsDelivery);
+  const mapCheckoutStep = step === 2 && needsDelivery;
 
   useEffect(() => {
     if (!user?.id || sessionRestored.current) return;
@@ -302,8 +300,7 @@ function Cart() {
   useEffect(() => {
     const deliveryId = orderSnapshot?.deliveryId;
     if (!deliveryId || driverMatched) return;
-    let unsub: (() => void) | undefined;
-    void subscribeToDelivery(deliveryId, (row) => {
+    const unsub = subscribeToDelivery(deliveryId, (row) => {
       if (row.driver_id) {
         setDriverMatched(true);
         void fetchOrderById(pendingOrderId!).then((o) => {
@@ -317,10 +314,8 @@ function Cart() {
           setMatchedDriver(card);
         });
       }
-    }).then((fn) => {
-      unsub = fn;
     });
-    return () => unsub?.();
+    return () => unsub();
   }, [orderSnapshot?.deliveryId, driverMatched, pendingOrderId, routeEtaMin]);
 
   useEffect(() => {
@@ -393,7 +388,7 @@ function Cart() {
   }, [items, pickupStops, deliveryLocation, needsDelivery, selectedVehicle, step]);
 
   useEffect(() => {
-    if (step !== 2 && !(step === 3 && needsDelivery && !driverMatched)) {
+    if (step !== 2) {
       if (step === 1) {
         setDriversNearby(0);
         setNearbyDriverPins([]);
@@ -560,8 +555,10 @@ function Cart() {
       return;
     }
     if (!canPay) {
-      if (needsDelivery && !driverMatched) {
-        toast.error("Wait for a driver to accept your trip before paying.");
+      if (needsDelivery && !deliveryQuote) {
+        toast.error("Wait for the delivery quote before paying.");
+      } else if (needsDelivery && !hasDriverForVehicle) {
+        toast.error("No couriers online for this vehicle — try another type.");
       } else {
         toast.error("Complete verification first");
       }
@@ -574,7 +571,8 @@ function Cart() {
         phone: profile?.phone ?? "+233551234987",
         momoProvider: channel,
       };
-      const res = needsDelivery && pendingOrderId
+      // Pay-then-match: always create+charge via checkout (drivers notified after MoMo)
+      const res = pendingOrderId
         ? await apiFetch("/api/checkout/pay", {
             method: "POST",
             body: JSON.stringify({ ...payBody, orderId: pendingOrderId }),
@@ -616,11 +614,9 @@ function Cart() {
         description: data.displayText ?? "Your order is being processed.",
       });
       if (data.orderId) {
-        const dest = needsDelivery && driverMatched
-          ? "/app/buyer/orders/$orderId/track"
-          : needsDelivery
-            ? "/app/buyer/orders/$orderId/match"
-            : "/app/buyer/orders/$orderId/success";
+        const dest = needsDelivery
+          ? "/app/buyer/orders/$orderId/match"
+          : "/app/buyer/orders/$orderId/success";
         if (user.id) {
           void queryClient.refetchQueries({ queryKey: ["buyer-orders", user.id] });
         }
@@ -799,11 +795,11 @@ function Cart() {
                     />
                     {hasDriverForVehicle ? (
                       <p className="mt-2 text-xs text-emerald-600">
-                        {driversForVehicle} {selectedVehicle} courier{driversForVehicle === 1 ? "" : "s"} nearby — request one to accept before payment.
+                        {driversForVehicle} {selectedVehicle} courier{driversForVehicle === 1 ? "" : "s"} nearby — pay first, then we match a driver.
                       </p>
                     ) : (
                       <p className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
-                        No {selectedVehicle} couriers online nearby right now. Change vehicle or wait — payment unlocks once a driver is available.
+                        No {selectedVehicle} couriers online nearby right now. Change vehicle or wait before paying.
                       </p>
                     )}
                   </div>
@@ -835,22 +831,16 @@ function Cart() {
                 <div className="mx-auto flex max-w-lg items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">Total</p>
-                    <p className="font-sans text-lg font-bold">GHS {total.toFixed(0)}</p>
+                    <p className="font-sans text-lg font-bold tabular-nums">GHS {total.toFixed(2)}</p>
                   </div>
                   <button
                     type="button"
-                    disabled={!canContinueStep2 || requestingDriver}
-                    onClick={() => void requestDriver()}
+                    disabled={!canContinueStep2}
+                    onClick={() => setStep(3)}
                     className="inline-flex flex-[1.4] items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                   >
-                    {requestingDriver || quoteLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : null}
-                    {requestingDriver
-                      ? "Requesting…"
-                      : hasDriverForVehicle
-                        ? "Request driver"
-                        : "Waiting for courier…"}
+                    {quoteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Continue to payment <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -895,110 +885,23 @@ function Cart() {
         </div>
       )}
 
-      {step === 3 && needsDelivery && (
-        <div className="relative -mx-4 sm:-mx-6 md:-mx-10">
-          <div className="relative h-[42vh] min-h-[280px] max-h-[420px]">
-            <CorridorMap
-              pins={mapPins}
-              route={routeCoords}
-              routeSegments={routeSegments}
-              fitKey={mapFitKey}
-              center={mapCenter}
-              zoom={STREET_ZOOM}
-              corridorOnly
-              dark={false}
-              height="100%"
-              etaLabel={routeEtaMin != null ? `${routeEtaMin} min` : undefined}
-            />
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className="absolute left-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-background/95 shadow-md"
-              aria-label="Back"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="relative z-10 -mt-6 rounded-t-3xl border border-border bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-4 shadow-[0_-8px_30px_rgba(0,0,0,.08)]">
-            <LifecycleStepper steps={CHECKOUT_MAIN_STEPS} currentStepId="driver" compact className="mb-3" />
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Driver matching</p>
-            {driverMatched ? (
-              <div className="mt-4 space-y-3">
-                <p className="font-serif text-xl text-emerald-700 dark:text-emerald-300">Driver accepted!</p>
-                <p className="text-sm text-muted-foreground">Continue to payment to confirm your order.</p>
-                {matchedDriver ? (
-                  <DriverProfileCard driver={matchedDriver} />
-                ) : (
-                  <p className="text-sm font-medium">{matchedDriverName ?? "Your driver"}</p>
-                )}
-              </div>
-            ) : (
-              <div className="mt-4 flex items-center gap-3">
-                <Loader2 className="h-8 w-8 shrink-0 animate-spin text-primary" />
-                <div>
-                  <p className="font-medium">Waiting for a driver to accept</p>
-                  <p className="text-xs text-muted-foreground">Nearby couriers were notified. Payment unlocks after accept.</p>
-                </div>
-              </div>
-            )}
-            <div className="mt-4">
-              <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
-            </div>
-          </div>
-
-          <div className="fixed inset-x-0 bottom-[max(env(safe-area-inset-bottom),0.5rem)] z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
-            <div className="mx-auto flex max-w-lg items-center gap-2">
-              <button
-                type="button"
-                disabled={cancelling}
-                onClick={() => void cancelRide()}
-                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-border px-4 py-3 text-sm font-medium text-muted-foreground hover:text-destructive disabled:opacity-50"
-              >
-                {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!driverMatched}
-                onClick={() => setStep(4)}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-              >
-                {driverMatched ? (
-                  <>
-                    Continue to payment <ArrowRight className="h-4 w-4" />
-                  </>
-                ) : (
-                  "Waiting for driver…"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {step === paymentStep && (
         <div className="mx-auto max-w-md space-y-5">
-          <button type="button" onClick={() => setStep(needsDelivery ? 3 : 2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="h-4 w-4" /> {needsDelivery ? "Back to driver" : "Back to delivery"}
+          <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="h-4 w-4" /> Back to delivery
           </button>
-          {needsDelivery && matchedDriver && (
-            <DriverProfileCard
-              driver={{ ...matchedDriver, phaseLabel: "Accepted — complete payment" }}
-            />
-          )}
-          {needsDelivery && !matchedDriver && matchedDriverName && (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-800 dark:text-emerald-200">
-              Driver {matchedDriverName} accepted — complete payment to confirm.
-            </div>
-          )}
           {DEMO_MODE && (
             <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs">
               <Wallet className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
               <p>Test mode — use 0551234987 on MTN.</p>
             </div>
           )}
-          <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
+          <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} quoteLoading={quoteLoading} />
+          {needsDelivery && (
+            <p className="text-xs text-muted-foreground">
+              After MoMo confirms, we match a nearby driver. Track from Orders.
+            </p>
+          )}
           {needsOtp && (
             <OtpBlock
               verified={otpVerified}
@@ -1044,17 +947,17 @@ function OrderTotals({
   subtotal: number; delivery: number; platformFee: number; total: number; needsDelivery: boolean; quoteLoading?: boolean;
 }) {
   return (
-    <dl className="rounded-2xl border border-border bg-card p-4 space-y-2 text-sm">
-      <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd>GHS {subtotal.toFixed(2)}</dd></div>
+    <dl className="rounded-2xl border border-border bg-card p-4 space-y-2.5 text-sm">
+      <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Subtotal</dt><dd className="tabular-nums font-medium">GHS {subtotal.toFixed(2)}</dd></div>
       <div className="flex justify-between">
         <dt className="text-muted-foreground inline-flex items-center gap-1">
           Delivery {quoteLoading && <Loader2 className="h-3 w-3 animate-spin" />}
         </dt>
         <dd>{needsDelivery ? `GHS ${delivery.toFixed(2)}` : "GHS 0.00"}</dd>
       </div>
-      <div className="flex justify-between"><dt className="text-muted-foreground">Service fee</dt><dd>GHS {platformFee.toFixed(2)}</dd></div>
+      <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Service fee</dt><dd className="tabular-nums font-medium">GHS {platformFee.toFixed(2)}</dd></div>
       <div className="flex justify-between border-t border-border pt-2 font-medium">
-        <dt>Total</dt><dd className="font-serif text-lg">GHS {total.toFixed(2)}</dd>
+        <dt>Total</dt><dd className="tabular-nums font-sans text-lg font-semibold">GHS {total.toFixed(2)}</dd>
       </div>
     </dl>
   );

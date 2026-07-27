@@ -32,3 +32,17 @@ export function profileHandle(profile: {
   if (!profile) return null;
   return profile.username ?? profile.slug ?? profile.id ?? null;
 }
+
+/** True when a public `/app/users/$slug` handle is the signed-in user (edit home = `/app/profile`). */
+export function isOwnProfileHandle(
+  handle: string | null | undefined,
+  profile: { username?: string | null; slug?: string | null; id?: string } | null | undefined,
+  userId?: string | null,
+): boolean {
+  const h = handle?.trim().toLowerCase();
+  if (!h || !profile) return false;
+  const candidates = [profile.username, profile.slug, profile.id, userId]
+    .filter(Boolean)
+    .map((v) => String(v).trim().toLowerCase());
+  return candidates.includes(h);
+}

@@ -13,8 +13,6 @@ import {
 import { PageHeader, StatCard } from "@/components/app/AppShell";
 import { AdminPageLayout } from "@/components/admin/AdminPageLayout";
 import { fetchAdminStats } from "@/lib/api/notifications";
-import { supabase } from "@/integrations/supabase/client";
-import { apiFetch } from "@/lib/api/fetch-auth";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin · AgroLink" }] }),
@@ -90,14 +88,22 @@ function AdminOverview() {
                 tone="rose"
               />
             </div>
-            <section className="mt-12 grid gap-6 lg:grid-cols-3">
+            <section className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <AdminCard
+                to="/app/admin/drivers"
+                icon={Truck}
+                tone="emerald"
+                title="Drivers"
+                count={stats.pendingDrivers}
+                sub="KYC approve — human gate"
+              />
               <AdminCard
                 to="/app/admin/listings"
                 icon={ListChecks}
                 tone="accent"
                 title="Listings"
                 count={stats.pendingReview}
-                sub="Pending moderation"
+                sub="Reports & pending review"
               />
               <AdminCard
                 to="/app/admin/orders"
@@ -105,7 +111,7 @@ function AdminOverview() {
                 tone="accent"
                 title="Orders"
                 count={stats.orderCount}
-                sub="All platform orders"
+                sub="Audit trail"
               />
               <AdminCard
                 to="/app/admin/payments"
@@ -113,7 +119,7 @@ function AdminOverview() {
                 tone="emerald"
                 title="Payments"
                 count={stats.orderCount}
-                sub="All transactions"
+                sub="Disputes & refunds — not daily release"
               />
               <AdminCard
                 to="/app/admin/disputes"
@@ -123,36 +129,11 @@ function AdminOverview() {
                 count={0}
                 sub="Open cases"
               />
-              <AdminCard
-                to="/app/admin/drivers"
-                icon={Truck}
-                tone="emerald"
-                title="Drivers"
-                count={stats.pendingDrivers}
-                sub="Pending verification"
-              />
             </section>
-            <button
-              onClick={async () => {
-                await apiFetch("/api/moderate", {
-                  method: "POST",
-                  body: JSON.stringify({ action: "ingest_prices" }),
-                });
-                const pending = await supabase
-                  .from("listings")
-                  .select("id")
-                  .eq("status", "pending_review");
-                for (const l of pending.data ?? []) {
-                  await apiFetch("/api/moderate", {
-                    method: "POST",
-                    body: JSON.stringify({ action: "moderate", title: "review", listingId: l.id }),
-                  });
-                }
-              }}
-              className="mt-8 text-sm text-primary underline-offset-4 hover:underline"
-            >
-              Run AI price ingest + review pending listings
-            </button>
+            <p className="mt-10 max-w-xl text-xs leading-relaxed text-muted-foreground">
+              Happy path is automatic: moderate → live listing; MoMo pay → match driver; POD → MoMo
+              splits. Admin stays for KYC, disputes, and refunds.
+            </p>
           </>
         )}
     </AdminPageLayout>
@@ -179,20 +160,20 @@ function AdminCard({
   return (
     <Link
       to={to}
-      className="group flex items-center justify-between rounded-3xl border border-border bg-card p-6 hover:border-primary/40 transition"
+      className="group flex items-center justify-between gap-4 rounded-3xl border border-border/80 bg-card p-7 transition hover:border-primary/35"
     >
-      <div className="flex items-center gap-4">
-        <span className={`grid h-12 w-12 place-items-center rounded-2xl bg-muted ${toneCls}`}>
+      <div className="flex min-w-0 items-center gap-5">
+        <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-muted ${toneCls}`}>
           <Icon className="h-5 w-5" />
         </span>
-        <div>
-          <div className="font-serif text-xl">{title}</div>
-          <div className="text-xs text-muted-foreground">{sub}</div>
+        <div className="min-w-0">
+          <div className="font-serif text-xl tracking-tight">{title}</div>
+          <div className="mt-1 text-xs leading-snug text-muted-foreground">{sub}</div>
         </div>
       </div>
-      <div className="text-right">
-        <div className={`font-serif text-3xl ${toneCls}`}>{count}</div>
-        <ArrowRight className="mt-2 h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+      <div className="shrink-0 text-right">
+        <div className={`font-serif text-3xl tabular-nums ${toneCls}`}>{count}</div>
+        <ArrowRight className="mt-2 ml-auto h-4 w-4 text-muted-foreground transition group-hover:text-foreground" />
       </div>
     </Link>
   );

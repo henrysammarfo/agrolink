@@ -11,12 +11,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { SellerStudioLayout } from "@/components/seller/SellerStudioLayout";
 import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
 import { useAuth } from "@/lib/auth";
-import { useShellRole } from "@/hooks/use-shell-role";
 import { createListing, uploadListingMedia } from "@/lib/api/listings";
 import { apiFetch } from "@/lib/api/fetch-auth";
 import { unitsForCrop } from "@/lib/crop-units";
+import type { CropType } from "@/lib/types/marketplace";
 import { useEnableWorkspace } from "@/hooks/use-enable-workspace";
 
 export const Route = createFileRoute("/app/create")({
@@ -34,7 +35,6 @@ const GHANA_LOCATIONS = [
 
 function Create() {
   const { roles, user, profile } = useAuth();
-  const shellRole = useShellRole();
   const { enableRole } = useEnableWorkspace();
   const isFarmer = roles.includes("farmer");
   const navigate = useNavigate();
@@ -92,14 +92,13 @@ function Create() {
       });
 
     return (
-      <AppShell role={shellRole === "admin" || shellRole === "transport" ? "buyer" : shellRole}>
+      <AppShell role="buyer">
         <PageHeader eyebrow="Create" title="Switch to" italic="Sell" />
-        <div className="rounded-3xl border border-border bg-card p-10 text-center">
+        <div className="mx-auto max-w-lg rounded-3xl border border-border bg-card p-10 text-center">
           <Sparkles className="mx-auto h-8 w-8 text-primary" />
           <h2 className="mt-4 font-serif text-3xl">Start selling on AgroLink</h2>
-          <p className="mt-3 mx-auto max-w-md text-sm text-muted-foreground">
-            Same account — enable Sell mode to post produce with photo or
-            video.
+          <p className="mt-3 mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
+            Same account — enable Sell mode to post produce with photo or video.
           </p>
           <button
             onClick={enableSeller}
@@ -208,23 +207,23 @@ function Create() {
   };
 
   return (
-    <AppShell role={shellRole === "admin" || shellRole === "transport" ? "buyer" : shellRole}>
+    <SellerStudioLayout>
       <PageHeader
-        eyebrow="Create"
+        eyebrow="Studio"
         title="New"
-        italic="listing"
-        sub="Photo or video · price · quantity · location · post. WhatsApp when it sells."
+        italic="post"
+        sub="Photo or video · price · quantity · location · WhatsApp when it sells."
       />
 
-      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-8 flex items-start gap-3 text-xs text-foreground/80">
-        <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+      <div className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs leading-relaxed text-foreground/80">
+        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         <p>
           We check posts for community rules before they go live. Honest photos and fair prices —
           tomato, leafy greens, and pepper sell best on this corridor.
         </p>
       </div>
 
-      <form onSubmit={submit} className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
+      <form onSubmit={submit} className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
         <div className="rounded-3xl border-2 border-dashed border-border bg-card aspect-[9/16] sm:aspect-video relative overflow-hidden grid place-items-center text-center p-8">
           {mediaPreview && mediaFile?.type.startsWith("video/") ? (
             <video
@@ -395,7 +394,7 @@ function Create() {
           </button>
         </div>
       </form>
-    </AppShell>
+    </SellerStudioLayout>
   );
 }
 

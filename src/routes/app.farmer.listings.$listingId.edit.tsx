@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Hash, Loader2, Tag } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
-import { FarmerGate } from "@/components/app/RoleGate";
+import { PageHeader } from "@/components/app/AppShell";
+import { SellerStudioLayout } from "@/components/seller/SellerStudioLayout";
 import { LocationPicker, type MapLocation } from "@/components/map/LocationPicker";
 import { useAuth } from "@/lib/auth";
 import {
@@ -132,20 +132,17 @@ function EditListing() {
 
   if (loading) {
     return (
-      <FarmerGate>
-        <AppShell role="buyer">
-          <div className="grid place-items-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        </AppShell>
-      </FarmerGate>
+      <SellerStudioLayout>
+        <div className="grid place-items-center py-24">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </SellerStudioLayout>
     );
   }
 
   return (
-    <FarmerGate>
-      <AppShell role="buyer">
-        <PageHeader eyebrow="Catalog" title="Edit" italic="listing" sub="Update price, stock, or caption." />
+    <SellerStudioLayout>
+      <PageHeader eyebrow="Catalog" title="Edit" italic="listing" sub="Update price, stock, or caption." />
 
         <form onSubmit={submit} className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
           <div className="rounded-3xl border border-border bg-card aspect-[4/5] relative overflow-hidden">
@@ -215,8 +212,7 @@ function EditListing() {
             </button>
           </div>
         </form>
-      </AppShell>
-    </FarmerGate>
+      </SellerStudioLayout>
   );
 }
 

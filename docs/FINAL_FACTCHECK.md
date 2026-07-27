@@ -75,13 +75,13 @@ Talk to **≥5 farmers** (Dodowa / Ashaiman / Tema peri-urban) and **≥5 buyers
 
 ---
 
-## SMS (must support — judge requirement)
+## SMS / WhatsApp (judge + launch)
 
 | Status | Note |
 |--------|------|
-| Product intent | SMS for farmer job/payment/pickup alerts |
-| Codebase | Hubtel OTP paths exist for high-value carts; expand farmer notifications |
-| Demo honesty | If SMS isn’t live on stage: “SMS is the channel; WhatsApp/in-app works today; SMS is next ship.” Never claim email-first again. |
+| Launch | **WhatsApp + push + email** — no Africa's Talking SMS in production path |
+| Demo honesty | “Farmers get WhatsApp/in-app; SMS when we budget a Ghana SMS provider.” Never claim email-first. |
+| Checkout | **Pay-then-match** (MoMo first, then driver offers) — Bolt/DoorDash pattern |
 
 ---
 

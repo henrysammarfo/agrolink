@@ -13,7 +13,7 @@ import {
   STREET_ZOOM,
 } from "@/lib/map-coords";
 import { getMapboxClientToken, MAPBOX_STYLE_DARK, MAPBOX_STYLE_LIGHT } from "@/lib/mapbox-client";
-import { DRIVER_CAR_ICON_HTML } from "@/lib/map-icons";
+import { DRIVER_CAR_ICON_HTML, pinHtmlForKind } from "@/lib/map-icons";
 import type { RouteSegment } from "@/lib/route-display";
 
 type Pin = { lat: number; lng: number; label: string; kind?: "farm" | "buyer" | "hub" | "driver" };
@@ -36,13 +36,6 @@ type Props = {
   priceLabel?: string;
   onLoadError?: () => void;
   corridorOnly?: boolean;
-};
-
-const COLORS: Record<NonNullable<Pin["kind"]>, string> = {
-  farm: "#ef4444",
-  buyer: "#0b3d2e",
-  hub: "#0b3d2e",
-  driver: "#22c55e",
 };
 
 function validPins(pins: Pin[]) {
@@ -261,14 +254,10 @@ export function MapboxCorridorMap({
           <Marker key={`pin-${i}`} longitude={p.lng} latitude={p.lat} anchor="center">
             <div
               title={p.label}
-              className="grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold text-white shadow-lg"
-              style={{
-                background: COLORS[p.kind ?? "farm"],
-                boxShadow: `0 4px 14px ${COLORS[p.kind ?? "farm"]}66`,
-              }}
-            >
-              ●
-            </div>
+              className="cursor-default"
+              // Mapbox custom HTML markers (docs.mapbox.com/.../custom-marker-icons)
+              dangerouslySetInnerHTML={{ __html: pinHtmlForKind(p.kind) }}
+            />
           </Marker>
         ))}
 

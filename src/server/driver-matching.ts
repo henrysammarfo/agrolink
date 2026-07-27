@@ -147,7 +147,7 @@ export async function acceptDeliveryServer(
 
   const linkedOrder = delivery.order as { payment_status?: string } | null;
   const payStatus = linkedOrder?.payment_status;
-  if (payStatus !== "paid" && payStatus !== "pending") {
+  if (payStatus !== "paid") {
     return { ok: false, error: "Waiting for buyer payment to confirm" };
   }
 

@@ -8,7 +8,10 @@ import { useShellRole } from "@/hooks/use-shell-role";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/inbox/chat/$userId")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): {
+    order?: string;
+    delivery?: string;
+  } => ({
     order: typeof s.order === "string" ? s.order : undefined,
     delivery: typeof s.delivery === "string" ? s.delivery : undefined,
   }),

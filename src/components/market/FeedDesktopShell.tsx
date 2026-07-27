@@ -4,6 +4,7 @@ import {
   ChevronUp,
   ClipboardList,
   Home,
+  Inbox,
   Info,
   Search,
   ShoppingBasket,
@@ -38,6 +39,7 @@ const APP_NAV = [
   { to: "/app/buyer/feed", label: "For You", icon: Sprout, match: (p: string) => p.startsWith("/app/buyer/feed") },
   { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket, match: (p: string) => p.startsWith("/app/buyer/cart") },
   { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList, match: (p: string) => p.startsWith("/app/buyer/orders") },
+  { to: "/app/inbox", label: "Inbox", icon: Inbox, match: (p: string) => p.startsWith("/app/inbox") },
   { to: "/app/profile", label: "Profile", icon: User, match: (p: string) => p.startsWith("/app/profile") },
 ] as const;
 
@@ -108,11 +110,11 @@ export function FeedDesktopShell({
           </button>
         ) : chrome === "app" ? (
           <Link
-            to="/app/buyer"
+            to="/app/buyer/feed"
             className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/60 hover:bg-white/5 hover:text-white"
           >
             <BrandMark className="h-6 w-6" />
-            Dashboard
+            For You
           </Link>
         ) : (
           <Link

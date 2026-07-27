@@ -19,6 +19,8 @@ export type DriverProfileFull = {
   ghana_card_id: string | null;
   momo_number: string | null;
   rejection_reason: string | null;
+  current_lat?: number | null;
+  current_lng?: number | null;
 };
 
 export async function fetchDriverProfile(userId: string): Promise<DriverProfileFull | null> {

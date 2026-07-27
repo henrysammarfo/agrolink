@@ -1,5 +1,5 @@
 import { Capacitor } from "@capacitor/core";
-import { Geolocation, type PositionCallback } from "@capacitor/geolocation";
+import { Geolocation } from "@capacitor/geolocation";
 
 export type GeoPosition = { lat: number; lng: number; accuracy?: number };
 

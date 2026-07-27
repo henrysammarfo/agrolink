@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BadgeCheck, Grid3x3, Bookmark, Heart, Settings, Share2, MapPin, LogOut, Play, Loader2, Eye } from "lucide-react";
-import { AppShell } from "@/components/app/AppShell";
+import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { WorkspaceSwitcher } from "@/components/app/WorkspaceSwitcher";
 import { RecommendedSellers } from "@/components/profile/RecommendedSellers";
 import { useAuth } from "@/lib/auth";
@@ -51,14 +51,14 @@ function Profile() {
 
   return (
     <AppShell role={role} compact>
-      <header className="mb-5 sm:mb-8">
-        <span className="text-xs uppercase tracking-widest text-primary/80">Profile</span>
-        <h1 className="mt-1 font-serif text-2xl sm:text-4xl md:text-5xl text-foreground">
-          Your <span className="italic text-accent">profile</span>
-        </h1>
-      </header>
+      <PageHeader
+        eyebrow="Account"
+        title="Your"
+        italic="profile"
+        sub="Posts, saves, and people who follow you — share the public link anytime."
+      />
 
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:gap-6">
+      <div className="flex flex-col items-center gap-[var(--space-block)] sm:flex-row sm:items-end sm:gap-6">
         <div className="relative shrink-0">
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="h-20 w-20 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-background shadow" />
@@ -81,17 +81,8 @@ function Profile() {
         </div>
       </div>
 
-      <div className="mt-4 w-full overflow-x-auto no-scrollbar">
+      <div className="mt-[var(--space-block)] w-full overflow-x-auto no-scrollbar">
         <div className="flex min-w-min items-center justify-center gap-2 sm:justify-start">
-          {publicSlug && (
-            <Link
-              to="/app/users/$slug"
-              params={{ slug: publicSlug }}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium hover:bg-secondary"
-            >
-              Public profile
-            </Link>
-          )}
           <Link
             to="/app/settings"
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-foreground px-3.5 py-2 text-xs sm:px-5 sm:py-2.5 sm:text-sm font-medium text-background"
@@ -115,7 +106,7 @@ function Profile() {
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-center gap-8 sm:justify-start sm:gap-10 text-center">
+      <div className="mt-[var(--space-block)] flex items-center justify-center gap-8 sm:justify-start sm:gap-10 text-center">
         <Link to="/app/profile/following" className="hover:opacity-80">
           <Stat n={String(stats?.following ?? 0)} label="Following" />
         </Link>

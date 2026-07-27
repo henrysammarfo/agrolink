@@ -1,10 +1,17 @@
 import { haversineKm, vehicleCanFulfill, type VehicleFilter } from "@/lib/vehicle-types";
-import type { DeliveryRow, DriverProfile } from "@/lib/types/marketplace";
+import type { DeliveryRow } from "@/lib/types/marketplace";
+
+type DriverJobFilter = {
+  id: string;
+  vehicle_type: string;
+  current_lat?: number | null;
+  current_lng?: number | null;
+};
 
 /** Client-side filter mirroring server rules for assigned + open jobs. */
 export function filterJobsForDriver(
   jobs: DeliveryRow[],
-  driver: DriverProfile | null | undefined,
+  driver: DriverJobFilter | null | undefined,
   vehicleFilter: VehicleFilter = "all",
 ): DeliveryRow[] {
   if (!driver) return [];

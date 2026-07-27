@@ -111,14 +111,14 @@ export async function fetchListingsBySlug(
       profile,
       listings: (allListings ?? []).map((row) => ({
         ...(row as FeedListing),
-        seller_name: profile.display_name,
-        seller_slug: profile.slug,
-        seller_avatar: profile.avatar_url,
-        seller_verified: profile.verified ?? false,
-        seller_rating: profile.seller_rating,
+        seller_name: profile.display_name as string | null,
+        seller_slug: profile.slug as string | null,
+        seller_avatar: profile.avatar_url as string | null,
+        seller_verified: Boolean(profile.verified),
+        seller_rating: (profile.seller_rating as number | null) ?? null,
         ai_demand_score: 0.5,
         feed_score: 0.5,
-      })),
+      })) as FeedListing[],
     };
   }
 
@@ -269,9 +269,9 @@ export async function uploadListingMedia(
 
 export async function incrementViewCount(listingId: string) {
   if (listingId.startsWith("seed-listing-")) return;
-  await supabase
-    .rpc("increment_listing_views" as never, { listing_id: listingId } as never)
-    .catch(() => {
-      supabase.rpc("increment_listing_views" as never, { listing_id: listingId } as never);
-    });
+  try {
+    await supabase.rpc("increment_listing_views" as never, { listing_id: listingId } as never);
+  } catch {
+    /* ignore view counter failures */
+  }
 }

@@ -199,7 +199,7 @@ function Settings() {
     <AppShell role={role} compact>
       <PageHeader eyebrow="Account" title="Your" italic="settings" />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="mx-auto grid w-full max-w-[var(--content-max)] gap-[var(--space-block)] lg:grid-cols-2">
         <Card title="Profile">
           {user?.id && (
             <AvatarCropUpload
@@ -320,9 +320,9 @@ function Settings() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl border border-border bg-card p-6">
-      <h2 className="font-serif text-2xl">{title}</h2>
-      <div className="mt-5 space-y-4">{children}</div>
+    <section className="rounded-3xl border border-border bg-card p-6 md:p-7">
+      <h2 className="font-serif text-2xl tracking-tight">{title}</h2>
+      <div className="mt-[var(--space-block)] space-y-4">{children}</div>
     </section>
   );
 }
@@ -336,17 +336,27 @@ function UsernameField({
   onChange: (v: string) => void;
   onAvailability: (ok: boolean | null) => void;
 }) {
+  const [available, setAvailable] = useState<boolean | null>(null);
+
   useEffect(() => {
     const uname = value.trim().toLowerCase();
     if (!uname || uname.length < 3) {
+      setAvailable(null);
       onAvailability(null);
       return;
     }
     const t = setTimeout(() => {
       apiFetch(`/api/profile/username-check?username=${encodeURIComponent(uname)}`)
         .then((r) => r.json())
-        .then((j: { available?: boolean }) => onAvailability(j.available ?? false))
-        .catch(() => onAvailability(null));
+        .then((j: { available?: boolean }) => {
+          const ok = j.available ?? false;
+          setAvailable(ok);
+          onAvailability(ok);
+        })
+        .catch(() => {
+          setAvailable(null);
+          onAvailability(null);
+        });
     }, 400);
     return () => clearTimeout(t);
   }, [value, onAvailability]);
@@ -370,8 +380,8 @@ function UsernameField({
       <p className="mt-1 text-xs text-muted-foreground">
         Unique handle — if taken, try another (e.g. attenu122).
         {!valid && uname ? " Invalid format." : ""}
-        {uname && valid && usernameOk === true && " Available."}
-        {uname && valid && usernameOk === false && " Already taken."}
+        {uname && valid && available === true && " Available."}
+        {uname && valid && available === false && " Already taken."}
       </p>
     </label>
   );

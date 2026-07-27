@@ -1,14 +1,13 @@
 import type { OrderRow } from "@/lib/types/marketplace";
 
-/** Checkout main steps — Cart → Delivery → Driver → Payment */
+/** Checkout main steps — Cart → Delivery → Payment (driver match happens after pay) */
 export const CHECKOUT_MAIN_STEPS = [
   { id: "cart", label: "Cart" },
   { id: "delivery", label: "Delivery" },
-  { id: "driver", label: "Driver" },
   { id: "payment", label: "Payment" },
 ] as const;
 
-/** Pickup modes skip the driver step. */
+/** Pickup modes skip delivery quote; same three labels for consistency. */
 export const CHECKOUT_STEPS_PICKUP = [
   { id: "cart", label: "Cart" },
   { id: "delivery", label: "Delivery" },
@@ -75,15 +74,15 @@ export function canRequestDriver(input: {
   return input.hasQuote && input.driversForVehicle > 0;
 }
 
-export function isDriverMatchedForPayment(input: {
+/** Pay-then-match: payment does not require a driver yet. */
+export function isDriverMatchedForPayment(_input: {
   fulfillmentMode: string;
   driverMatched: boolean;
 }): boolean {
-  if (input.fulfillmentMode !== "platform_delivery") return true;
-  return input.driverMatched;
+  return true;
 }
 
-/** @deprecated use canRequestDriver + isDriverMatchedForPayment */
+/** @deprecated use canRequestDriver */
 export function isDeliveryReadyForPayment(input: {
   fulfillmentMode: string;
   hasQuote: boolean;

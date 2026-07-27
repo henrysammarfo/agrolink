@@ -20,7 +20,8 @@ See **`docs/FINAL_FACTCHECK.md`** (Tavily + primary sources).
 - Buyers: restaurants + chop bars  
 - Crops: tomato + leafy greens  
 - Innovation: same-day dispatch + MoMo + POD (feed = discovery only)  
-- Farmer channel: **SMS** (never email-first)  
+- Farmer channel: **WhatsApp** (never email-first; SMS later if budgeted)
+- Checkout: **Pay → match driver → track → POD**
 
 
 1. Landing → sign in as farmer → post a listing (or use seeded produce)

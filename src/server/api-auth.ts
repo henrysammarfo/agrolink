@@ -76,7 +76,10 @@ export async function optionalAuth(request: Request): Promise<AuthContext | null
   return authenticateRequest(request);
 }
 
-export async function userHasRole(userId: string, role: string): Promise<boolean> {
+export async function userHasRole(
+  userId: string,
+  role: "buyer" | "farmer" | "transport" | "admin",
+): Promise<boolean> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("user_roles")
@@ -97,7 +100,7 @@ export async function requireAdmin(request: Request): Promise<AuthContext | Resp
 
 export async function requireRole(
   request: Request,
-  role: string,
+  role: "buyer" | "farmer" | "transport" | "admin",
 ): Promise<AuthContext | Response> {
   const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;

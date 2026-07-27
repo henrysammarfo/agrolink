@@ -215,7 +215,7 @@ function Jobs() {
                   <Package className="h-4 w-4" /> Picked up
                 </button>
               )}
-              {(j.status === "picked_up" || j.status === "enroute_delivery") && j.status !== "delivered" && (
+              {(j.status === "picked_up" || j.status === "enroute_delivery") && (
                 <button onClick={() => advance(j)} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm text-white">
                   <Truck className="h-4 w-4" /> {j.status === "enroute_delivery" ? "Photo & complete" : "Deliver"}
                 </button>

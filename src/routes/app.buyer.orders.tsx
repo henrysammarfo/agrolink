@@ -56,7 +56,7 @@ function Orders() {
         sub="Follow the driver live, then keep every receipt in one place."
       />
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-[var(--space-block)] flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex rounded-full border border-border bg-card p-1 text-sm">
           {(["active", "history"] as const).map((t) => (
             <button
