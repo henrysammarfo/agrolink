@@ -5,8 +5,8 @@ Last updated: 2026-07-27
 ## Active revamp
 
 - Spec: `docs/UI_REVAMP_SPEC.md`
-- Branch: merged via PR #48 (`main`)
-- Phase 1–3 done: Feed-first, RightDrawer, pay-then-match, Seller Studio, Mapbox pins, routing/HUD polish
+- Branch: `cursor/nav-unmix-cc54` (ask before push)
+- Phase 1–3 merged (PR #48); **nav unmix**: Market / Studio / Drive separated; login → For You; no SELLER_NAV mashup
 - **No GitHub Actions CI** — billing blocked; rely on Vercel builds only (do not re-add workflows)
 - Farmer alerts: WhatsApp + push + email (no SMS for launch)
 - Research: `docs/research/tavily-mapbox-markers.json`

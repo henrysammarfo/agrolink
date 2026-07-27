@@ -1,9 +1,9 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import {
-  ShoppingBasket, Heart, ClipboardList, Wallet, Settings, Tractor, Sprout, Truck, MapPin,
-  ChevronLeft, Bell, Plus, LogOut, Home, User, Inbox, Image as ImageIcon,
-  ShieldCheck, AlertTriangle, CreditCard, ListChecks, Zap, Search, Radio,
+  ShoppingBasket, ClipboardList, Wallet, Settings, Sprout, Truck, MapPin,
+  ChevronLeft, Bell, Plus, LogOut, Home, User, Inbox,
+  ShieldCheck, AlertTriangle, CreditCard, ListChecks, Search, Radio,
 } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/brand/Logo";
 import { useAuth, type AppRole as AuthRole } from "@/lib/auth";
@@ -20,13 +20,6 @@ const MARKET_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
   { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
   { to: "/app/inbox", label: "Inbox", icon: Inbox },
   { to: "/app/profile", label: "Profile", icon: User },
-];
-
-const SELLER_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
-  { to: "/app/create", label: "Create", icon: Plus },
-  { to: "/app/farmer/listings", label: "Listings", icon: ImageIcon },
-  { to: "/app/farmer/orders", label: "Sales", icon: Tractor },
-  { to: "/app/farmer/payouts", label: "Payouts", icon: Wallet },
 ];
 
 const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]> = {
@@ -61,7 +54,7 @@ type MobileTab = {
   center?: boolean;
 };
 
-function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, isSeller: boolean): MobileTab[] {
+function buildMobileTabs(role: AppRole, cartCount: number): MobileTab[] {
   if (role === "buyer" || role === "farmer") {
     return [
       { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "For You" },
@@ -74,38 +67,45 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, 
   if (role === "transport") {
     return [
       { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "Shop" },
-      { id: "map", to: "/app/transport", icon: MapPin, label: "Map" },
+      { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Inbox" },
       { id: "live", to: "/app/transport", icon: Radio, label: "Live", center: true },
       { id: "jobs", to: "/app/transport/jobs", icon: Truck, label: "Jobs" },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
     ];
   }
-  if (role === "admin") {
-    return [
-      { id: "home", to: "/app/admin", icon: Home, label: "Home" },
-      { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "Market" },
-      { id: "orders", to: "/app/admin/orders", icon: ClipboardList, label: "Orders", center: true },
-      { id: "disputes", to: "/app/admin/disputes", icon: AlertTriangle, label: "Disputes" },
-      { id: "me", to: "/app/profile", icon: User, label: "Me" },
-    ];
-  }
   return [
-    { id: "home", to: "/app/buyer/feed", icon: Home, label: "For You" },
-    { id: "discover", to: "/app/buyer/feed", icon: Sprout, label: "Discover" },
-    { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
-    { id: "cart", to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount },
+    { id: "home", to: "/app/admin", icon: Home, label: "Home" },
+    { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "Market" },
+    { id: "orders", to: "/app/admin/orders", icon: ClipboardList, label: "Orders", center: true },
+    { id: "disputes", to: "/app/admin/disputes", icon: AlertTriangle, label: "Disputes" },
     { id: "me", to: "/app/profile", icon: User, label: "Me" },
   ];
 }
 
-function isMobileTabActive(pathname: string, tab: MobileTab): boolean {
-  if (tab.id === "live") return false;
-  if (tab.id === "jobs" && pathname.startsWith("/app/transport/jobs")) return true;
-  if (tab.id === "cart" && pathname.startsWith("/app/buyer/cart")) return true;
-  if (tab.id === "feed" && pathname.startsWith("/app/buyer/feed")) return true;
-  if (tab.id === "orders" && (pathname.startsWith("/app/buyer/orders") || pathname.startsWith("/app/farmer/orders") || pathname.startsWith("/app/admin/orders"))) return true;
-  if (tab.id === "payments" && (pathname.startsWith("/app/buyer/payments") || pathname.startsWith("/app/farmer/payouts") || pathname.startsWith("/app/admin/payments"))) return true;
-  return pathname === tab.to || (tab.to !== "/app/buyer" && pathname.startsWith(tab.to));
+/** Longest-prefix match so /jobs doesn't also light Map/Home. */
+function isPathActive(pathname: string, to: string, candidates: string[]): boolean {
+  const matches = candidates.filter(
+    (t) => pathname === t || pathname.startsWith(`${t}/`),
+  );
+  if (!matches.length) return false;
+  const best = matches.reduce((a, b) => (a.length >= b.length ? a : b));
+  return best === to;
+}
+
+function isMobileTabActive(pathname: string, tab: MobileTab, tabs: MobileTab[]): boolean {
+  if (tab.center && tab.id === "create") return pathname.startsWith("/app/create");
+  if (tab.center && tab.id === "live") {
+    return pathname === "/app/transport" || pathname === "/app/transport/";
+  }
+  if (tab.center && tab.id === "orders") {
+    return pathname.startsWith("/app/admin/orders");
+  }
+  const siblingTos = tabs.map((t) => t.to);
+  return isPathActive(pathname, tab.to, siblingTos);
+}
+
+function isSidebarActive(pathname: string, to: string, navTos: string[]): boolean {
+  return isPathActive(pathname, to, navTos);
 }
 
 function MobileTabLink({
@@ -124,8 +124,12 @@ function MobileTabLink({
         <span
           className={`grid h-12 w-14 place-items-center rounded-2xl shadow-lg ${
             isLive
-              ? "bg-emerald-500 text-white shadow-emerald-500/40"
-              : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-primary/30"
+              ? active
+                ? "bg-emerald-500 text-white shadow-emerald-500/40 ring-2 ring-emerald-300"
+                : "bg-emerald-500 text-white shadow-emerald-500/40"
+              : active
+                ? "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-primary/30 ring-2 ring-primary/40"
+                : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-primary/30"
           }`}
         >
           <tab.icon className="h-5 w-5" />
@@ -182,10 +186,8 @@ export function AppShell({
   const cartCount = cartItems.reduce((sum, item) => sum + Number(item.quantity), 0);
   const unreadInbox =
     unreadOverride ?? (unread ? unread.notifications + unread.messages : 0);
-  const nav = [
-    ...NAV[role === "farmer" ? "buyer" : role],
-    ...(roles.includes("farmer") && (role === "buyer" || role === "farmer") ? SELLER_NAV : []),
-  ];
+  const nav = NAV[role === "farmer" ? "buyer" : role];
+  const navTos = nav.map((n) => n.to);
   const immersive = IMMERSIVE_PATHS.some((p) => pathname === p);
 
   const workspaceRoles = [
@@ -196,7 +198,7 @@ export function AppShell({
 
   const { switchTo: switchWorkspace } = useWorkspaceSwitch();
 
-  const mobileTabs = buildMobileTabs(role, cartCount, unreadInbox, roles.includes("farmer"));
+  const mobileTabs = buildMobileTabs(role, cartCount);
 
   if (immersive) {
     const lightChrome = pathname.startsWith("/app/transport");
@@ -215,7 +217,7 @@ export function AppShell({
             <MobileTabLink
               key={t.id}
               tab={t}
-              active={isMobileTabActive(pathname, t)}
+              active={isMobileTabActive(pathname, t, mobileTabs)}
               immersiveDark={!lightChrome}
             />
           ))}
@@ -270,7 +272,7 @@ export function AppShell({
 
         <nav className="mt-4 flex-1 space-y-1 px-3">
           {nav.map((n) => {
-            const active = pathname === n.to;
+            const active = isSidebarActive(pathname, n.to, navTos);
             return (
               <Link
                 key={n.to}
@@ -284,6 +286,15 @@ export function AppShell({
               </Link>
             );
           })}
+          {roles.includes("farmer") && (role === "buyer" || role === "farmer") && !collapsed && (
+            <Link
+              to="/app/farmer"
+              className="mt-2 flex items-center gap-3 rounded-xl border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground"
+            >
+              <Sprout className="h-4 w-4 shrink-0 text-primary" />
+              <span className="truncate">Open Studio</span>
+            </Link>
+          )}
         </nav>
 
         <div className="space-y-1 border-t border-sidebar-border p-3">
@@ -360,7 +371,7 @@ export function AppShell({
         {!hideMobileNav && (
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur pb-[max(env(safe-area-inset-bottom),0px)]">
           {mobileTabs.map((t) => (
-            <MobileTabLink key={t.id} tab={t} active={isMobileTabActive(pathname, t)} />
+            <MobileTabLink key={t.id} tab={t} active={isMobileTabActive(pathname, t, mobileTabs)} />
           ))}
         </nav>
         )}

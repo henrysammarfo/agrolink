@@ -32,10 +32,11 @@ function Auth() {
 
   useEffect(() => {
     if (!user) return;
+    // Home rule: For You unless Drive-only or Admin
     const dest = hasRole("admin")
       ? "/app/admin"
-      : hasRole("farmer")
-        ? "/app/farmer"
+      : hasRole("buyer") || hasRole("farmer")
+        ? "/app/buyer/feed"
         : hasRole("transport")
           ? "/app/transport"
           : "/app/buyer/feed";
