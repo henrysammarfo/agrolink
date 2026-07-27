@@ -66,11 +66,12 @@ function About() {
             <div>
               <span className="text-xs uppercase tracking-widest text-muted-foreground">The corridor</span>
               <h2 className="mt-3 font-serif text-4xl md:text-6xl text-foreground">
-                Agbogbloshie <span className="italic">→</span> Tema.
+                Dodowa <span className="italic">→</span> Tema / Accra.
               </h2>
               <p className="mt-5 text-muted-foreground">
-                Greater Accra moves more than 4,000 tons of vegetables a week through a handful of wholesale hubs.
-                AgroLink threads the smaller farms directly into that flow — no broker rake.
+                Peri-urban vegetable farms supply Ashaiman, Tema, and Accra kitchens. Agbogbloshie
+                remains a wholesale reference — our focus is restaurant and chop-bar demand with
+                same-day dispatch.
               </p>
               <div className="mt-6 flex flex-wrap gap-4 text-xs">
                 <Legend color="#2f7d32" label="Farms" />

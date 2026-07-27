@@ -63,6 +63,7 @@ export function orderStatusWhatsAppBody(type: string, extras?: Record<string, st
     delivery_job: `AgroLink: New delivery job — ${extras?.pickup ?? "pickup"} · GHS ${extras?.fee ?? "—"}. Open AgroLink Drive to accept.`,
     message: `AgroLink: ${extras?.preview ?? "You have a new message"}`,
     dispatched: `AgroLink: Your order is on the way! Driver ${extras?.driver ?? ""} is en route. ETA ~${extras?.eta ?? "soon"}.`,
+    farmer_sale: `AgroLink: A buyer ordered your ${extras?.crop ?? "produce"}. Prepare for pickup. MoMo after delivery. Open AgroLink Farmer.`,
   };
   return templates[type] ?? `AgroLink: ${extras?.body ?? type}`;
 }

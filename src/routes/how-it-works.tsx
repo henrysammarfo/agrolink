@@ -21,17 +21,17 @@ const ROLES = [
   {
     key: "farmer", icon: Tractor, title: "Farmers", italic: "list. sell. get paid.",
     steps: [
-      { icon: Camera, t: "Snap & list", d: "Record a 10-second video of fresh harvest, set price and quantity. Less than a minute." },
-      { icon: Brain, t: "AI pricing", d: "We benchmark today's wholesale prices in Agbogbloshie and Tema and suggest a fair rate." },
+      { icon: Camera, t: "Snap & list", d: "Photo or short video of harvest, set price and quantity. Phone-first — WhatsApp when it sells." },
+      { icon: Brain, t: "Optional price tip", d: "Optional market-price tip for tomato and leafy greens on the Dodowa–Tema–Accra corridor. You set the price." },
       { icon: Wallet, t: "Same-evening payout", d: "MTN MoMo, Vodafone Cash, AirtelTigo. Money lands the same evening — no waiting." },
     ],
   },
   {
     key: "buyer", icon: ShoppingBasket, title: "Buyers", italic: "discover. order. receive.",
     steps: [
-      { icon: Sparkles, t: "Swipe the feed", d: "Vertical TikTok-style feed. Save what you like, follow farmers you trust." },
-      { icon: ShoppingBasket, t: "One-tap cart", d: "Combine produce from multiple farmers into a single order. Pay on mobile money." },
-      { icon: MapPin, t: "Live tracking", d: "Watch your driver from pickup to drop-off. Average door-time: 38 minutes." },
+      { icon: Sparkles, t: "Browse the feed", d: "Vertical produce feed for kitchens. Save what you like, follow farmers you trust." },
+      { icon: ShoppingBasket, t: "One-tap cart", d: "Order tomato and greens for your restaurant or chop bar. Pay on mobile money." },
+      { icon: MapPin, t: "Live tracking", d: "Watch your driver from pickup to drop-off with proof of delivery." },
     ],
   },
   {
@@ -46,9 +46,9 @@ const ROLES = [
 
 const PILLARS = [
   { icon: BadgePercent, t: "Transparent fee", d: "A thin service fee (about 6%) on each completed order. No subscriptions, no listing fee. Ever." },
-  { icon: Bell, t: "Real-time alerts", d: "WhatsApp + push for every order, payment and dispatch event. Nobody misses a thing." },
+  { icon: Bell, t: "Real-time alerts", d: "WhatsApp + push for orders and dispatch. Farmers are never email-first." },
   { icon: ShieldCheck, t: "Verified network", d: "Farmers, buyers and drivers are phone- and ID-verified before they can transact." },
-  { icon: Smartphone, t: "Built for the market", d: "Designed for low-bandwidth phones. Big buttons, English + visual cues for market women." },
+  { icon: Smartphone, t: "Built for the market", d: "Designed for low-bandwidth phones. Big buttons, English + visual cues — WhatsApp when it matters." },
 ];
 
 function HowItWorks() {
@@ -61,8 +61,8 @@ function HowItWorks() {
             Three roles. <span className="italic">One marketplace.</span>
           </h1>
           <p className="mt-6 text-base md:text-lg text-muted-foreground">
-            AgroLink connects smallholder farms with the kitchens, shops and households of
-            Greater Accra — with mobile-money payment and transport built in.
+            AgroLink moves tomato and leafy greens from peri-urban farms (Dodowa corridor) to
+            Accra restaurants and chop bars — MoMo, same-day dispatch, proof of delivery.
           </p>
         </header>
 

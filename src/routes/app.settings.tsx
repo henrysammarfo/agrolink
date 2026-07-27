@@ -289,14 +289,14 @@ function Settings() {
 
         <Card title="Notifications">
           {!prefsLoaded && <p className="text-xs text-muted-foreground">Loading preferences…</p>}
-          <Toggle label="Order updates" desc="Email + WhatsApp + push for orders." value={whatsapp} onChange={onWhatsappToggle} disabled={togglingKey === "whatsapp"} />
+          <Toggle label="Order updates" desc="WhatsApp + email + push when orders move." value={whatsapp} onChange={onWhatsappToggle} disabled={togglingKey === "whatsapp"} />
           <Toggle label="Push notifications" desc="Driver job alerts (Bolt-style ping)." value={push} onChange={onPushToggle} disabled={togglingKey === "push"} />
           <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={onMarketingToggle} disabled={togglingKey === "marketing"} />
         </Card>
 
         <Card title="Contact & payments">
           <p className="text-sm text-muted-foreground">
-            Your phone above is used for trip calls and order SMS. Save profile to update it.
+            Your phone above is used for trip calls and WhatsApp order alerts. Farmers: WhatsApp-first, not email. Save profile to update it.
           </p>
           {roles.includes("transport") && (
             <p className="text-xs text-muted-foreground">
