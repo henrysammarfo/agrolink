@@ -31,8 +31,8 @@ export async function fetchConversations(userId: string): Promise<Conversation[]
 
     const partner =
       row.sender_id === userId
-        ? (row.receiver as { display_name: string | null; avatar_url: string | null })
-        : (row.sender as { display_name: string | null; avatar_url: string | null });
+        ? (row.receiver as unknown as { display_name: string | null; avatar_url: string | null })
+        : (row.sender as unknown as { display_name: string | null; avatar_url: string | null });
 
     const unread = (data ?? []).filter(
       (m) => m.receiver_id === userId && m.sender_id === partnerId && !m.read,

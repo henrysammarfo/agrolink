@@ -65,7 +65,7 @@ export async function hasActiveDeliveryChat(
   const { data: delivery } = await query.maybeSingle();
   if (!delivery) return false;
 
-  const order = delivery.order as { buyer_id: string } | null;
+  const order = delivery.order as unknown as { buyer_id: string } | null;
   const buyerId = order?.buyer_id;
   if (!buyerId || !delivery.driver_id) return false;
 

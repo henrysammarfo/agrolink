@@ -300,8 +300,7 @@ function Cart() {
   useEffect(() => {
     const deliveryId = orderSnapshot?.deliveryId;
     if (!deliveryId || driverMatched) return;
-    let unsub: (() => void) | undefined;
-    void subscribeToDelivery(deliveryId, (row) => {
+    const unsub = subscribeToDelivery(deliveryId, (row) => {
       if (row.driver_id) {
         setDriverMatched(true);
         void fetchOrderById(pendingOrderId!).then((o) => {
@@ -315,10 +314,8 @@ function Cart() {
           setMatchedDriver(card);
         });
       }
-    }).then((fn) => {
-      unsub = fn;
     });
-    return () => unsub?.();
+    return () => unsub();
   }, [orderSnapshot?.deliveryId, driverMatched, pendingOrderId, routeEtaMin]);
 
   useEffect(() => {

@@ -9,14 +9,14 @@ const ACTIVE_SELECT = `
 `;
 
 async function enrichWithBuyerProfiles(rows: DeliveryRow[]): Promise<DeliveryRow[]> {
-  const buyerIds = collectBuyerUserIds(rows);
+  const buyerIds = collectBuyerUserIds(rows as unknown as Parameters<typeof collectBuyerUserIds>[0]);
   if (!buyerIds.length) return rows;
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select("id, display_name, avatar_url, phone, slug, username")
     .in("id", buyerIds);
   if (error) throw new Error(error.message);
-  return attachBuyerProfiles(rows, profiles ?? []) as DeliveryRow[];
+  return attachBuyerProfiles(rows as never, profiles ?? []) as DeliveryRow[];
 }
 
 export async function fetchDriverActiveDeliveries(driverProfileId: string): Promise<DeliveryRow[]> {

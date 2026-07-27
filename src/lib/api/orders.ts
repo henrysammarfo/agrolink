@@ -31,8 +31,8 @@ export async function fetchSellerOrders(sellerId: string): Promise<OrderRow[]> {
     .in("id", orderIds)
     .order("created_at", { ascending: false });
   if (oErr) throw oErr;
-  const rows = (data ?? []) as OrderRow[];
-  const userIds = collectDriverUserIds(rows);
+  const rows = (data ?? []) as unknown as OrderRow[];
+  const userIds = collectDriverUserIds(rows as never);
   if (!userIds.length) return rows;
 
   const { data: profiles, error: pErr } = await supabase
@@ -40,7 +40,7 @@ export async function fetchSellerOrders(sellerId: string): Promise<OrderRow[]> {
     .select("id, display_name, avatar_url, phone, slug, username")
     .in("id", userIds);
   if (pErr) throw pErr;
-  return attachDriverProfiles(rows, profiles ?? []) as OrderRow[];
+  return attachDriverProfiles(rows as never, profiles ?? []) as OrderRow[];
 }
 
 export type AdminOrderRow = OrderRow & {
@@ -110,7 +110,7 @@ export async function advanceDeliveryStatus(
   if (error) throw error;
 }
 
-export async function subscribeToDelivery(
+export function subscribeToDelivery(
   deliveryId: string,
   callback: (payload: DeliveryRow) => void,
 ) {
@@ -141,7 +141,7 @@ export async function completeDeliveryViaApi(
   return data;
 }
 
-export async function subscribeToDriverLocation(
+export function subscribeToDriverLocation(
   driverProfileId: string,
   callback: (payload: { current_lat: number; current_lng: number }) => void,
 ) {

@@ -98,8 +98,6 @@ export type OrderItemRow = {
   listing?: { title: string; image_url: string | null };
 };
 
-import type { DeliveryStatus } from "@/lib/types/marketplace";
-
 export type PickupStop = { lat: number; lng: number; label?: string };
 
 export type DeliveryRow = {

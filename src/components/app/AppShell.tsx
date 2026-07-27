@@ -90,7 +90,7 @@ function buildMobileTabs(role: AppRole, cartCount: number, unreadInbox: number, 
     ];
   }
   return [
-    { id: "home", to: "/app/buyer", icon: Home, label: "Home" },
+    { id: "home", to: "/app/buyer/feed", icon: Home, label: "For You" },
     { id: "discover", to: "/app/buyer/feed", icon: Sprout, label: "Discover" },
     { id: "create", to: "/app/create", icon: Plus, label: "", center: true },
     { id: "cart", to: "/app/buyer/cart", icon: ShoppingBasket, label: "Cart", badge: cartCount },
@@ -375,17 +375,21 @@ export function PageHeader({ eyebrow, title, italic, sub, action }: {
   eyebrow?: string; title: string; italic?: string; sub?: string; action?: ReactNode;
 }) {
   return (
-    <header className="mb-10 flex flex-col gap-5 md:mb-12 md:flex-row md:items-end md:justify-between">
+    <header className="mb-[var(--space-section)] flex flex-col gap-[var(--space-block)] md:mb-12 md:flex-row md:items-end md:justify-between">
       <div className="max-w-2xl">
         {eyebrow && (
           <span className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
             {eyebrow}
           </span>
         )}
-        <h1 className="mt-3 font-serif text-[2rem] leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-[2.75rem]">
+        <h1 className="mt-[var(--space-tight)] font-serif text-[2rem] leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-[2.75rem]">
           {title} {italic && <span className="italic text-primary/90">{italic}</span>}
         </h1>
-        {sub && <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-[15px]">{sub}</p>}
+        {sub && (
+          <p className="mt-[var(--space-tight)] max-w-xl text-sm leading-relaxed text-muted-foreground md:text-[15px]">
+            {sub}
+          </p>
+        )}
       </div>
       {action}
     </header>

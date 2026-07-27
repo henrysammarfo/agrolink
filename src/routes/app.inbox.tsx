@@ -38,14 +38,14 @@ const ICON_MAP: Record<string, typeof Heart> = {
 };
 
 export const Route = createFileRoute("/app/inbox")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    tab:
-      s.tab === "messages"
-        ? ("messages" as const)
-        : s.tab === "requests"
-          ? ("requests" as const)
-          : ("activity" as const),
-  }),
+  validateSearch: (s: Record<string, unknown>): {
+    tab?: "messages" | "requests" | "activity";
+  } => {
+    if (s.tab === "messages" || s.tab === "requests" || s.tab === "activity") {
+      return { tab: s.tab };
+    }
+    return {};
+  },
   head: () => ({ meta: [{ title: "Inbox · AgroLink" }] }),
   component: Inbox,
 });
@@ -53,10 +53,10 @@ export const Route = createFileRoute("/app/inbox")({
 function Inbox() {
   const shellRole = useShellRole();
   const { user } = useAuth();
-  const { tab: initialTab } = Route.useSearch();
+  const { tab: searchTab } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"activity" | "messages" | "requests">(initialTab);
+  const [tab, setTab] = useState<"activity" | "messages" | "requests">(searchTab ?? "activity");
 
   const { data: notifications = [], isLoading: nLoading } = useNotifications(user?.id);
   const { data: conversations = [], isLoading: cLoading } = useConversations(user?.id);
@@ -135,7 +135,7 @@ function Inbox() {
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-[var(--space-block)] mx-auto w-full max-w-[var(--content-max)]">
         {tab === "activity" ? (
           nLoading ? (
             <div className="grid place-items-center py-16">

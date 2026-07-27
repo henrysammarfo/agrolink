@@ -14,15 +14,17 @@ export type DriverProfileSnippet = {
   username: string | null;
 };
 
-type DeliveryLike = {
+type DeliverySingle = {
   driver?: { user_id?: string; profile?: DriverProfileSnippet } | null;
-} | DeliveryLike[] | null | undefined;
+};
+
+type DeliveryLike = DeliverySingle | DeliverySingle[] | null | undefined;
 
 type OrderLike = {
   delivery?: DeliveryLike;
 };
 
-function normalizeDelivery(delivery: DeliveryLike) {
+function normalizeDelivery(delivery: DeliveryLike): DeliverySingle | undefined {
   if (!delivery) return undefined;
   return Array.isArray(delivery) ? delivery[0] : delivery;
 }

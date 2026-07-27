@@ -22,7 +22,7 @@ export async function fetchMessageRequests(userId: string): Promise<MessageReque
     .eq("status", "pending")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as MessageRequestRow[];
+  return (data ?? []) as unknown as MessageRequestRow[];
 }
 
 export async function respondToMessageRequest(

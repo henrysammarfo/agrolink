@@ -66,6 +66,7 @@ import { Route as ApiPaymentsVerifyRouteImport } from './routes/api/payments/ver
 import { Route as ApiOtpVerifyRouteImport } from './routes/api/otp/verify'
 import { Route as ApiOtpSendRouteImport } from './routes/api/otp/send'
 import { Route as ApiOrdersVerifyPaymentRouteImport } from './routes/api/orders/verify-payment'
+import { Route as ApiListingsReportRouteImport } from './routes/api/listings/report'
 import { Route as ApiListingsCommentsRouteImport } from './routes/api/listings/comments'
 import { Route as ApiDeliveryQuoteRouteImport } from './routes/api/delivery/quote'
 import { Route as ApiDeliveryAvailabilityRouteImport } from './routes/api/delivery/availability'
@@ -380,6 +381,11 @@ const ApiOrdersVerifyPaymentRoute = ApiOrdersVerifyPaymentRouteImport.update({
   path: '/api/orders/verify-payment',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiListingsReportRoute = ApiListingsReportRouteImport.update({
+  id: '/api/listings/report',
+  path: '/api/listings/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiListingsCommentsRoute = ApiListingsCommentsRouteImport.update({
   id: '/api/listings/comments',
   path: '/api/listings/comments',
@@ -566,6 +572,7 @@ export interface FileRoutesByFullPath {
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/listings/comments': typeof ApiListingsCommentsRoute
+  '/api/listings/report': typeof ApiListingsReportRoute
   '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
@@ -651,6 +658,7 @@ export interface FileRoutesByTo {
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/listings/comments': typeof ApiListingsCommentsRoute
+  '/api/listings/report': typeof ApiListingsReportRoute
   '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
@@ -738,6 +746,7 @@ export interface FileRoutesById {
   '/api/delivery/availability': typeof ApiDeliveryAvailabilityRoute
   '/api/delivery/quote': typeof ApiDeliveryQuoteRoute
   '/api/listings/comments': typeof ApiListingsCommentsRoute
+  '/api/listings/report': typeof ApiListingsReportRoute
   '/api/orders/verify-payment': typeof ApiOrdersVerifyPaymentRoute
   '/api/otp/send': typeof ApiOtpSendRoute
   '/api/otp/verify': typeof ApiOtpVerifyRoute
@@ -826,6 +835,7 @@ export interface FileRouteTypes {
     | '/api/delivery/availability'
     | '/api/delivery/quote'
     | '/api/listings/comments'
+    | '/api/listings/report'
     | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
@@ -911,6 +921,7 @@ export interface FileRouteTypes {
     | '/api/delivery/availability'
     | '/api/delivery/quote'
     | '/api/listings/comments'
+    | '/api/listings/report'
     | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
@@ -997,6 +1008,7 @@ export interface FileRouteTypes {
     | '/api/delivery/availability'
     | '/api/delivery/quote'
     | '/api/listings/comments'
+    | '/api/listings/report'
     | '/api/orders/verify-payment'
     | '/api/otp/send'
     | '/api/otp/verify'
@@ -1071,6 +1083,7 @@ export interface RootRouteChildren {
   ApiDeliveryAvailabilityRoute: typeof ApiDeliveryAvailabilityRoute
   ApiDeliveryQuoteRoute: typeof ApiDeliveryQuoteRoute
   ApiListingsCommentsRoute: typeof ApiListingsCommentsRoute
+  ApiListingsReportRoute: typeof ApiListingsReportRoute
   ApiOrdersVerifyPaymentRoute: typeof ApiOrdersVerifyPaymentRoute
   ApiOtpSendRoute: typeof ApiOtpSendRoute
   ApiOtpVerifyRoute: typeof ApiOtpVerifyRoute
@@ -1486,6 +1499,13 @@ declare module '@tanstack/react-router' {
       path: '/api/orders/verify-payment'
       fullPath: '/api/orders/verify-payment'
       preLoaderRoute: typeof ApiOrdersVerifyPaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/listings/report': {
+      id: '/api/listings/report'
+      path: '/api/listings/report'
+      fullPath: '/api/listings/report'
+      preLoaderRoute: typeof ApiListingsReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/listings/comments': {
@@ -1918,6 +1938,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeliveryAvailabilityRoute: ApiDeliveryAvailabilityRoute,
   ApiDeliveryQuoteRoute: ApiDeliveryQuoteRoute,
   ApiListingsCommentsRoute: ApiListingsCommentsRoute,
+  ApiListingsReportRoute: ApiListingsReportRoute,
   ApiOrdersVerifyPaymentRoute: ApiOrdersVerifyPaymentRoute,
   ApiOtpSendRoute: ApiOtpSendRoute,
   ApiOtpVerifyRoute: ApiOtpVerifyRoute,

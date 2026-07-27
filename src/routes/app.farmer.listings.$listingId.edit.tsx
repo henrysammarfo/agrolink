@@ -213,8 +213,7 @@ function EditListing() {
           </div>
         </form>
       </SellerStudioLayout>
-    );
-  }
+  );
 }
 
 function inferCrop(title: string): string {

@@ -10,9 +10,13 @@ import { LifecycleStepper } from "@/components/order/LifecycleStepper";
 import { PAYMENT_TRACKING_STEPS, getPaymentTrackingStep } from "@/lib/order-lifecycle";
 
 export const Route = createFileRoute("/app/buyer/orders/$orderId/payment-callback")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    reference: (search.reference as string) ?? (search.trxref as string) ?? "",
-  }),
+  validateSearch: (search: Record<string, unknown>): { reference?: string } => {
+    const ref =
+      (typeof search.reference === "string" && search.reference) ||
+      (typeof search.trxref === "string" && search.trxref) ||
+      undefined;
+    return ref ? { reference: ref } : {};
+  },
   head: () => ({ meta: [{ title: "Payment · AgroLink" }] }),
   component: PaymentCallbackPage,
 });

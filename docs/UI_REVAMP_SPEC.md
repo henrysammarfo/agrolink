@@ -18,14 +18,14 @@ Branch: `cursor/ui-revamp-phase1-cc54` (local iterate — ask before push)
 |-------|--------|-------|
 | 0 Spec + memory | Done | This file + MEMORY / FINAL_FACTCHECK |
 | 1 Shell + drawer + pay-then-match | Done | AppShell slim, RightDrawer, cart/paystack |
-| 2 Seller Studio + Mapbox pins + admin/spacing | In progress | `SellerStudioLayout`, `map-icons` HTML markers, PageHeader/StatCard rhythm, admin copy |
-| 3 Full routing cleanup + every-page polish | Pending | |
+| 2 Seller Studio + Mapbox pins + admin/spacing | Done | `SellerStudioLayout`, `map-icons` HTML markers, PageHeader/StatCard rhythm, admin copy |
+| 3 Routing cleanup + polish | Done | Create under Studio; `/app/buyer` → feed; own `/app/users/$me` → `/app/profile`; Drive idle HUD; spacing tokens on key pages |
 
 ## Seller Studio map (TikTok Studio → AgroLink)
 
 | Studio | AgroLink |
 |--------|----------|
-| Upload (+) | `/app/create` |
+| Upload (+) | `/app/create` (Studio chrome when farmer) |
 | Home | `/app/farmer` overview |
 | Content/Posts | `/app/farmer/listings` |
 | Analytics / Sales | `/app/farmer/orders` |
@@ -33,6 +33,15 @@ Branch: `cursor/ui-revamp-phase1-cc54` (local iterate — ask before push)
 | Inbox | `/app/inbox` |
 
 Chrome: [`SellerStudioLayout.tsx`](../src/components/seller/SellerStudioLayout.tsx) — 72px icon rail desktop, 5-tab mobile.
+
+## Routing (Phase 3)
+
+| From | To |
+|------|----|
+| Exact `/app/buyer` | `/app/buyer/feed` |
+| Own `/app/users/$slug` | `/app/profile` |
+| Own `/app/users/$slug/followers` | `/app/profile/followers` |
+| `/discover` | `/market` |
 
 ## Mapbox markers
 
@@ -47,7 +56,13 @@ Cart → Fulfillment → Pay (MoMo) → Match driver → Track → POD → Auto 
 
 ## Spacing tokens
 
-`:root` in `src/styles.css`: `--space-section`, `--space-block`, `--space-tight`, `--content-max`.
+`:root` in `src/styles.css`: `--space-section`, `--space-block`, `--space-tight`, `--content-max`.  
+Used by `PageHeader`, profile/settings/inbox/orders, Studio create.
+
+## Drive idle HUD
+
+Offline: dark glass sheet on map (“Offline — map still open”) + single **Go live**.  
+Online waiting: soft “Listening for jobs” (no empty-wallet dead end).
 
 ## Do / don’t
 

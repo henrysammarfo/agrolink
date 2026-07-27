@@ -14,14 +14,20 @@ import { BrandMark } from "@/components/brand/Logo";
 import { FarmerGate } from "@/components/app/RoleGate";
 import { cn } from "@/lib/utils";
 
-const RAIL = [
+const RAIL: ReadonlyArray<{
+  to: "/app/create" | "/app/farmer" | "/app/farmer/listings" | "/app/farmer/orders" | "/app/farmer/payouts" | "/app/inbox";
+  label: string;
+  icon: typeof Plus;
+  accent?: boolean;
+  exact?: boolean;
+}> = [
   { to: "/app/create", label: "Create", icon: Plus, accent: true },
   { to: "/app/farmer", label: "Home", icon: Home, exact: true },
   { to: "/app/farmer/listings", label: "Posts", icon: ImageIcon },
   { to: "/app/farmer/orders", label: "Sales", icon: ClipboardList },
   { to: "/app/farmer/payouts", label: "Money", icon: Wallet },
   { to: "/app/inbox", label: "Inbox", icon: Inbox },
-] as const;
+];
 
 /**
  * TikTok Studio–style seller chrome: narrow icon rail + spacious main.

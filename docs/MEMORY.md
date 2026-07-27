@@ -7,7 +7,8 @@ Last updated: 2026-07-27
 - Spec: `docs/UI_REVAMP_SPEC.md`
 - Branch: `cursor/ui-revamp-phase1-cc54` (local — ask before push)
 - Phase 1 done: Feed-first shell, RightDrawer, pay-then-match
-- Phase 2 in progress: Seller Studio rail, Mapbox HTML pins, admin/spacing
+- Phase 2 done: Seller Studio rail, Mapbox HTML pins, admin/spacing
+- Phase 3 done: Create under Studio; buyer Overview → feed; own-slug → `/app/profile`; Drive idle HUD; spacing tokens on profile/settings/inbox/orders
 - Farmer alerts: WhatsApp + push + email (no SMS for launch)
 - Research: `docs/research/tavily-mapbox-markers.json`
 

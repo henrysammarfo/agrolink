@@ -9,11 +9,11 @@ import { isDriverVerified } from "@/lib/api/driver-onboarding";
 export function RoleGate({
   role,
   children,
-  fallback = "/app/buyer",
+  fallback = "/app/buyer/feed",
 }: {
   role: AppRole;
   children: ReactNode;
-  fallback?: "/app/buyer" | "/app/farmer" | "/app/transport" | "/app/admin";
+  fallback?: string;
 }) {
   const { roles, loading } = useAuth();
   const navigate = useNavigate();
@@ -49,15 +49,15 @@ export function RoleGate({
 }
 
 export function AdminGate({ children }: { children: ReactNode }) {
-  return <RoleGate role="admin" fallback="/app/buyer">{children}</RoleGate>;
+  return <RoleGate role="admin" fallback="/app/buyer/feed">{children}</RoleGate>;
 }
 
 export function FarmerGate({ children }: { children: ReactNode }) {
-  return <RoleGate role="farmer" fallback="/app/buyer">{children}</RoleGate>;
+  return <RoleGate role="farmer" fallback="/app/buyer/feed">{children}</RoleGate>;
 }
 
 export function TransportGate({ children }: { children: ReactNode }) {
-  return <RoleGate role="transport" fallback="/app/buyer">{children}</RoleGate>;
+  return <RoleGate role="transport" fallback="/app/buyer/feed">{children}</RoleGate>;
 }
 
 /** Uber/Bolt-style gate: transport role + approved driver verification */

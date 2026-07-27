@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { Truck, Radio, Wallet, Loader2 } from "lucide-react";
+import { Truck, Radio, Loader2 } from "lucide-react";
 import { dialPhone, pickBuyerPhone } from "@/lib/trip-contact";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
@@ -462,22 +462,40 @@ function TransportOverview() {
                 }}
               />
             ) : (
-              <div className="pointer-events-auto mx-auto max-w-lg rounded-t-3xl border border-border/80 bg-background p-5 shadow-2xl">
+              <div
+                className={`pointer-events-auto mx-auto max-w-lg rounded-t-3xl border p-5 shadow-2xl backdrop-blur-md ${
+                  online
+                    ? "border-border/70 bg-background/95"
+                    : "border-white/10 bg-zinc-950/80 text-white"
+                }`}
+              >
                 {jobsError && (
-                  <div className="mb-3 rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                  <div className="mb-3 rounded-xl border border-amber-300/50 bg-amber-50/90 px-3 py-2 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/50 dark:text-amber-100">
                     {jobsError}
                   </div>
                 )}
-                <div className="flex items-center gap-3">
-                  <Wallet className="h-8 w-8 shrink-0 text-muted-foreground/50" />
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${
+                      online
+                        ? "bg-emerald-500/10 text-emerald-600"
+                        : "bg-white/10 text-white/70"
+                    }`}
+                  >
+                    {online ? (
+                      <Radio className="h-4 w-4 animate-pulse" />
+                    ) : (
+                      <Truck className="h-4 w-4" />
+                    )}
+                  </span>
                   <div className="min-w-0 flex-1 text-left">
-                    <p className="font-sans text-sm font-semibold">
-                      {online ? "Waiting for matching jobs…" : "You're offline"}
+                    <p className={`font-sans text-sm font-semibold ${online ? "" : "text-white"}`}>
+                      {online ? "Listening for jobs" : "Offline — map still open"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className={`mt-1 text-xs leading-relaxed ${online ? "text-muted-foreground" : "text-white/65"}`}>
                       {online
-                        ? `You'll only see ${vehicleLabel} deliveries in your area.`
-                        : "Tap Go live (top right) or the green Live tab to start receiving jobs."}
+                        ? `Matching ${vehicleLabel} runs near you. Stay on this screen for the next offer.`
+                        : "You won’t get new job pings until you go live. Preview the corridor map anytime."}
                     </p>
                   </div>
                 </div>
@@ -485,9 +503,9 @@ function TransportOverview() {
                   <button
                     type="button"
                     onClick={toggleOnline}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 py-3.5 text-sm font-semibold text-white"
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition active:scale-[0.99]"
                   >
-                    <Radio className="h-4 w-4" /> Go live now
+                    <Radio className="h-4 w-4" /> Go live
                   </button>
                 )}
               </div>

@@ -6,9 +6,18 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+/** Loose row shape — full schema lives in SQL migrations; regenerate later with `supabase gen types`. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyRow = Record<string, any>
+
+type GenericTable = {
+  Row: AnyRow
+  Insert: AnyRow
+  Update: AnyRow
+  Relationships: []
+}
+
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -65,7 +74,10 @@ export type Database = {
           id: string
           phone: string | null
           region: string | null
+          slug: string | null
+          username: string | null
           updated_at: string
+          [key: string]: Json | undefined
         }
         Insert: {
           avatar_url?: string | null
@@ -75,7 +87,10 @@ export type Database = {
           id: string
           phone?: string | null
           region?: string | null
+          slug?: string | null
+          username?: string | null
           updated_at?: string
+          [key: string]: Json | undefined
         }
         Update: {
           avatar_url?: string | null
@@ -85,7 +100,10 @@ export type Database = {
           id?: string
           phone?: string | null
           region?: string | null
+          slug?: string | null
+          username?: string | null
           updated_at?: string
+          [key: string]: Json | undefined
         }
         Relationships: []
       }
@@ -110,9 +128,14 @@ export type Database = {
         }
         Relationships: []
       }
+      /** Catch-all for marketplace tables until types are regenerated from Supabase. */
+      [table: string]: GenericTable
     }
     Views: {
-      [_ in never]: never
+      [view: string]: {
+        Row: AnyRow
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -122,12 +145,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      [fn: string]: {
+        Args: AnyRow
+        Returns: unknown
+      }
     }
     Enums: {
       app_role: "buyer" | "farmer" | "transport" | "admin"
+      [name: string]: string
     }
     CompositeTypes: {
-      [_ in never]: never
+      [name: string]: never
     }
   }
 }
@@ -232,27 +260,10 @@ export type Enums<
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["buyer", "farmer", "transport", "admin"],
+      app_role: ["buyer", "farmer", "transport", "admin"] as const,
     },
   },
 } as const

@@ -110,11 +110,11 @@ export function FeedDesktopShell({
           </button>
         ) : chrome === "app" ? (
           <Link
-            to="/app/buyer"
+            to="/app/buyer/feed"
             className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/60 hover:bg-white/5 hover:text-white"
           >
             <BrandMark className="h-6 w-6" />
-            Dashboard
+            For You
           </Link>
         ) : (
           <Link

@@ -242,7 +242,7 @@ export async function processCheckout(params: {
             : weightKg > 40
               ? "pickup"
               : "motorcycle";
-    quote = await computeDeliveryQuote({
+    quote = (await computeDeliveryQuote({
       pickupLat: firstListing.lat,
       pickupLng: firstListing.lng,
       deliveryLat,
@@ -250,7 +250,7 @@ export async function processCheckout(params: {
       weightKg,
       vehicleType: quoteVehicle,
       pickupStops: pickupStops.length > 1 ? pickupStops : undefined,
-    });
+    })) as typeof quote;
     if (params.vehicleType === "bicycle") {
       quote = { ...quote, total: Math.round(quote.total * 0.85) };
     }
