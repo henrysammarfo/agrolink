@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Send, Loader2, Package, ImagePlus, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,6 +26,7 @@ type Props = {
 type AttachmentType = "image" | "video" | "audio";
 
 export function ChatThread({ userId, partnerId, partnerName, senderName, orderId, deliveryId }: Props) {
+  const qc = useQueryClient();
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -102,8 +104,9 @@ export function ChatThread({ userId, partnerId, partnerName, senderName, orderId
       if (result === "pending") {
         setMessages((m) => m.filter((x) => x.id !== optimistic.id));
         toast.success("Message request sent", {
-          description: "They'll see it after they accept.",
+          description: "Track it under Inbox → Requests until they accept.",
         });
+        void qc.invalidateQueries({ queryKey: ["message-requests", "outgoing", userId] });
         return;
       }
       trackEvent("chat_message_sent", {

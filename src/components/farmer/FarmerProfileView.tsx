@@ -124,8 +124,9 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
       setMessageOpen(false);
       setMessageText("");
       if (result === "pending") {
-        toast.success("Message request sent", { description: "They can accept in their inbox." });
+        toast.success("Message request sent", { description: "They can accept in their inbox. Track it under Requests." });
         await qc.invalidateQueries({ queryKey: ["message-request-status", user.id, farmerProfile.id] });
+        await qc.invalidateQueries({ queryKey: ["message-requests", "outgoing", user.id] });
       } else {
         toast.success("Message sent");
         navigate({ to: "/app/inbox/chat/$userId", params: { userId: farmerProfile.id } });

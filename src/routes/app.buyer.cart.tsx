@@ -651,9 +651,9 @@ function Cart() {
 
   return (
     <AppShell role="buyer" compact hideMobileNav={mapCheckoutStep && needsDelivery}>
-      {!mapCheckoutStep && (
+      {step === 1 && (
         <>
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => navigate({ to: "/app/buyer/feed" })}
@@ -671,8 +671,18 @@ function Cart() {
         </>
       )}
 
+      {step === paymentStep && (
+        <div className="mb-4">
+          <LifecycleStepper
+            steps={checkoutSteps}
+            currentStepId={checkoutStepId}
+            className="mb-2"
+          />
+        </div>
+      )}
+
       {step === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-4">
           {items.map((it) => (
             <CartLine
               key={it.id}
@@ -706,7 +716,7 @@ function Cart() {
         <div className="relative -mx-4 sm:-mx-6 md:-mx-10">
           {needsDelivery && pickupStops[0] ? (
             <>
-              <div className="relative h-[42vh] min-h-[280px] max-h-[420px]">
+              <div className="relative h-[42vh] min-h-[280px] max-h-[420px] sm:h-[48vh]">
                 <CorridorMap
                   pins={mapPins}
                   route={routeCoords}
@@ -729,14 +739,14 @@ function Cart() {
                 </button>
               </div>
 
-              <div className="relative z-10 -mt-6 rounded-t-3xl border border-border bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-4 shadow-[0_-8px_30px_rgba(0,0,0,.08)]">
+              <div className="relative z-10 -mt-6 rounded-t-3xl border border-border bg-background px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pt-4 shadow-[0_-8px_30px_rgba(0,0,0,.08)]">
                 <LifecycleStepper steps={CHECKOUT_MAIN_STEPS} currentStepId="delivery" compact className="mb-3" />
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Delivery setup</p>
                 <div className="mt-2">
                   <LifecycleStepper steps={DELIVERY_SETUP_SUBSTEPS} currentStepId={deliverySubstep} compact />
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mt-4">Your trip</p>
-                <div className="mt-3 flex gap-2 overflow-x-auto">
+                <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your trip</p>
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                   {FULFILLMENT_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -827,7 +837,7 @@ function Cart() {
                 recentPicks={GHANA_LOCATIONS}
               />
 
-              <div className="fixed inset-x-0 bottom-[max(env(safe-area-inset-bottom),0.5rem)] z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
+              <div className="fixed inset-x-0 bottom-[max(env(safe-area-inset-bottom),0.5rem)] z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:bottom-0">
                 <div className="mx-auto flex max-w-lg items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">Total</p>
@@ -846,31 +856,46 @@ function Cart() {
               </div>
             </>
           ) : (
-            <div className="space-y-5 px-1">
-              <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-                <ChevronLeft className="h-4 w-4" /> Back to cart
-              </button>
-              <div className="space-y-3">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Fulfillment</p>
-                {FULFILLMENT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setFulfillmentMode(opt.value)}
-                    className={`w-full rounded-2xl border p-4 text-left transition ${
-                      fulfillmentMode === opt.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    <div className="text-sm font-medium">{opt.label}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{opt.description}</div>
-                  </button>
-                ))}
+            <div className="space-y-6 px-4 pb-8 sm:px-6 md:px-10">
+              <div className="flex flex-col gap-4">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="inline-flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Back to cart
+                </button>
+                <LifecycleStepper steps={CHECKOUT_MAIN_STEPS} currentStepId="delivery" compact />
               </div>
-              <div className="rounded-2xl border border-dashed border-border p-4 text-xs text-muted-foreground">
-                {fulfillmentMode === "farm_pickup"
-                  ? "You'll collect at the farmer's location after payment."
-                  : "Your driver collects at the farm after payment."}
-              </div>
+
+              <section className="space-y-3">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Fulfillment
+                </h2>
+                <div className="grid gap-3">
+                  {FULFILLMENT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFulfillmentMode(opt.value)}
+                      className={`w-full rounded-2xl border p-4 text-left transition ${
+                        fulfillmentMode === opt.value
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                          : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      <div className="text-sm font-medium">{opt.label}</div>
+                      <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{opt.description}</div>
+                    </button>
+                  ))}
+                </div>
+                <p className="rounded-2xl border border-dashed border-border px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                  {fulfillmentMode === "farm_pickup"
+                    ? "You'll collect at the farmer's location after payment."
+                    : "Your driver collects at the farm after payment."}
+                </p>
+              </section>
+
               <OrderTotals subtotal={subtotal} delivery={delivery} platformFee={platformFee} total={total} needsDelivery={needsDelivery} />
               <button
                 type="button"
@@ -886,7 +911,7 @@ function Cart() {
       )}
 
       {step === paymentStep && (
-        <div className="mx-auto max-w-md space-y-5">
+        <div className="mx-auto max-w-md space-y-5 pb-6">
           <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-4 w-4" /> Back to delivery
           </button>

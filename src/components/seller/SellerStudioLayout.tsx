@@ -25,13 +25,14 @@ const RAIL: ReadonlyArray<{
   accent?: boolean;
   exact?: boolean;
   badgeKey?: "sales";
+  search?: { tab: "messages" | "activity" | "requests" };
 }> = [
   { to: "/app/create", label: "Create", icon: Plus, accent: true },
   { to: "/app/farmer", label: "Home", icon: Home, exact: true },
   { to: "/app/farmer/listings", label: "Posts", icon: ImageIcon },
   { to: "/app/farmer/orders", label: "Sales", icon: ClipboardList, badgeKey: "sales" },
   { to: "/app/farmer/payouts", label: "Money", icon: Wallet },
-  { to: "/app/inbox", label: "Inbox", icon: Inbox },
+  { to: "/app/inbox", label: "Messages", icon: Inbox, search: { tab: "messages" } },
 ];
 
 /**
@@ -65,6 +66,7 @@ export function SellerStudioLayout({ children }: { children: ReactNode }) {
                 <Link
                   key={item.to}
                   to={item.to}
+                  search={item.search as never}
                   title={item.label}
                   aria-label={badge > 0 ? `${item.label}, ${badge} need action` : item.label}
                   className={cn(
