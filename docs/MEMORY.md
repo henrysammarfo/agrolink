@@ -144,6 +144,7 @@ Stress tests: `npm run stress:comms`
 | API keys configured | OpenAI, Paystack, Resend, WhatsApp, PostHog, Sentry, Google Maps, TinyFish, VAPID |
 | E2E tests | `npm run test:e2e` — 22/22 passed |
 | Deploy target | Vercel — `docs/DEPLOY_VERCEL.md`, root `README.md` |
+| Types regen | Offline: `npm run db:types` (from `supabase/migrations`). Live OpenAPI: `npm run db:types:live` when env keys are present. Official CLI needs org access to `mhyuzmhzockexqmnyuze`. Client stays untyped (`createClient` without `Database`) because embeds join `profiles` via FKs that point at `auth.users`. |
 
 ## Launch path: PWA (not APK)
 

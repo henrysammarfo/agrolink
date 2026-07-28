@@ -3,7 +3,7 @@
 // Use this for admin operations in server functions and server routes only.
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from '@supabase/supabase-js';
-// Untyped client until `supabase gen types` covers joins/FKs.
+// Untyped until live `supabase gen types` (see client.ts). Offline: `npm run db:types`.
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
