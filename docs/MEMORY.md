@@ -145,6 +145,7 @@ Stress tests: `npm run stress:comms`
 | E2E tests | `npm run test:e2e` — 22/22 passed |
 | Deploy target | Vercel — `docs/DEPLOY_VERCEL.md`, root `README.md` |
 | Types regen | Offline: `npm run db:types` (from `supabase/migrations`). Live OpenAPI: `npm run db:types:live` when env keys are present. Official CLI needs org access to `mhyuzmhzockexqmnyuze`. Client stays untyped (`createClient` without `Database`) because embeds join `profiles` via FKs that point at `auth.users`. |
+| Profile / roles | Own `/app/profile` is TikTok-lean (no workspace switcher / role chips). Public Driver badge only when approved + online (or Drive context); dual-role sellers show Seller. Studio Sales rail badges `orderNeedsFarmerAction`. |
 
 ## Launch path: PWA (not APK)
 

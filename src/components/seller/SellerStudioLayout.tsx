@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   BarChart3,
   ClipboardList,
@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import { BrandMark } from "@/components/brand/Logo";
 import { FarmerGate } from "@/components/app/RoleGate";
+import { useAuth } from "@/lib/auth";
+import { useSellerOrders } from "@/hooks/use-marketplace";
+import { orderNeedsFarmerAction } from "@/lib/farmer-order-flow";
 import { cn } from "@/lib/utils";
 
 const RAIL: ReadonlyArray<{
@@ -21,11 +24,12 @@ const RAIL: ReadonlyArray<{
   icon: typeof Plus;
   accent?: boolean;
   exact?: boolean;
+  badgeKey?: "sales";
 }> = [
   { to: "/app/create", label: "Create", icon: Plus, accent: true },
   { to: "/app/farmer", label: "Home", icon: Home, exact: true },
   { to: "/app/farmer/listings", label: "Posts", icon: ImageIcon },
-  { to: "/app/farmer/orders", label: "Sales", icon: ClipboardList },
+  { to: "/app/farmer/orders", label: "Sales", icon: ClipboardList, badgeKey: "sales" },
   { to: "/app/farmer/payouts", label: "Money", icon: Wallet },
   { to: "/app/inbox", label: "Inbox", icon: Inbox },
 ];
@@ -36,6 +40,12 @@ const RAIL: ReadonlyArray<{
  */
 export function SellerStudioLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user } = useAuth();
+  const { data: orders = [] } = useSellerOrders(user?.id);
+  const salesBadge = useMemo(
+    () => orders.filter(orderNeedsFarmerAction).length,
+    [orders],
+  );
 
   return (
     <FarmerGate>
@@ -50,14 +60,15 @@ export function SellerStudioLayout({ children }: { children: ReactNode }) {
                 ? pathname === item.to
                 : pathname === item.to || pathname.startsWith(`${item.to}/`);
               const Icon = item.icon;
+              const badge = item.badgeKey === "sales" ? salesBadge : 0;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
                   title={item.label}
-                  aria-label={item.label}
+                  aria-label={badge > 0 ? `${item.label}, ${badge} need action` : item.label}
                   className={cn(
-                    "grid h-11 w-11 place-items-center rounded-2xl transition",
+                    "relative grid h-11 w-11 place-items-center rounded-2xl transition",
                     item.accent
                       ? "bg-primary text-primary-foreground shadow-sm hover:brightness-110"
                       : active
@@ -66,6 +77,11 @@ export function SellerStudioLayout({ children }: { children: ReactNode }) {
                   )}
                 >
                   <Icon className="h-5 w-5" />
+                  {badge > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-0.5 text-[9px] font-bold text-primary-foreground">
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -86,11 +102,11 @@ export function SellerStudioLayout({ children }: { children: ReactNode }) {
 
           <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-background/95 pb-[max(env(safe-area-inset-bottom),0px)] backdrop-blur md:hidden">
             {[
-              { to: "/app/buyer/feed", icon: Sprout, label: "Shop", exact: false },
-              { to: "/app/farmer/listings", icon: ImageIcon, label: "Posts", exact: false },
-              { to: "/app/create", icon: Plus, label: "Create", center: true, exact: false },
-              { to: "/app/farmer/orders", icon: BarChart3, label: "Sales", exact: false },
-              { to: "/app/farmer/payouts", icon: Wallet, label: "Money", exact: false },
+              { to: "/app/buyer/feed" as const, icon: Sprout, label: "Shop", exact: false },
+              { to: "/app/farmer/listings" as const, icon: ImageIcon, label: "Posts", exact: false },
+              { to: "/app/create" as const, icon: Plus, label: "Create", center: true, exact: false },
+              { to: "/app/farmer/orders" as const, icon: BarChart3, label: "Sales", exact: false, badge: salesBadge },
+              { to: "/app/farmer/payouts" as const, icon: Wallet, label: "Money", exact: false },
             ].map((t) => {
               const active = t.center
                 ? pathname.startsWith("/app/create")
@@ -117,12 +133,17 @@ export function SellerStudioLayout({ children }: { children: ReactNode }) {
                   key={t.to}
                   to={t.to}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 py-2 text-[10px]",
+                    "relative flex flex-col items-center gap-0.5 py-2 text-[10px]",
                     active ? "text-primary" : "text-muted-foreground",
                   )}
                 >
                   <Icon className="h-5 w-5" />
                   {t.label}
+                  {(t.badge ?? 0) > 0 && (
+                    <span className="absolute right-3 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                      {t.badge! > 9 ? "9+" : t.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}

@@ -52,20 +52,31 @@ export const Route = createFileRoute("/api/search/global")({
           if (farmers.error) throw farmers.error;
 
           const profileIds = (farmers.data ?? []).map((f) => f.id);
-          const { data: drivers } = profileIds.length
-            ? await supabaseAdmin
-                .from("driver_profiles")
-                .select("user_id, vehicle_type, verification_status")
-                .in("user_id", profileIds)
-                .eq("verification_status", "approved")
-            : { data: [] };
+          const [{ data: drivers }, { data: sellerRows }] = await Promise.all([
+            profileIds.length
+              ? supabaseAdmin
+                  .from("driver_profiles")
+                  .select("user_id, vehicle_type, verification_status, available")
+                  .in("user_id", profileIds)
+                  .eq("verification_status", "approved")
+              : Promise.resolve({ data: [] as { user_id: string; vehicle_type: string | null; verification_status: string; available: boolean | null }[] }),
+            profileIds.length
+              ? supabaseAdmin
+                  .from("listings")
+                  .select("seller_id")
+                  .in("seller_id", profileIds)
+                  .eq("status", "active")
+              : Promise.resolve({ data: [] as { seller_id: string }[] }),
+          ]);
 
           const driverSet = new Set((drivers ?? []).map((d) => d.user_id));
           const driverVehicle = new Map((drivers ?? []).map((d) => [d.user_id, d.vehicle_type]));
+          const sellerSet = new Set((sellerRows ?? []).map((r) => r.seller_id));
 
           const enrichedFarmers = (farmers.data ?? []).map((f) => ({
             ...f,
-            is_driver: driverSet.has(f.id),
+            is_driver: driverSet.has(f.id) && !sellerSet.has(f.id),
+            is_seller: sellerSet.has(f.id),
             vehicle_type: driverVehicle.get(f.id) ?? null,
           }));
 

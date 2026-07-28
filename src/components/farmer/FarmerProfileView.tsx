@@ -14,6 +14,8 @@ import { sendChatMessage } from "@/lib/api/chat";
 import { useAuth } from "@/lib/auth";
 import { MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
 import { profilePath } from "@/lib/app-role";
+import { shouldShowDriverBadge, shouldShowOnlineBadge } from "@/lib/driver-badge";
+import { useShellRole } from "@/hooks/use-shell-role";
 
 type Props = {
   slug: string;
@@ -23,6 +25,7 @@ type Props = {
 export function FarmerProfileView({ slug, inApp = false }: Props) {
   const navigate = useNavigate();
   const { user, profile: authProfile } = useAuth();
+  const shellRole = useShellRole();
   const qc = useQueryClient();
   const farmerSlug = slug.trim().toLowerCase();
   const [tab, setTab] = useState<"posts" | "bookmarks">("posts");
@@ -164,8 +167,15 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
     enabled: !!farmerProfile?.id && driverInfo?.verification_status === "approved",
   });
 
-  const isDriver = driverInfo?.verification_status === "approved";
   const isFarmer = listings.length > 0;
+  const badgeInput = {
+    verificationStatus: driverInfo?.verification_status,
+    available: driverInfo?.available,
+    hasListings: isFarmer,
+    context: (inApp && shellRole === "transport" ? "drive" : "profile") as "drive" | "profile",
+  };
+  const isDriver = shouldShowDriverBadge(badgeInput);
+  const showOnline = shouldShowOnlineBadge(badgeInput);
   const handle = farmerProfile?.username ?? (farmerProfile?.slug ?? slug).replace(/-/g, "");
   const isSelf = user?.id === farmerProfile?.id;
   const followersLink = inApp
@@ -224,17 +234,16 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
             <h1 className="font-serif text-2xl sm:text-4xl text-foreground">{farmerProfile.display_name}</h1>
             <p className="text-sm text-muted-foreground">@{handle}</p>
             <div className="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              {isDriver && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                  <Truck className="h-3 w-3" /> Driver
-                </span>
-              )}
-              {isFarmer && (
+              {isFarmer ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-primary">
                   Seller
                 </span>
-              )}
-              {driverInfo?.available && (
+              ) : isDriver ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                  <Truck className="h-3 w-3" /> Driver
+                </span>
+              ) : null}
+              {showOnline && (
                 <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
                   Online now
                 </span>
@@ -242,10 +251,12 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
             </div>
             <p className="mt-1 inline-flex items-center justify-center sm:justify-start gap-2 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" /> {farmerProfile.region ?? "Greater Accra"}
-              {isDriver && driverInfo?.vehicle_type && (
-                <span>· {driverInfo.vehicle_type}{driverInfo.plate_number ? ` · ${driverInfo.plate_number}` : ""}</span>
-              )}
             </p>
+            {isDriver && driverInfo?.vehicle_type && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {driverInfo.vehicle_type}{driverInfo.plate_number ? ` · ${driverInfo.plate_number}` : ""}
+              </p>
+            )}
           </div>
         <div className="mt-4 sm:mt-0 flex flex-wrap items-center justify-center gap-2">
           {!isSelf && (
@@ -278,7 +289,7 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-center sm:justify-start gap-8 sm:gap-10 text-center px-2">
+      <div className="mt-5 flex items-center justify-center sm:justify-start gap-8 sm:gap-10 text-center px-2">
         <Link {...followersLink} className="hover:opacity-80">
           <Stat n={String(stats?.followers ?? farmerProfile.follower_count ?? 0)} label="Followers" />
         </Link>
@@ -288,9 +299,6 @@ export function FarmerProfileView({ slug, inApp = false }: Props) {
           <Stat n={String(driverTrips)} label="Trips" />
         ) : null}
         {isFarmer && <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />}
-        {isFarmer && (
-          <Stat n={farmerProfile.seller_rating != null ? `${farmerProfile.seller_rating.toFixed(1)}★` : "—"} label="Rating" />
-        )}
       </div>
 
       <p className="mt-5 px-2 text-center sm:text-left text-foreground/85 max-w-2xl text-sm sm:text-base">

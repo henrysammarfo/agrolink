@@ -4,6 +4,7 @@ import { PageHeader, StatCard } from "@/components/app/AppShell";
 import { SellerStudioLayout } from "@/components/seller/SellerStudioLayout";
 import { useAuth } from "@/lib/auth";
 import { useSellerOrders, useSellerListings, useFarmerRevenue } from "@/hooks/use-marketplace";
+import { orderNeedsFarmerAction } from "@/lib/farmer-order-flow";
 import { StatusBadge } from "./app.buyer";
 import { MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
 
@@ -24,7 +25,7 @@ function FarmerOverview() {
   const series = revenue?.series ?? [];
   const max = Math.max(...series.map((r) => r.ghs), 1);
   const total = revenue?.total ?? 0;
-  const pending = orders.filter((o) => o.status === "pending" || o.status === "confirmed").length;
+  const pending = orders.filter(orderNeedsFarmerAction).length;
 
   return (
     <SellerStudioLayout>
