@@ -14,6 +14,7 @@ type Profile = {
   region: string | null;
   slug: string | null;
   username?: string | null;
+  verified?: boolean;
   public_bookmarks?: boolean;
   profile_view_notifications?: boolean;
 };
