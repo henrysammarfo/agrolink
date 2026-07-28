@@ -11,6 +11,7 @@ import { useUnreadCounts, useCart } from "@/hooks/use-marketplace";
 import { GlobalSearch, SearchTrigger } from "@/components/app/GlobalSearch";
 import { roleHome, normalizeWorkspace } from "@/lib/active-workspace";
 import { useWorkspaceSwitch } from "@/hooks/use-workspace-switch";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 export type AppRole = AuthRole;
 
@@ -44,6 +45,13 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
 };
 
 const IMMERSIVE_PATHS = ["/app/buyer/feed", "/app/transport"];
+
+function roleLabel(role: AppRole): string {
+  if (role === "buyer" || role === "farmer") return "Market";
+  if (role === "transport") return "Drive";
+  if (role === "admin") return "Admin";
+  return role;
+}
 
 type MobileTab = {
   id: string;
@@ -197,28 +205,33 @@ export function AppShell({
   ];
 
   const { switchTo: switchWorkspace } = useWorkspaceSwitch();
+  const { theme } = useTheme();
 
   const mobileTabs = buildMobileTabs(role, cartCount);
 
   if (immersive) {
     const lightChrome = pathname.startsWith("/app/transport");
+    const feedDark = !lightChrome && theme === "dark";
+    const hideDesktopNav = !lightChrome;
     return (
       <div
-        className={`agrolink-immersive-feed relative h-[100dvh] w-full overflow-hidden lg:[--agrolink-tab-bar:0px] ${lightChrome ? "bg-background" : "bg-black"}`}
+        className={`agrolink-immersive-feed relative h-[100dvh] w-full overflow-hidden ${hideDesktopNav ? "lg:[--agrolink-tab-bar:0px]" : ""} ${lightChrome ? "bg-background" : feedDark ? "bg-black" : "bg-background"}`}
         style={{ "--agrolink-tab-bar": "3.5rem" } as CSSProperties}
       >
         <div className="absolute inset-0">{children ?? <Outlet />}</div>
-        <nav className={`agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t pb-[max(env(safe-area-inset-bottom),0px)] lg:hidden ${
+        <nav className={`agrolink-immersive-chrome pointer-events-auto fixed inset-x-0 bottom-0 z-[10060] grid grid-cols-5 border-t pb-[max(env(safe-area-inset-bottom),0px)] ${hideDesktopNav ? "lg:hidden" : ""} ${
           lightChrome
             ? "border-border bg-background/95 backdrop-blur-md"
-            : "border-white/5 bg-black/55 backdrop-blur-md"
+            : feedDark
+              ? "border-white/5 bg-black/55 backdrop-blur-md"
+              : "border-border bg-background/95 backdrop-blur-md"
         }`}>
           {mobileTabs.map((t) => (
             <MobileTabLink
               key={t.id}
               tab={t}
               active={isMobileTabActive(pathname, t, mobileTabs)}
-              immersiveDark={!lightChrome}
+              immersiveDark={!lightChrome && feedDark}
             />
           ))}
         </nav>
@@ -229,7 +242,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
       <aside
-        className={`hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-500 ${
+        className={`sticky top-0 hidden h-dvh shrink-0 self-start overflow-y-auto md:flex flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-500 ${
           collapsed ? "w-[72px]" : "w-[260px]"
         }`}
       >
@@ -355,7 +368,7 @@ export function AppShell({
               <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/20 font-serif text-sm text-primary">
                 {(profile?.display_name?.[0] ?? "A").toUpperCase()}
               </span>
-              <span className="pr-2 text-xs text-muted-foreground capitalize">{role}</span>
+              <span className="pr-2 text-xs text-muted-foreground">{roleLabel(role)}</span>
             </Link>
           </div>
         </header>
