@@ -43,7 +43,7 @@ const APP_NAV = [
   { to: "/app/buyer/feed", label: "For You", icon: Sprout, match: (p: string) => p.startsWith("/app/buyer/feed") },
   { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket, match: (p: string) => p.startsWith("/app/buyer/cart") },
   { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList, match: (p: string) => p.startsWith("/app/buyer/orders") },
-  { to: "/app/inbox", label: "Inbox", icon: Inbox, match: (p: string) => p.startsWith("/app/inbox") },
+  { to: "/app/inbox", label: "Messages", icon: Inbox, match: (p: string) => p.startsWith("/app/inbox"), search: { tab: "messages" as const } },
   { to: "/app/profile", label: "Profile", icon: User, match: (p: string) => p.startsWith("/app/profile") || p.startsWith("/app/users") },
 ] as const;
 
@@ -136,10 +136,12 @@ export function FeedDesktopShell({
         <nav className="flex flex-1 flex-col gap-1">
           {nav.map((item) => {
             const active = item.match(pathname);
+            const search = "search" in item ? item.search : undefined;
             return (
               <Link
                 key={item.to}
                 to={item.to}
+                search={search as never}
                 title={collapsed ? item.label : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-semibold transition",

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { AppShell, PageHeader } from "@/components/app/AppShell";
+import { AppShell } from "@/components/app/AppShell";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { useAuth } from "@/lib/auth";
 import { useShellRole } from "@/hooks/use-shell-role";
@@ -70,8 +70,8 @@ function ChatPage() {
       ) : !partner ? (
         <div className="py-20 text-center">
           <p className="text-muted-foreground">User not found</p>
-          <Link to="/app/inbox" className="mt-4 text-primary underline">
-            Back to inbox
+          <Link to="/app/inbox" search={{ tab: "messages" }} className="mt-4 text-primary underline">
+            Back to messages
           </Link>
         </div>
       ) : (

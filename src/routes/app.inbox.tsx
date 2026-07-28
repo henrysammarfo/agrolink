@@ -56,7 +56,11 @@ function Inbox() {
   const { tab: searchTab } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"activity" | "messages" | "requests">(searchTab ?? "activity");
+  const [tab, setTab] = useState<"activity" | "messages" | "requests">(searchTab ?? "messages");
+
+  useEffect(() => {
+    if (searchTab) setTab(searchTab);
+  }, [searchTab]);
 
   const { data: notifications = [], isLoading: nLoading } = useNotifications(user?.id);
   const { data: conversations = [], isLoading: cLoading } = useConversations(user?.id);
@@ -84,9 +88,15 @@ function Inbox() {
     <AppShell role={shellRole} unreadInbox={(unreadNotis ?? 0) + (unreadMsgs ?? 0)} compact>
       <PageHeader
         eyebrow="Inbox"
-        title="Your"
-        italic="updates"
-        sub="Likes, orders, and direct messages — realtime."
+        title={tab === "messages" ? "Your" : tab === "requests" ? "Message" : "Your"}
+        italic={tab === "messages" ? "messages" : tab === "requests" ? "requests" : "activity"}
+        sub={
+          tab === "messages"
+            ? "Chats with buyers, sellers, and drivers."
+            : tab === "requests"
+              ? "People who want to message you."
+              : "Likes, orders, follows, and delivery alerts."
+        }
         action={
           tab === "activity" && unreadNotis > 0 ? (
             <button
@@ -100,15 +110,16 @@ function Inbox() {
       />
 
       <div className="border-b border-border">
-        <div className="flex gap-8">
-          {(["activity", "messages", "requests"] as const).map((k) => (
+        <div className="flex gap-4 overflow-x-auto no-scrollbar sm:gap-8">
+          {(["messages", "activity", "requests"] as const).map((k) => (
             <button
               key={k}
+              type="button"
               onClick={() => {
                 setTab(k);
                 navigate({ to: "/app/inbox", search: { tab: k } });
               }}
-              className={`border-b-2 px-1 pb-3 text-sm capitalize ${
+              className={`shrink-0 border-b-2 px-1 pb-3 text-sm capitalize ${
                 tab === k
                   ? "border-foreground text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"

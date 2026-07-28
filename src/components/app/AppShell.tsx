@@ -15,22 +15,22 @@ import { useTheme } from "@/components/theme/ThemeProvider";
 
 export type AppRole = AuthRole;
 
-const MARKET_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
+const MARKET_NAV: { to: string; label: string; icon: typeof Wallet; search?: Record<string, string> }[] = [
   { to: "/app/buyer/feed", label: "For You", icon: Sprout },
   { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket },
   { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
-  { to: "/app/inbox", label: "Inbox", icon: Inbox },
+  { to: "/app/inbox", label: "Messages", icon: Inbox, search: { tab: "messages" } },
   { to: "/app/profile", label: "Profile", icon: User },
 ];
 
-const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]> = {
+const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet; search?: Record<string, string> }[]> = {
   buyer: MARKET_NAV,
   farmer: MARKET_NAV,
   transport: [
     { to: "/app/buyer/feed", label: "For You", icon: Sprout },
     { to: "/app/transport", label: "Map", icon: MapPin },
     { to: "/app/transport/jobs", label: "Jobs", icon: Truck },
-    { to: "/app/inbox", label: "Inbox", icon: Inbox },
+    { to: "/app/inbox", label: "Messages", icon: Inbox, search: { tab: "messages" } },
     { to: "/app/profile", label: "Profile", icon: User },
   ],
   admin: [
@@ -60,6 +60,7 @@ type MobileTab = {
   label: string;
   badge?: number;
   center?: boolean;
+  search?: Record<string, string>;
 };
 
 function buildMobileTabs(role: AppRole, cartCount: number): MobileTab[] {
@@ -75,7 +76,7 @@ function buildMobileTabs(role: AppRole, cartCount: number): MobileTab[] {
   if (role === "transport") {
     return [
       { id: "feed", to: "/app/buyer/feed", icon: Sprout, label: "Shop" },
-      { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Inbox" },
+      { id: "inbox", to: "/app/inbox", icon: Inbox, label: "Msgs", search: { tab: "messages" } },
       { id: "live", to: "/app/transport", icon: Radio, label: "Live", center: true },
       { id: "jobs", to: "/app/transport/jobs", icon: Truck, label: "Jobs" },
       { id: "me", to: "/app/profile", icon: User, label: "Me" },
@@ -128,7 +129,7 @@ function MobileTabLink({
   if (tab.center) {
     const isLive = tab.id === "live";
     return (
-      <Link key={tab.id} to={tab.to} className="flex items-center justify-center -mt-3">
+      <Link key={tab.id} to={tab.to} search={tab.search as never} className="flex items-center justify-center -mt-3">
         <span
           className={`grid h-12 w-14 place-items-center rounded-2xl shadow-lg ${
             isLive
@@ -149,6 +150,7 @@ function MobileTabLink({
     <Link
       key={tab.id}
       to={tab.to}
+      search={tab.search as never}
       className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] ${
         active
           ? immersiveDark
@@ -288,8 +290,9 @@ export function AppShell({
             const active = isSidebarActive(pathname, n.to, navTos);
             return (
               <Link
-                key={n.to}
+                key={n.to + (n.search?.tab ?? "")}
                 to={n.to}
+                search={n.search as never}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
                   active ? "bg-primary/15 text-foreground" : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground"
                 }`}
@@ -351,7 +354,13 @@ export function AppShell({
             >
               <Search className="h-4 w-4" />
             </button>
-            <Link to="/app/inbox" className="relative grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground">
+            <Link
+              to="/app/inbox"
+              search={{ tab: "activity" }}
+              className="relative grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+              aria-label="Activity"
+              title="Activity"
+            >
               <Bell className="h-4 w-4" />
               {unreadInbox > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-0.5 text-[9px] font-bold text-primary-foreground">
