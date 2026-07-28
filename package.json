@@ -17,6 +17,8 @@
     "upload:media": "node scripts/upload-listing-media.mjs",
     "stress:order-flow": "node --experimental-strip-types scripts/stress-order-flow.mjs",
     "db:migrate": "node scripts/apply-migrations.mjs",
+    "db:types": "node scripts/gen-supabase-types-from-migrations.mjs",
+    "db:types:live": "node scripts/gen-supabase-types.mjs",
     "cron:configure": "node scripts/configure-cron.mjs",
     "icons:generate": "node scripts/generate-brand-icons.mjs",
     "vapid:generate": "node scripts/generate-vapid-keys.mjs",
