@@ -1,6 +1,6 @@
-import { createFileRoute, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { Truck, Radio, Loader2 } from "lucide-react";
+import { Truck, Radio, Loader2, Sprout } from "lucide-react";
 import { dialPhone, pickBuyerPhone } from "@/lib/trip-contact";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
@@ -406,6 +406,13 @@ function TransportOverview() {
           )}
 
           <div className="pointer-events-none absolute left-3 top-[max(env(safe-area-inset-top),10px)] z-20 flex flex-col gap-2">
+            <Link
+              to="/app/buyer/feed"
+              className="pointer-events-auto inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background/95 px-3 py-2 text-sm font-semibold text-foreground shadow-lg backdrop-blur-md"
+            >
+              <Sprout className="h-4 w-4 text-primary" />
+              Shop
+            </Link>
             {earnings && !active && (
               <div className="pointer-events-auto grid w-[10.5rem] grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/65 p-2 text-white backdrop-blur-md">
                 <div className="text-center">

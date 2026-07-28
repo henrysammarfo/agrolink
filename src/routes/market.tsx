@@ -1,5 +1,6 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useEffect } from "react";
 import { FeedPlayer } from "@/components/market/FeedPlayer";
 import { useAuth } from "@/lib/auth";
 
@@ -21,12 +22,24 @@ export const Route = createFileRoute("/market")({
 function Market() {
   const { user, loading } = useAuth();
   const { listing } = Route.useSearch();
+  const navigate = useNavigate();
 
-  if (!loading && user) {
-    throw redirect({
-      to: "/app/buyer/feed",
-      search: listing ? { listing } : {},
-    });
+  useEffect(() => {
+    if (!loading && user) {
+      void navigate({
+        to: "/app/buyer/feed",
+        search: listing ? { listing } : {},
+        replace: true,
+      });
+    }
+  }, [loading, user, listing, navigate]);
+
+  if (loading || user) {
+    return (
+      <div className="grid h-screen w-screen place-items-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading" />
+      </div>
+    );
   }
 
   return (

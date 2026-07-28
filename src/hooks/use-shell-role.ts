@@ -25,7 +25,7 @@ export function useShellRole(): AppRole {
   }
 
   if (SHARED_PREFIXES.some((p) => pathname.startsWith(p))) {
-    return workspace;
+    return "buyer";
   }
 
   return workspace;
