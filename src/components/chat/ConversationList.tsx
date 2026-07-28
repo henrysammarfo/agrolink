@@ -11,7 +11,14 @@ export function ConversationList({
   if (conversations.length === 0) {
     return (
       <div className="rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-        No conversations yet — message a farmer or driver from their profile or order track screen.
+        <p>No conversations yet.</p>
+        <p className="mt-2">
+          Message someone from their profile — if they need to approve it, check the{" "}
+          <Link to="/app/inbox" search={{ tab: "requests" }} className="text-primary underline-offset-2 hover:underline">
+            Requests
+          </Link>{" "}
+          tab for pending status.
+        </p>
       </div>
     );
   }

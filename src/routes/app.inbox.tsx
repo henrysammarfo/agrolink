@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Heart, MessageCircle, Truck, Wallet, Bell, Loader2, UserPlus, Check, X } from "lucide-react";
+import { Heart, MessageCircle, Truck, Wallet, Bell, Loader2, UserPlus, Check, X, Clock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppShell, PageHeader } from "@/components/app/AppShell";
 import { ConversationList } from "@/components/chat/ConversationList";
@@ -17,8 +17,12 @@ import {
   subscribeToNotifications,
 } from "@/lib/api/notifications";
 import { showLocalNotification } from "@/lib/push-client";
-import { fetchMessageRequests, respondToMessageRequest } from "@/lib/api/message-requests";
-import { parseNotificationTarget, profileHandle } from "@/lib/profile-links";
+import {
+  fetchMessageRequests,
+  fetchOutgoingMessageRequests,
+  respondToMessageRequest,
+} from "@/lib/api/message-requests";
+import { parseNotificationTarget } from "@/lib/profile-links";
 import { useQuery } from "@tanstack/react-query";
 
 const ICON_MAP: Record<string, typeof Heart> = {
@@ -64,11 +68,28 @@ function Inbox() {
 
   const { data: notifications = [], isLoading: nLoading } = useNotifications(user?.id);
   const { data: conversations = [], isLoading: cLoading } = useConversations(user?.id);
-  const { data: requests = [], isLoading: rLoading, refetch: refetchRequests } = useQuery({
-    queryKey: ["message-requests", user?.id],
+  const {
+    data: incomingRequests = [],
+    isLoading: incomingLoading,
+    refetch: refetchIncoming,
+  } = useQuery({
+    queryKey: ["message-requests", "incoming", user?.id],
     queryFn: () => fetchMessageRequests(user!.id),
     enabled: !!user?.id,
   });
+  const {
+    data: outgoingRequests = [],
+    isLoading: outgoingLoading,
+    refetch: refetchOutgoing,
+  } = useQuery({
+    queryKey: ["message-requests", "outgoing", user?.id],
+    queryFn: () => fetchOutgoingMessageRequests(user!.id),
+    enabled: !!user?.id,
+  });
+  const rLoading = incomingLoading || outgoingLoading;
+  const refetchRequests = async () => {
+    await Promise.all([refetchIncoming(), refetchOutgoing()]);
+  };
   const { data: unread } = useUnreadCounts(user?.id);
 
   useEffect(() => {
@@ -82,7 +103,7 @@ function Inbox() {
 
   const unreadNotis = unread?.notifications ?? notifications.filter((n) => !n.read).length;
   const unreadMsgs = unread?.messages ?? conversations.reduce((s, c) => s + c.unread, 0);
-  const pendingRequests = requests.length;
+  const pendingRequests = incomingRequests.length + outgoingRequests.length;
 
   return (
     <AppShell role={shellRole} unreadInbox={(unreadNotis ?? 0) + (unreadMsgs ?? 0)} compact>
@@ -94,7 +115,7 @@ function Inbox() {
           tab === "messages"
             ? "Chats with buyers, sellers, and drivers."
             : tab === "requests"
-              ? "People who want to message you."
+              ? "Incoming requests and ones you sent waiting for approval."
               : "Likes, orders, follows, and delivery alerts."
         }
         action={
@@ -221,56 +242,119 @@ function Inbox() {
             <div className="grid place-items-center py-16">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
+          ) : incomingRequests.length === 0 && outgoingRequests.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+              No pending requests. When you message someone new, it shows here until they accept.
+            </div>
           ) : (
-            <ul className="divide-y divide-border rounded-3xl border border-border bg-card overflow-hidden">
-              {requests.map((r) => {
-                const requester = r.requester as {
-                  display_name?: string | null;
-                  avatar_url?: string | null;
-                } | null;
-                return (
-                  <li key={r.requester_id} className="px-5 py-4">
-                    <div className="flex items-start gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-muted text-primary font-semibold">
-                        {(requester?.display_name ?? "?")[0]}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium">{requester?.display_name ?? "User"}</div>
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{r.preview}</p>
-                        <div className="mt-3 flex gap-2">
-                          <button
-                            onClick={async () => {
-                              await respondToMessageRequest("accept", r.requester_id);
-                              await refetchRequests();
-                              qc.invalidateQueries({ queryKey: ["conversations", user?.id] });
-                              navigate({
-                                to: "/app/inbox/chat/$userId",
-                                params: { userId: r.requester_id },
-                              });
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs text-primary-foreground"
-                          >
-                            <Check className="h-3 w-3" /> Accept
-                          </button>
-                          <button
-                            onClick={async () => {
-                              await respondToMessageRequest("decline", r.requester_id);
-                              refetchRequests();
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs"
-                          >
-                            <X className="h-3 w-3" /> Decline
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-              {requests.length === 0 && (
-                <li className="p-10 text-center text-muted-foreground">No pending requests.</li>
+            <div className="space-y-6">
+              {incomingRequests.length > 0 && (
+                <section>
+                  <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Incoming · needs your reply
+                  </h3>
+                  <ul className="divide-y divide-border rounded-3xl border border-border bg-card overflow-hidden">
+                    {incomingRequests.map((r) => {
+                      const requester = r.requester;
+                      return (
+                        <li key={`in-${r.requester_id}`} className="px-5 py-4">
+                          <div className="flex items-start gap-3">
+                            <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-muted text-primary font-semibold">
+                              {requester?.avatar_url ? (
+                                <img src={requester.avatar_url} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                (requester?.display_name ?? "?")[0]
+                              )}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">{requester?.display_name ?? "User"}</div>
+                              <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{r.preview}</p>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await respondToMessageRequest("accept", r.requester_id);
+                                    await refetchRequests();
+                                    qc.invalidateQueries({ queryKey: ["conversations", user?.id] });
+                                    navigate({
+                                      to: "/app/inbox/chat/$userId",
+                                      params: { userId: r.requester_id },
+                                    });
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs text-primary-foreground"
+                                >
+                                  <Check className="h-3 w-3" /> Accept
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await respondToMessageRequest("decline", r.requester_id);
+                                    await refetchRequests();
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs"
+                                >
+                                  <X className="h-3 w-3" /> Decline
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
               )}
-            </ul>
+
+              {outgoingRequests.length > 0 && (
+                <section>
+                  <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Sent · waiting for approval
+                  </h3>
+                  <ul className="divide-y divide-border rounded-3xl border border-border bg-card overflow-hidden">
+                    {outgoingRequests.map((r) => {
+                      const recipient = r.recipient;
+                      const handle = recipient?.username ?? recipient?.slug ?? r.recipient_id;
+                      return (
+                        <li key={`out-${r.recipient_id}`} className="px-5 py-4">
+                          <div className="flex items-start gap-3">
+                            <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-muted text-primary font-semibold">
+                              {recipient?.avatar_url ? (
+                                <img src={recipient.avatar_url} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                (recipient?.display_name ?? "?")[0]
+                              )}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium">{recipient?.display_name ?? "User"}</span>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                                  <Clock className="h-3 w-3" /> Pending
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                                {r.preview || "Waiting for them to accept your message request."}
+                              </p>
+                              <p className="mt-1 text-[11px] text-muted-foreground">
+                                Sent {new Date(r.created_at).toLocaleString()}
+                              </p>
+                              {handle && (
+                                <Link
+                                  to="/app/users/$slug"
+                                  params={{ slug: handle }}
+                                  className="mt-2 inline-block text-xs text-primary hover:underline"
+                                >
+                                  View profile
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+            </div>
           )
         ) : cLoading ? (
           <div className="grid place-items-center py-16">
