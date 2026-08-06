@@ -36,7 +36,7 @@ No cold “official” list works here. You get numbers **in person**.
 
 > Hi bro/sis, Henry here — we met at [Dodowa Market]. Building AgroLink: driver picks your tomato/greens, Accra kitchen pays MoMo same day. Fit chat 10 min? No payment now — just learning.
 
-**Quick questions:** Where you sell now? Unsold how long before spoil? Prefer WhatsApp when buyer orders? Try one pickup this week?
+**Quick questions:** Where you sell now? Unsold how long before spoil? OK with **in-app / push** when a kitchen orders (we’re not shipping WhatsApp alerts for MVP)? Try one pickup this week?
 
 ---
 

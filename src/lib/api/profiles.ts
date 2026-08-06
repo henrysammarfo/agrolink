@@ -17,23 +17,10 @@ export type PublicProfile = {
 };
 
 export async function fetchPublicSellers(limit = 12): Promise<PublicProfile[]> {
-  const { data: listingRows, error: lErr } = await supabase
-    .from("listings")
-    .select("seller_id")
-    .eq("status", "active");
-  if (lErr) throw lErr;
-
-  const ids = [...new Set((listingRows ?? []).map((r) => r.seller_id))];
-  if (!ids.length) return [];
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .in("id", ids)
-    .order("seller_rating", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data ?? []) as PublicProfile[];
+  const res = await fetch(`/api/stats/public-sellers?limit=${limit}`);
+  if (!res.ok) throw new Error("Failed to load sellers");
+  const json = (await res.json()) as { sellers?: PublicProfile[] };
+  return json.sellers ?? [];
 }
 
 export async function fetchPublicDriverInfo(userId: string) {

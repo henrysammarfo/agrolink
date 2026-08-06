@@ -16,28 +16,27 @@ Goal: look sharp on **trust + corridor logistics**, not feed polish.
 - Corridor lock + landing constraints (no fake testimonials)  
 - Mapbox / Paystack / Supabase keys on Vercel  
 - Driver KYC + admin disputes foundation  
+- Comment moderation API + RLS (client insert locked)  
+- WhatsApp/SMS off in product + UI copy  
 
 ---
 
-## P0 — before pitch
+## P0 — before pitch (you own this)
 
 | # | Part | Harden how |
 |---|------|------------|
-| 1 | Field proof | `OUTREACH` ≥5 farmers + ≥5 kitchens |
-| 2 | Pitch script | One-liner + MoMo → match → track → POD; feed = discovery |
+| 1 | Field proof | `OUTREACH` ≥5 farmers + ≥5 kitchens — fill the table |
+| 2 | Pitch script | One-liner in `JUDGE_FEEDBACK.md` + 3-min demo in `DEMO_REHEARSAL.md` |
 | 3 | Seller dry-run | Studio post &lt;2 min on phone |
-| 4 | Verification story | Driver KYC + listing AI + POD + disputes |
-| 5 | Deploy landing | Ship constraints section if not live |
+| 4 | Verification story | Driver KYC + listing AI + POD + disputes (one admin dry-run) |
+| 5 | Confirm live | Landing constraints live on agrolink-omega |
 
-## P1 — product (this pass)
+## P1 leftovers
 
 | Part | Status |
 |------|--------|
-| Comment moderation (OpenAI + blocklist on POST) | Done |
-| Track: verified driver + listed date + POD badge/photo | Done |
-| WhatsApp/SMS off notify path | Done |
-| Local `.env.local` | Still need backup paste (Sensitive on Vercel) |
-| Dispute resolve rehearsal | You — admin UI dry-run |
+| Local `.env.local` | Optional — backup paste if offline demo |
+| Dispute resolve rehearsal | Admin UI dry-run once |
 
 ## Skip
 

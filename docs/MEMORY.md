@@ -4,7 +4,7 @@ Last updated: 2026-08-06
 
 ## Active focus (finals)
 
-- **Judge response:** `docs/JUDGE_FEEDBACK.md` + `docs/FINAL_FACTCHECK.md`
+- **Judge response:** `docs/JUDGE_FEEDBACK.md` + `docs/FINAL_FACTCHECK.md` + `docs/PITCH_CARD.md`
 - **Pre-pitch harden:** `docs/PITCH_HARDEN.md`
 - **Routes map:** `docs/ROUTES.md` — Market / Studio / Drive / Admin stay separate; no hidden pages
 - **Field validation:** `docs/OUTREACH_CONTACTS.md` — ≥5 farmers + ≥5 kitchens (Henry owns walks)
@@ -13,8 +13,10 @@ Last updated: 2026-08-06
 - **No GitHub Actions CI** — billing blocked; Vercel builds only (do not re-add workflows)
 - **Defer:** native APK, crop expansion beyond tomato/leafies, multi-corridor scale
 - **SMS / WhatsApp:** off — alerts = in-app + web push (+ email). Do not pitch either. Product UI/copy aligned (settings toggle removed; how-it-works / create / contact updated).
-- **Comments:** insert only via moderated `/api/listings/comments` (migration `20260806140000_comments_insert_via_api_only`).
+- **Comments:** insert only via moderated `/api/listings/comments` — RLS migration applied on production.
+- **Anon listings GRANT:** migration `20260806150000_grant_listings_select_anon` — landing featured sellers also via `/api/stats/public-sellers` (avoids client 401).
 - **Own-profile routes:** `/app/users/$slug` (+ followers) use `<Navigate>` (no `throw redirect` in render).
+- **Next (P0):** field outreach ≥5+5 + pitch rehearsal — see `OUTREACH_CONTACTS.md` + `JUDGE_FEEDBACK.md` one-liner + `PITCH_CARD.md`.
 
 ## Scope lock (say this)
 
