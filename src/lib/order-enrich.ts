@@ -1,7 +1,7 @@
 /** Supabase select without invalid driver→profile FK embed. */
 export const ORDER_WITH_DELIVERY_SELECT = `
   *,
-  items:order_items(*, listing:listings(title, image_url)),
+  items:order_items(*, listing:listings(title, image_url, created_at)),
   delivery:deliveries(*, driver:driver_profiles(*))
 `;
 

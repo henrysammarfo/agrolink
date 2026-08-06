@@ -16,6 +16,9 @@ Index of all project documentation.
 |----------|-------------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flow, API map, diagrams |
 | [MEMORY.md](./MEMORY.md) | Source of truth — phase status, decisions |
+| [JUDGE_FEEDBACK.md](./JUDGE_FEEDBACK.md) | Team Titan finals judge map + pitch responses |
+| [FINAL_FACTCHECK.md](./FINAL_FACTCHECK.md) | Cite-safe PHL / corridor facts |
+| [OUTREACH_CONTACTS.md](./OUTREACH_CONTACTS.md) | Farmer + kitchen interview scripts + log |
 | [FEED_ALGORITHM.md](./FEED_ALGORITHM.md) | Feed ranking formula + fairness rules |
 | [UX_REFERENCE.md](./UX_REFERENCE.md) | UX patterns (TikTok feed, Bolt driver, Uber tracking) |
 | [COMMS.md](./COMMS.md) | In-trip chat, call, message permissions |

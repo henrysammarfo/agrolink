@@ -54,6 +54,14 @@ function Orders() {
         title="Your"
         italic="orders"
         sub="Follow the driver live, then keep every receipt in one place."
+        action={
+          <Link
+            to="/app/buyer/payments"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            Payments
+          </Link>
+        }
       />
 
       <div className="mb-[var(--space-block)] flex flex-wrap items-center justify-between gap-3">

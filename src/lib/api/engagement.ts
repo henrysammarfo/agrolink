@@ -54,14 +54,18 @@ export async function fetchComments(listingId: string): Promise<FeedComment[]> {
 
 export async function addComment(
   listingId: string,
-  userId: string,
+  _userId: string,
   content: string,
   meta?: { sellerId?: string; listingTitle?: string; actorName?: string },
 ) {
-  const { error } = await supabase
-    .from("listing_comments")
-    .insert({ listing_id: listingId, user_id: userId, content });
-  if (error) throw error;
+  const res = await apiFetch("/api/listings/comments", {
+    method: "POST",
+    body: JSON.stringify({ listingId, content }),
+  });
+  const json = (await res.json().catch(() => ({}))) as { error?: string; moderated?: boolean };
+  if (!res.ok) {
+    throw new Error(json.error ?? "Could not post comment");
+  }
 
   if (meta?.sellerId) {
     await apiFetch("/api/comms/notify", {

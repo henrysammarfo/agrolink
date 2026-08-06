@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { MessageCircle, Phone, Mail, MapPin, ArrowRight } from "lucide-react";
+import { Phone, Mail, MapPin, ArrowRight } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { submitContactForm } from "@/lib/api/notifications";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
       { title: "Contact · AgroLink" },
-      { name: "description", content: "Talk to the AgroLink team. WhatsApp, phone, and email." },
+      { name: "description", content: "Talk to the AgroLink team. Phone and email." },
       { property: "og:title", content: "Contact · AgroLink" },
       { property: "og:description", content: "Get in touch — farmers, buyers, partners." },
     ],
@@ -39,15 +39,9 @@ function Contact() {
         <div className="mt-16 grid gap-10 lg:grid-cols-[1fr_1.2fr]">
           <div className="space-y-4">
             {[
-              {
-                icon: MessageCircle,
-                label: "WhatsApp",
-                value: "+233 20 000 0000",
-                tone: "primary" as const,
-              },
-              { icon: Phone, label: "Phone", value: "+233 30 000 0000" },
-              { icon: Mail, label: "Email", value: "hello@agrolink.gh" },
-              { icon: MapPin, label: "Office", value: "Osu, Accra · Ghana" },
+              { icon: Phone, label: "Phone", value: "+233 30 000 0000", primary: true },
+              { icon: Mail, label: "Email", value: "hello@agrolink.gh", primary: false },
+              { icon: MapPin, label: "Office", value: "Osu, Accra · Ghana", primary: false },
             ].map((c) => (
               <a
                 key={c.label}
@@ -55,7 +49,7 @@ function Contact() {
                 className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 transition hover:border-primary/40"
               >
                 <span
-                  className={`grid h-12 w-12 place-items-center rounded-xl ${c.tone === "primary" ? "bg-primary/20 text-primary" : "bg-foreground/10 text-foreground"}`}
+                  className={`grid h-12 w-12 place-items-center rounded-xl ${c.primary ? "bg-primary/20 text-primary" : "bg-foreground/10 text-foreground"}`}
                 >
                   <c.icon className="h-5 w-5" />
                 </span>
@@ -78,7 +72,7 @@ function Contact() {
                 setSent(true);
                 toast.success("Message sent");
               } catch {
-                toast.error("Could not send — try WhatsApp instead");
+                toast.error("Could not send — try email or phone instead");
               }
             }}
             className="rounded-3xl border border-border bg-card p-8 md:p-10"

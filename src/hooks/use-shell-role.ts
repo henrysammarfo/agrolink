@@ -3,9 +3,11 @@ import { useAuth, type AppRole } from "@/lib/auth";
 import { loadActiveWorkspace, normalizeWorkspace } from "@/lib/active-workspace";
 import { useActiveWorkspace } from "@/hooks/use-active-workspace";
 
-const SHARED_PREFIXES = ["/app/inbox", "/app/profile", "/app/settings", "/app/users", "/app/create"];
-
-/** Shell role for nav chrome — keeps transport/admin isolated on shared pages. */
+/**
+ * Shell role for nav chrome.
+ * Route prefixes win for Market / Studio / Drive / Admin so modes stay separate.
+ * Shared pages (inbox, profile, settings) keep the active workspace chrome.
+ */
 export function useShellRole(): AppRole {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, roles } = useAuth();
@@ -16,16 +18,18 @@ export function useShellRole(): AppRole {
 
   if (pathname.startsWith("/app/admin")) return "admin";
   if (pathname.startsWith("/app/transport")) return "transport";
-  if (
-    pathname.startsWith("/app/buyer") ||
-    pathname.startsWith("/app/farmer") ||
-    pathname.startsWith("/app/create")
-  ) {
-    return "buyer";
+  if (pathname.startsWith("/app/farmer") || pathname.startsWith("/app/create")) {
+    return roles.includes("farmer") ? "buyer" : workspace;
   }
+  if (pathname.startsWith("/app/buyer")) return "buyer";
 
-  if (SHARED_PREFIXES.some((p) => pathname.startsWith(p))) {
-    return "buyer";
+  if (
+    pathname.startsWith("/app/inbox") ||
+    pathname.startsWith("/app/profile") ||
+    pathname.startsWith("/app/settings") ||
+    pathname.startsWith("/app/users")
+  ) {
+    return workspace;
   }
 
   return workspace;

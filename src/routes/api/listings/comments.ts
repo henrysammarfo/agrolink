@@ -1,4 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuth, jsonError } from "@/server/api-auth";
+import { moderateCommentContent } from "@/server/ai";
+
+type PostBody = {
+  listingId?: string;
+  content?: string;
+};
 
 export const Route = createFileRoute("/api/listings/comments")({
   server: {
@@ -42,6 +49,44 @@ export const Route = createFileRoute("/api/listings/comments")({
         }));
 
         return Response.json({ comments });
+      },
+
+      POST: async ({ request }) => {
+        const auth = await requireAuth(request);
+        if (auth instanceof Response) return auth;
+
+        let body: PostBody;
+        try {
+          body = (await request.json()) as PostBody;
+        } catch {
+          return jsonError("Invalid JSON", 400);
+        }
+
+        const listingId = body.listingId?.trim();
+        const content = body.content?.trim() ?? "";
+        if (!listingId) return jsonError("Missing listingId", 400);
+
+        const mod = await moderateCommentContent(content);
+        if (!mod.passed) {
+          return Response.json({ error: mod.reason ?? "Comment rejected", moderated: true }, { status: 422 });
+        }
+
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data, error } = await supabaseAdmin
+          .from("listing_comments")
+          .insert({
+            listing_id: listingId,
+            user_id: auth.userId,
+            content: content.slice(0, 1000),
+          })
+          .select("id, user_id, content, created_at")
+          .single();
+
+        if (error) {
+          return Response.json({ error: error.message }, { status: 400 });
+        }
+
+        return Response.json({ ok: true, comment: data });
       },
     },
   },

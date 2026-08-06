@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app/AppShell";
 import { FarmerProfileView } from "@/components/farmer/FarmerProfileView";
 import { useAuth } from "@/lib/auth";
@@ -16,7 +16,7 @@ function InAppUserProfile() {
   const shellRole = useShellRole();
 
   if (isOwnProfileHandle(slug, profile, user?.id)) {
-    throw redirect({ to: "/app/profile" });
+    return <Navigate to="/app/profile" />;
   }
 
   return (

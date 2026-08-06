@@ -9,7 +9,7 @@ Branch: `cursor/nav-unmix-cc54` (ask before push)
 2. Checkout = **pay first → match driver** (Bolt/DoorDash).
 3. Comments/share = **RightDrawer** (desktop right / mobile bottom).
 4. No TikTok clones without AgroLink use case.
-5. Farmer alerts = WhatsApp + push + email (no launch SMS).
+5. Farmer alerts = **in-app + web push** (+ email). **No SMS. No WhatsApp** for launch/pitch.
 6. Admin: human **driver KYC**; auto listings + POD payouts.
 7. **Three modes** — Market / Studio / Drive (not mashed into one sidebar).
 

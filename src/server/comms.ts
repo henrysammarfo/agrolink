@@ -1,14 +1,15 @@
-/** Central notifications — in-app + web push + free email (Resend) + Meta WhatsApp */
+/** Central notifications — in-app + web push + optional email (Resend).
+ * WhatsApp / SMS are intentionally off for launch & pitch (in-app + push only). */
 
 import webpush from "web-push";
 import { sendOrderEmail } from "@/server/email-notify";
-import { sendWhatsAppMessage, orderStatusWhatsAppBody } from "@/server/whatsapp";
 
 type NotifyPayload = {
   type: string;
   title: string;
   body?: string;
   link?: string;
+  /** @deprecated unused — WhatsApp disabled */
   whatsappExtras?: Record<string, string>;
 };
 
@@ -44,7 +45,7 @@ export async function notifyUser(userId: string, payload: NotifyPayload) {
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("phone, whatsapp_enabled, push_enabled")
+    .select("phone, push_enabled")
     .eq("id", userId)
     .maybeSingle();
 
@@ -53,30 +54,20 @@ export async function notifyUser(userId: string, payload: NotifyPayload) {
   }));
   const email = authUser?.user?.email;
 
-  const orderUpdatesEnabled = profile?.whatsapp_enabled !== false;
   const fullLink = absoluteLink(payload.link);
 
-  if (orderUpdatesEnabled) {
-    if (email) {
-      await sendOrderEmail({
-        to: email,
-        subject: payload.title,
-        title: payload.title,
-        body: payload.body ?? payload.title,
-        link: fullLink,
-      });
-    }
-
-    if (profile?.phone) {
-      const waBody = orderStatusWhatsAppBody(payload.type, {
-        body: payload.body ?? payload.title,
-        link: payload.link ?? "",
-        preview: payload.body ?? payload.title,
-        ...payload.whatsappExtras,
-      });
-      await sendWhatsAppMessage(profile.phone, waBody);
-    }
+  // Email for kitchens/ops who have an address. No WhatsApp / SMS.
+  if (email) {
+    await sendOrderEmail({
+      to: email,
+      subject: payload.title,
+      title: payload.title,
+      body: payload.body ?? payload.title,
+      link: fullLink,
+    });
   }
+
+  void profile?.phone;
 
   if (profile?.push_enabled === false) return;
 

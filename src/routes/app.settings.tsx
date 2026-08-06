@@ -22,7 +22,6 @@ export const Route = createFileRoute("/app/settings")({
 });
 
 function Settings() {
-  const [whatsapp, setWhatsapp] = useState(true);
   const [push, setPush] = useState(true);
   const [marketing, setMarketing] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
@@ -70,14 +69,13 @@ function Settings() {
     if (!user?.id) return;
     fetchNotificationPrefs(user.id)
       .then((p) => {
-        setWhatsapp(p.whatsapp);
         setPush(p.push);
         setMarketing(p.marketing);
       })
       .finally(() => setPrefsLoaded(true));
   }, [user?.id]);
 
-  const persistPref = async (key: "whatsapp" | "push" | "marketing", value: boolean) => {
+  const persistPref = async (key: "push" | "marketing", value: boolean) => {
     if (!user?.id) return false;
     setTogglingKey(key);
     try {
@@ -90,14 +88,6 @@ function Settings() {
     } finally {
       setTogglingKey(null);
     }
-  };
-
-  const onWhatsappToggle = async (enabled: boolean) => {
-    const prev = whatsapp;
-    setWhatsapp(enabled);
-    const ok = await persistPref("whatsapp", enabled);
-    if (!ok) setWhatsapp(prev);
-    else toast.success(enabled ? "Order updates enabled" : "External order updates off");
   };
 
   const onPushToggle = async (enabled: boolean) => {
@@ -289,14 +279,16 @@ function Settings() {
 
         <Card title="Notifications">
           {!prefsLoaded && <p className="text-xs text-muted-foreground">Loading preferences…</p>}
-          <Toggle label="Order updates" desc="WhatsApp + email + push when orders move." value={whatsapp} onChange={onWhatsappToggle} disabled={togglingKey === "whatsapp"} />
-          <Toggle label="Push notifications" desc="Driver job alerts (Bolt-style ping)." value={push} onChange={onPushToggle} disabled={togglingKey === "push"} />
+          <p className="mb-3 text-xs text-muted-foreground">
+            Order updates arrive in-app, by web push, and by email when you have an address on file.
+          </p>
+          <Toggle label="Push notifications" desc="Order moves and driver job alerts." value={push} onChange={onPushToggle} disabled={togglingKey === "push"} />
           <Toggle label="Marketing emails" desc="Seasonal produce + drops." value={marketing} onChange={onMarketingToggle} disabled={togglingKey === "marketing"} />
         </Card>
 
         <Card title="Contact & payments">
           <p className="text-sm text-muted-foreground">
-            Your phone above is used for trip calls and WhatsApp order alerts. Farmers: WhatsApp-first, not email. Save profile to update it.
+            Your phone above is used for trip calls with drivers and kitchens. Save profile to update it.
           </p>
           {roles.includes("transport") && (
             <p className="text-xs text-muted-foreground">

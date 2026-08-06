@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Phone, MessageCircle, Navigation, ChevronUp, ChevronDown, UserPlus, ChevronRight } from "lucide-react";
+import { Phone, MessageCircle, Navigation, ChevronUp, ChevronDown, UserPlus, ChevronRight, BadgeCheck, Camera, CalendarDays } from "lucide-react";
 import { CorridorMap } from "@/components/map/CorridorMap";
 import { ChatThread } from "@/components/chat/ChatThread";
 import {
@@ -255,6 +255,16 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
     phaseLabel: phase,
   });
 
+  const listedAt = order.items
+    ?.map((i) => i.listing?.created_at)
+    .filter((d): d is string => !!d)
+    .sort()[0];
+  const listedLabel = listedAt
+    ? new Date(listedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+    : null;
+  const hasPod = !!(delivery.pod_photo_url || delivery.pod_captured_at);
+  const driverVerified = delivery.driver?.verification_status === "approved" || !!driverCard?.verified;
+
   return (
     <div className={`overflow-hidden ${fullscreen ? "bg-black" : "rounded-3xl border border-border bg-card shadow-sm"}`}>
       <div className={`relative ${fullscreen ? "h-[55vh] min-h-[55vh]" : "h-[280px] md:h-[340px]"}`}>
@@ -290,6 +300,39 @@ export function LiveTrackCard({ order, fullscreen }: Props) {
           <div className="mt-4">
             <DriverProfileCard driver={driverCard} dark={!!fullscreen} />
           </div>
+        )}
+
+        <div className={`mt-3 flex flex-wrap gap-2 ${fullscreen ? "text-white" : ""}`}>
+          {driverVerified && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${fullscreen ? "bg-emerald-500/20 text-emerald-200" : "bg-primary/10 text-primary"}`}>
+              <BadgeCheck className="h-3.5 w-3.5" /> Verified driver
+            </span>
+          )}
+          {listedLabel && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${fullscreen ? "bg-white/10 text-white/80" : "bg-muted text-muted-foreground"}`}>
+              <CalendarDays className="h-3.5 w-3.5" /> Listed {listedLabel}
+            </span>
+          )}
+          {hasPod ? (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${fullscreen ? "bg-emerald-500/20 text-emerald-200" : "bg-emerald-500/10 text-emerald-700"}`}>
+              <Camera className="h-3.5 w-3.5" /> POD captured
+            </span>
+          ) : delivery.status === "delivered" ? (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${fullscreen ? "bg-amber-500/20 text-amber-100" : "bg-amber-500/10 text-amber-800"}`}>
+              <Camera className="h-3.5 w-3.5" /> POD pending
+            </span>
+          ) : null}
+        </div>
+
+        {hasPod && delivery.pod_photo_url && (
+          <a
+            href={delivery.pod_photo_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 block overflow-hidden rounded-2xl border border-border"
+          >
+            <img src={delivery.pod_photo_url} alt="Proof of delivery" className="h-28 w-full object-cover" />
+          </a>
         )}
 
         <div className="mt-3 flex justify-end gap-2">

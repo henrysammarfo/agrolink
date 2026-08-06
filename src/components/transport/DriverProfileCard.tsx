@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { BadgeCheck } from "lucide-react";
 
 export type DriverCardInfo = {
   displayName: string;
@@ -14,6 +15,7 @@ export type DriverCardInfo = {
   userId?: string | null;
   etaLabel?: string | null;
   phaseLabel?: string | null;
+  verified?: boolean;
 };
 
 type Props = {
@@ -66,14 +68,23 @@ export function DriverProfileCard({ driver, className = "", compact, dark }: Pro
           <Link
             to="/app/users/$slug"
             params={{ slug: handle }}
-            className="block truncate font-sans font-semibold hover:underline"
+            className="inline-flex max-w-full items-center gap-1 truncate font-sans font-semibold hover:underline"
           >
-            {name}
+            <span className="truncate">{name}</span>
+            {driver.verified && (
+              <BadgeCheck className={`h-4 w-4 shrink-0 ${dark ? "text-emerald-300" : "text-primary"}`} aria-label="Verified driver" />
+            )}
           </Link>
         ) : (
-          <div className="truncate font-sans font-semibold">{name}</div>
+          <div className="inline-flex max-w-full items-center gap-1 truncate font-sans font-semibold">
+            <span className="truncate">{name}</span>
+            {driver.verified && (
+              <BadgeCheck className={`h-4 w-4 shrink-0 ${dark ? "text-emerald-300" : "text-primary"}`} aria-label="Verified driver" />
+            )}
+          </div>
         )}
         <p className={`mt-0.5 truncate text-xs ${dark ? "text-white/70" : "text-muted-foreground"}`}>
+          {driver.verified ? "Verified driver · " : ""}
           {vehicle}
           {driver.etaLabel ? ` · ${driver.etaLabel}` : ""}
         </p>
@@ -101,6 +112,7 @@ export function driverCardFromDeliveryDriver(
     vehicle_make?: string | null;
     vehicle_model?: string | null;
     rating?: number | null;
+    verification_status?: string | null;
     profile?: {
       display_name?: string | null;
       avatar_url?: string | null;
@@ -125,5 +137,6 @@ export function driverCardFromDeliveryDriver(
     userId: driver.user_id,
     etaLabel: extras?.etaLabel,
     phaseLabel: extras?.phaseLabel,
+    verified: driver.verification_status === "approved",
   };
 }

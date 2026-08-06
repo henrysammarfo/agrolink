@@ -1,20 +1,18 @@
-import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/buyer")({
   head: () => ({ meta: [{ title: "Buyer · AgroLink" }] }),
+  beforeLoad: ({ location }) => {
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    if (path === "/app/buyer") {
+      throw redirect({ to: "/app/buyer/feed" });
+    }
+  },
   component: BuyerLayout,
 });
 
-/**
- * Exact `/app/buyer` used to be an Overview dashboard. Logged-in home is Feed.
- * Nested buyer routes (orders, cart, …) still render under this layout.
- * Auth is gated by `/app` parent.
- */
+/** Nested buyer routes (feed, cart, orders, payments, …). Auth gated by `/app`. */
 function BuyerLayout() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  if (pathname === "/app/buyer" || pathname === "/app/buyer/") {
-    throw redirect({ to: "/app/buyer/feed" });
-  }
   return <Outlet />;
 }
 

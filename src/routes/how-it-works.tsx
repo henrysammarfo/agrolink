@@ -21,7 +21,7 @@ const ROLES = [
   {
     key: "farmer", icon: Tractor, title: "Farmers", italic: "list. sell. get paid.",
     steps: [
-      { icon: Camera, t: "Snap & list", d: "Photo or short video of harvest, set price and quantity. Phone-first — WhatsApp when it sells." },
+      { icon: Camera, t: "Snap & list", d: "Photo or short video of harvest, set price and quantity. Phone-first — in-app alert when it sells." },
       { icon: Brain, t: "Optional price tip", d: "Optional market-price tip for tomato and leafy greens on the Dodowa–Tema–Accra corridor. You set the price." },
       { icon: Wallet, t: "Same-evening payout", d: "MTN MoMo, Vodafone Cash, AirtelTigo. Money lands the same evening — no waiting." },
     ],
@@ -46,9 +46,9 @@ const ROLES = [
 
 const PILLARS = [
   { icon: BadgePercent, t: "Transparent fee", d: "A thin service fee (about 6%) on each completed order. No subscriptions, no listing fee. Ever." },
-  { icon: Bell, t: "Real-time alerts", d: "WhatsApp + push for orders and dispatch. Farmers are never email-first." },
+  { icon: Bell, t: "Real-time alerts", d: "In-app + web push for orders and dispatch. Email when you have an address — never email-only for farmers." },
   { icon: ShieldCheck, t: "Verified network", d: "Farmers, buyers and drivers are phone- and ID-verified before they can transact." },
-  { icon: Smartphone, t: "Built for the market", d: "Designed for low-bandwidth phones. Big buttons, English + visual cues — WhatsApp when it matters." },
+  { icon: Smartphone, t: "Built for the market", d: "Designed for low-bandwidth phones. Big buttons, English + visual cues — alerts where you already are." },
 ];
 
 function HowItWorks() {

@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Loader2,
   Truck,
+  Zap,
 } from "lucide-react";
 import { PageHeader, StatCard } from "@/components/app/AppShell";
 import { AdminPageLayout } from "@/components/admin/AdminPageLayout";
@@ -128,6 +129,14 @@ function AdminOverview() {
                 title="Disputes"
                 count={0}
                 sub="Open cases"
+              />
+              <AdminCard
+                to="/app/admin/pricing"
+                icon={Zap}
+                tone="accent"
+                title="Surge pricing"
+                count={0}
+                sub="Peak / rain multiplier"
               />
             </section>
             <p className="mt-10 max-w-xl text-xs leading-relaxed text-muted-foreground">

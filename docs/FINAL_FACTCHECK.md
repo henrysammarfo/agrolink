@@ -1,6 +1,7 @@
 # AgroLink / Team Titan — Finals Fact-Check Brief
 
-**Last updated:** 2026-07-27  
+**Last updated:** 2026-08-06  
+**Judge map:** [`docs/JUDGE_FEEDBACK.md`](./JUDGE_FEEDBACK.md)  
 **Sources:** Tavily advanced search (`docs/research/tavily-finals-factcheck.json`) + primary papers/news below.  
 **Team note:** Meeting notes say “Tim Titan” — that is **Team Titan**.
 
@@ -114,9 +115,10 @@ Talk to **≥5 farmers** (Dodowa / Ashaiman / Tema peri-urban) and **≥5 buyers
 
 ## Honest gaps (better to own)
 
-1. Farmer interviews not yet a formal research sample — **do before finals**.  
-2. SMS not fully live for all farmer events — **say roadmap**, demo WhatsApp/in-app.  
-3. Admin + comment moderation + verification need clearer SOP in pitch slides.  
-4. Dual Vercel projects earlier caused deploy confusion — production is `teamtitanlink/agrolink` → https://agrolink-omega.vercel.app  
+1. Farmer / kitchen interviews — tracker in `OUTREACH_CONTACTS.md`; **fill ≥5 + ≥5 before finals**.  
+2. SMS / WhatsApp — **not used**; say in-app + push. Never claim email-first.  
+3. Comment moderation is on create (OpenAI + blocklist); listing AI + driver KYC + POD remain the trust story.  
+4. Cold storage / aggregation hubs — **not solved**; we own transport + payment + POD on one corridor.  
+5. Production: https://agrolink-omega.vercel.app — no fictional testimonials on landing.  
 
 Raw Tavily: `docs/research/tavily-finals-factcheck.json`.

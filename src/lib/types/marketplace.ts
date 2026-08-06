@@ -95,7 +95,7 @@ export type OrderItemRow = {
   quantity: number;
   unit_price: number;
   total_price: number;
-  listing?: { title: string; image_url: string | null };
+  listing?: { title: string; image_url: string | null; created_at?: string };
 };
 
 export type PickupStop = { lat: number; lng: number; label?: string };
@@ -135,6 +135,7 @@ export type DeliveryRow = {
     vehicle_color?: string | null;
     vehicle_make?: string | null;
     vehicle_model?: string | null;
+    verification_status?: string | null;
     current_lat: number | null;
     current_lng: number | null;
     rating?: number | null;

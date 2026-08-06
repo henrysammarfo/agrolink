@@ -57,8 +57,11 @@ export function SellerStudioLayout({ children }: { children: ReactNode }) {
           <nav className="flex flex-1 flex-col items-center gap-1.5">
             {RAIL.map((item) => {
               const active = item.exact
-                ? pathname === item.to
-                : pathname === item.to || pathname.startsWith(`${item.to}/`);
+                ? pathname === item.to || pathname === `${item.to}/`
+                : item.to === "/app/create"
+                  ? pathname === "/app/create" || pathname.startsWith("/app/create/")
+                  : pathname === item.to || pathname.startsWith(`${item.to}/`);
+              // Don't light Studio Home on every /app/farmer/* child
               const Icon = item.icon;
               const badge = item.badgeKey === "sales" ? salesBadge : 0;
               return (

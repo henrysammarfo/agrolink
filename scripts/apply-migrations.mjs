@@ -11,11 +11,15 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, "../supabase/migrations");
-const ENV_PATH = path.join(__dirname, "../.env");
+const ENV_PATHS = [
+  path.join(__dirname, "../.env"),
+  path.join(__dirname, "../.env.local"),
+];
 
-if (existsSync(ENV_PATH)) {
-  for (const line of readFileSync(ENV_PATH, "utf8").split("\n")) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
+for (const envPath of ENV_PATHS) {
+  if (!existsSync(envPath)) continue;
+  for (const line of readFileSync(envPath, "utf8").split("\n")) {
+    const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
   }
 }

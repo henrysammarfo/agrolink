@@ -84,13 +84,29 @@ Go early (before lunch rush). Ask for **kitchen / store manager** or the person 
 
 ## Tracking (fill as you go)
 
-| Date | Name | Farmer / kitchen | Place | WhatsApp | Insight | Next |
-|------|------|------------------|-------|----------|---------|------|
-| | | | | | | |
-| | | | | | | |
-| | | | | | | |
-| | | | | | | |
-| | | | | | | |
+**Goal before finals:** ≥5 farmers + ≥5 kitchens. Count only rows with a real WhatsApp + one insight.
+
+| # | Date | Name | Farmer / kitchen | Place | WhatsApp | Insight (spoilage / pay / trust) | Next |
+|---|------|------|------------------|-------|----------|----------------------------------|------|
+| 1 | | | | | | | |
+| 2 | | | | | | | |
+| 3 | | | | | | | |
+| 4 | | | | | | | |
+| 5 | | | | | | | |
+| 6 | | | | | | | |
+| 7 | | | | | | | |
+| 8 | | | | | | | |
+| 9 | | | | | | | |
+| 10 | | | | | | | |
+
+### Must-ask (judge-aligned)
+
+1. Crop + weekly volume (tomato / leafies)?  
+2. Where sold today (farm gate / Dodowa / Madina / Agbogbloshie)?  
+3. When does unsold spoil?  
+4. Accept driver pickup if MoMo lands same day?  
+5. Alert preference: **in-app / push / call**? (We are not shipping SMS or WhatsApp for MVP.)  
+6. Kitchens: morning procure pain (time, price, quality, no-show)? Who bears loss if rejected?
 
 ---
 

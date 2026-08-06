@@ -1,167 +1,120 @@
 # AgroLink Memory — Source of Truth
 
-Last updated: 2026-07-27
+Last updated: 2026-08-06
 
-## Active revamp
+## Active focus (finals)
 
-- Spec: `docs/UI_REVAMP_SPEC.md`
-- Branch: `cursor/nav-unmix-cc54` (ask before push)
-- Phase 1–3 merged (PR #48); **nav unmix**: Market / Studio / Drive separated; login → For You; no SELLER_NAV mashup
-- **No GitHub Actions CI** — billing blocked; rely on Vercel builds only (do not re-add workflows)
-- Farmer alerts: WhatsApp + push + email (no SMS for launch)
-- Research: `docs/research/tavily-mapbox-markers.json`
+- **Judge response:** `docs/JUDGE_FEEDBACK.md` + `docs/FINAL_FACTCHECK.md`
+- **Pre-pitch harden:** `docs/PITCH_HARDEN.md`
+- **Routes map:** `docs/ROUTES.md` — Market / Studio / Drive / Admin stay separate; no hidden pages
+- **Field validation:** `docs/OUTREACH_CONTACTS.md` — ≥5 farmers + ≥5 kitchens (Henry owns walks)
+- **Live:** https://agrolink-omega.vercel.app · Vercel project **`teamtitanlink/agrolink`** (`prj_74Av2rjxUU6M25F2ekGzpLOMfOFd`) — note separate project `agrolink-omega` exists but does **not** own the live domain
+- **Local env:** repo linked via `vercel link`; Production/Preview vars are all **Sensitive** → `vercel env pull` cannot decrypt. Fill `.env.local` from backup or add Development non-Sensitive copies on Vercel.
+- **No GitHub Actions CI** — billing blocked; Vercel builds only (do not re-add workflows)
+- **Defer:** native APK, crop expansion beyond tomato/leafies, multi-corridor scale
+- **SMS / WhatsApp:** off — alerts = in-app + web push (+ email). Do not pitch either. Product UI/copy aligned (settings toggle removed; how-it-works / create / contact updated).
+- **Comments:** insert only via moderated `/api/listings/comments` (migration `20260806140000_comments_insert_via_api_only`).
+- **Own-profile routes:** `/app/users/$slug` (+ followers) use `<Navigate>` (no `throw redirect` in render).
 
-## Stack (actual, not build guide)
+## Scope lock (say this)
+
+> We help peri-urban Dodowa-corridor farmers move **tomato and leafy greens** to **Accra restaurants and chop bars** by solving **same-day pickup, MoMo settlement, and proof of delivery**.
+
+| | |
+|--|--|
+| Model | B2B food-service (not D2C consumers) |
+| Innovation | Fulfillment + MoMo escrow + POD accountability |
+| Feed | Buyer discovery UX only |
+| Checkout | Pay MoMo → match driver → track → POD → auto payouts |
+
+## Stack (actual)
 
 - **Frontend:** TanStack Start + React 19 + Tailwind 4 + shadcn/ui
 - **Backend:** Supabase (Postgres, Auth, Storage, Realtime)
-- **Server:** TanStack Start server functions + Nitro API routes (`/api/checkout`, `/api/delivery/quote`, `/api/webhooks/paystack`)
-- **Maps:** Mapbox GL JS + Directions / Geocoding / Map Matching (Leaflet fallback if no token). See `docs/MAPBOX_MEMORY.md` + `docs/MAPBOX_FACTCHECK.md`.
-- **Payments:** Paystack primary (MoMo)
-- **Comms:** Resend email + Meta WhatsApp Cloud API (free tier)
-- **AI:** OpenAI (moderation + pricing), TinyFish (market data)
-- **Deploy:** Vercel (Nitro `vercel` preset) — see `docs/DEPLOY_VERCEL.md`
-- **Feed:** Embla vertical ±1 paging (TikTok-style) in `FeedPlayer.tsx`
-- **Research:** Tavily key in `.env.local` for session fact-checks; competitor UX in `docs/UX_PARITY_COMPETITORS.md` + `docs/research/`
-- **Mapbox agent tooling:** `.cursor/mcp.json` + `.agents/skills/mapbox-*` (restart Cursor + OAuth)
+- **Server:** Nitro `/api/*` + `src/server/*`
+- **Maps:** Mapbox GL JS + Directions / Geocoding / Matrix / Matching (Leaflet+OSRM fallback). `docs/MAPBOX_MEMORY.md`
+- **Payments:** Paystack MoMo + subaccount escrow
+- **Comms:** In-app + Web Push + Resend email (WhatsApp/SMS off)
+- **AI:** OpenAI listing moderation (+ optional price advice — demote in pitch)
+- **Deploy:** Vercel — `docs/DEPLOY_VERCEL.md`
+- **Feed:** Embla / Riyils in `FeedPlayer.tsx`
+- **Mobile:** PWA first (`docs/PWA.md`); Capacitor scaffold deferred
 
-## Phase status
+## UI revamp (merged)
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Memory docs | Done | MEMORY, UX_REFERENCE, API_KEYS, BUILD_GUIDE_DELTA, FEED_ALGORITHM, SECURITY, QA |
-| DB schema v1 | Done | `20260704120000_marketplace_core.sql` |
-| DB schema v2 | Done | `20260705010000_driver_verification_pricing.sql` — driver docs, disputes, payouts, pricing config |
-| Unified auth | Done | Single signup; Shop/Sell/Drive toggles in settings |
-| Live create | Done | Storage + moderation + DB |
-| Live feed | Done | `feed_rank` + engagement tables |
-| Payments | Done | Paystack + dynamic delivery quote at checkout |
-| Delivery pricing | Done | Bolt/Uber-style: base, km, kg, vehicle, peak, min fare — `src/lib/delivery-pricing.ts` |
-| Driver onboarding | Done | Register + Hubtel Ghana Card verify + doc upload |
-| Auto payouts | Done | Paystack Transfers on delivery complete |
-| Driver push | Done | FCM + in-app notify on new paid jobs |
-| Surge pricing | Done | `surge_multiplier` in pricing config |
-| Follow system | Done | Live toggle on farmer profiles |
-| OSS library | Done | `docs/OSS_REFERENCE.md` — TikTok, Bolt, Uber, Yango, DoorDash |
-| Extra recommendations | Done | See below |
-| Logistics | Done | Realtime driver location + OSRM + verified driver gate |
-| Admin | Done | Live payments + disputes from Supabase |
-| Marketing pages | Done | Home, farmers directory — Supabase-backed, no mock-data.ts |
-| Remove mocks | Done | `mock-data.ts` deleted; all routes wired to Supabase |
+| 1–3 Shell, Studio, polish | Done | PR #48 |
+| 4 Nav unmix Market / Studio / Drive | Done | PR #50 |
+| Theme / Drive escape / feed sticky | Done | PR #52 |
+| Profile badge + notif polish | Done | PR #53 |
+| Types from migrations | Done | PR #51 |
+| Drop GH Actions | Done | PR #49 |
+
+## Proven loops (2026-08)
+
+| Loop | Status |
+|------|--------|
+| Paid order → match → POD → payout | Done (manual on live) |
+| Manual QA checklist on live | Done (team) |
+| Fictional landing testimonials removed | Done — replaced with corridor constraint cards |
+| ≥5 farmer + ≥5 kitchen interviews | Open — tracker in OUTREACH |
 
 ## What is LIVE
 
-- Auth, listings, feed, cart, orders, Paystack checkout with OSRM delivery fee
-- Driver registration + document upload + `verification_status` gate
-- Transport map/jobs (approved drivers only)
-- Farmer dashboard, orders, payouts
-- Buyer dashboard, cart, orders, live tracking, in-trip chat/call
-- Admin payments, disputes, listings moderation
-- Public farmers directory + TikTok-style profile pages
+- Auth, listings, feed, cart, pay-then-match Paystack checkout
+- Driver register → docs → admin KYC → go live → accept → POD
+- Farmer Studio (listings, orders, payouts)
+- Buyer track + in-trip chat/call
+- Admin: orders, payments, drivers, listings, disputes, surge
+- Public farmers directory + profiles
+- Marketing landing: honest constraints section (no fake quotes)
+
+## Admin role (pitch clarity)
+
+| Automatic | Human admin |
+|-----------|-------------|
+| Listing moderation → live | Driver KYC approve/reject |
+| MoMo pay → driver offers | Disputes / refunds |
+| POD → Paystack transfer splits | Surge config, payment audit |
+
+## Comms honesty
+
+| Channel | Status |
+|---------|--------|
+| In-app notifications | Live |
+| Web push | Live (VAPID) |
+| Email (Resend) | Live when account has email |
+| WhatsApp Cloud | **Off** — code kept, not called from `notifyUser` |
+| SMS | **Not used** |
 
 ## Demo mode
 
-`VITE_DEMO_MODE=true` — demo user on `/app/*` without login. **Production: omit or false.**
-
-## Extra recommendations (implemented 2026-07-05)
-
-| Feature | Status | Implementation |
-|---------|--------|----------------|
-| react-vertical-feed TikTok scroll | Done | `FeedPlayer.tsx` + immersive `/app/buyer/feed` shell |
-| 30s job accept + auto-reassign | Done | `accept_deadline`, `JobAcceptCountdown`, `/api/deliveries/reassign-expired` |
-| Paystack subaccounts escrow | Done | `paystack-subaccounts.ts`, split at MoMo charge, release on delivery |
-| Multi-farm batch routing | Done | `batch-routing.ts` OSRM multi-stop + cart co-op quote |
-| Hubtel SMS OTP (GHS 500+) | Done | `/api/otp/send`, `/api/otp/verify`, cart UI |
-| Premium app UX | Done | TikTok immersive feed nav, Bolt countdown sheets |
-| Capacitor / APK scaffold | Done | `capacitor.config.ts`, `manifest.webmanifest`, `docs/APK_BUILD.md` |
-| react-riyils gesture feed | Done | Swiper physics in fullscreen `FeedPlayer` |
-| POD photo on deliver | Done | `PodCaptureSheet`, `delivery-pod` bucket, `pod_photo_url` |
-| Capacitor geolocation | Done | `@capacitor/geolocation` + `native-geolocation.ts` |
-| Demo feed seed | Done | `demo-listings.ts` + `scripts/seed-demo-listings.mjs` |
-| Brand app icons | Done | `public/icons/` from BrandMark gradient |
-
-## P0–P2 UX parity (verified 2026-07-05, `npm run build` pass)
-
-| Priority | Feature | Status | Files |
-|----------|---------|--------|-------|
-| P0 | Self-hosted feed media (no Mixkit/Unsplash in prod) | Done | `media-urls.ts`, `public/media/demo/*`, `demo-listings.ts` |
-| P0 | Sticky mobile checkout bar | Done | `app.buyer.cart.tsx` |
-| P0 | Feed overlay sans typography | Done | `FeedPlayer.tsx` — Inter/sans in overlay |
-| P0 | Double-tap like + haptic | Done | `FeedPlayer.tsx`, `haptics.ts` |
-| P0 | Seed listings when DB empty | Done | `VITE_DEMO_MODE` or `VITE_SEED_FEED=true` |
-| P0 | Full-bleed feed (no sidebar) | Done | `AppShell.tsx` `IMMERSIVE_PATHS` |
-| P0 | Skeleton loaders (feed/cart/teaser) | Done | `FeedSkeleton.tsx` |
-| P1 | Dark map tiles + reactive CorridorMap | Done | `CorridorMap.tsx` |
-| P1 | Driver earnings widget | Done | `fetchDriverEarnings`, `app.transport.tsx` |
-| P1 | Slide-to-confirm pickup/deliver | Done | `SlideToConfirm.tsx` |
-| P1 | Fullscreen order tracking | Done | `/app/buyer/orders/$orderId/track` |
-| P1 | OrderTracker wired | Done | `app.buyer.orders.tsx`, `buildTrackedOrder()` |
-| P1 | Cart delivery coords from geolocation | Done | `getCurrentPosition()` in cart |
-| P2 | Web push polish (SW + VAPID) | Done | `push-client.ts`, `sw.js` |
-| P2 | PostHog/Sentry optional init | Done | `analytics.ts`, `VITE_POSTHOG_KEY`, `VITE_SENTRY_DSN` |
-| P2 | RiyilsExplore grid on farmer profile | Done | `farmers.$slug.tsx` |
-| P2 | Category chips on feed | Done | `CategoryChips.tsx` |
-| P2 | Reorder from past orders | Done | `reorderFromOrder`, history table |
-| P2 | Message/Share stubs | Done | `farmers.$slug.tsx`, `LiveTrackCard.tsx` |
-
-## Full comms phase (verified 2026-07-05, build pass)
-
-| Feature | Status | Implementation |
-|---------|--------|----------------|
-| Central notify + web push | Done | `server/comms.ts`, `web-push` VAPID |
-| Engagement notis (like/comment/follow) | Done | `/api/comms/notify`, wired in `engagement.ts` |
-| Order/delivery push | Done | Paystack webhook + `delivery-complete.ts` via `notifyUser` |
-| Realtime activity inbox | Done | `subscribeToNotifications`, unread badge on bell |
-| Conversation list | Done | `ConversationList.tsx`, grouped by partner |
-| Chat threads | Done | `/app/inbox/chat/$userId`, `ChatThread.tsx` |
-| Realtime messages | Done | `subscribeToMessages` Supabase channel |
-| Message farmer/driver | Done | Profile + track card → chat route |
-| VAPID key generator | Done | `npm run vapid:generate` |
-
-## Production comms + media batch (2026-07-05)
-
-| Priority | Feature | Status | Implementation |
-|----------|---------|--------|----------------|
-| 1 | Listing media → Supabase Storage | Done | `scripts/upload-listing-media.mjs`, `seed-demo-listings.mjs` uploads to `listing-images/demo/*`; `demo-listings.ts` uses storage URLs when `VITE_SUPABASE_URL` set |
-| 2 | WhatsApp order updates (Meta Cloud API) + email (Resend) | Done | `server/whatsapp.ts`, `server/email-notify.ts`, `comms.ts`; no WATI/Hubtel |
-| 3 | Chat image attachments | Done | `messages.attachment_url`, `chat-attachments` bucket, `ChatThread.tsx` upload + display |
-| 4 | ⌘K global search | Done | `GlobalSearch.tsx`, `/api/search/global`, `AppShell` trigger (desktop + mobile) |
-| 5 | PostHog event wiring | Done | `feed_*`, `driver_*`, `checkout_initiated`, `search`, `chat_message_sent`, `admin_surge_updated` |
-| 6 | Admin surge pricing UI | Done | `/app/admin/pricing`, `/api/admin/pricing` PATCH |
-
-Migration: `20260705120000_comms_media_search.sql`
-
-Stress tests: `npm run stress:comms`
-
-## Live Supabase + keys (2026-07-07)
-
-| Item | Status |
-|------|--------|
-| Supabase project | `mhyuzmhzockexqmnyuze` (eu-west-1) |
-| Migrations | 14 applied via `npm run db:migrate` |
-| Demo seed | 3 farmers + 3 listings + storage URLs |
-| `service_role` grants | Migration `20260706153000` |
-| API keys configured | OpenAI, Paystack, Resend, WhatsApp, PostHog, Sentry, Google Maps, TinyFish, VAPID |
-| E2E tests | `npm run test:e2e` — 22/22 passed |
-| Deploy target | Vercel — `docs/DEPLOY_VERCEL.md`, root `README.md` |
-| Types regen | Offline: `npm run db:types` (from `supabase/migrations`). Live OpenAPI: `npm run db:types:live` when env keys are present. Official CLI needs org access to `mhyuzmhzockexqmnyuze`. Client stays untyped (`createClient` without `Database`) because embeds join `profiles` via FKs that point at `auth.users`. |
-| Profile / roles | Own `/app/profile` is TikTok-lean (no workspace switcher / role chips). Public Driver badge only when approved + online (or Drive context); dual-role sellers show Seller. Studio Sales rail badges `orderNeedsFarmerAction`. |
-
-## Launch path: PWA (not APK)
-
-Production mobile = **installable PWA** over HTTPS. See `docs/PWA.md`.
-
-Capacitor/APK is **deferred** — config kept for a later phase only.
+`VITE_DEMO_MODE=true` — offline demo only. **Production: false.**
 
 ## Key decisions
 
-1. Extend Supabase stack — do NOT rebuild Express/Prisma/RN from build guide
-2. OpenAI for moderation — not Venice uncensored models
-3. Paystack primary — test MTN `0551234987`
-4. TikTok-style unified account — roles via toggles, not signup picker
-5. Uber/Bolt driver flow — register → upload docs → admin approve → go online
+1. Stay on Supabase — do not rebuild Express/Prisma/RN  
+2. OpenAI for moderation — not Venice for trust path  
+3. Paystack primary  
+4. Unified account + workspace toggles  
+5. Uber/Bolt driver gate: register → docs → admin → online  
+6. Feed is discovery; logistics + trust is the product  
 
-## Open-source references (see UX_REFERENCE.md)
+## Open docs
 
-- TikTok feed: `mrthinh307/toptop`, `react-vertical-feed`
-- Delivery: `chimzyfire-ship-it/DeliveryApp`, `fleetbase/navigator-app`
+| Doc | Use |
+|-----|-----|
+| `JUDGE_FEEDBACK.md` | Finals Q&A map |
+| `FINAL_FACTCHECK.md` | Cite-safe PHL / corridor facts |
+| `OUTREACH_CONTACTS.md` | Field interview scripts + log |
+| `DEMO_REHEARSAL.md` | Live walkthrough |
+| `QA_CHECKLIST.md` | Regression |
+| `SECURITY.md` | JWT / RLS / webhook |
+
+## Deferred
+
+- Capacitor APK  
+- Multi-crop / multi-region expansion  
+- GitHub Actions CI  
+- Cold storage / aggregation hubs (own as gap — not solved)

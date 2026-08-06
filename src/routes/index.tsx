@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Play, Leaf, Truck, Sparkles, BadgeCheck, MapPin, ShoppingBasket, Tractor, Wallet, Loader2 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { HERO_VIDEO_URL, HERO_VIDEO_FALLBACK_URL, MARKETING_FALLBACK_IMAGE } from "@/lib/config/site";
-import { TESTIMONIALS, formatGmv } from "@/lib/config/marketing";
+import { CORRIDOR_CONSTRAINTS, formatGmv } from "@/lib/config/marketing";
 import { useFeedTeaser, useMarketingStats, usePublicSellers } from "@/hooks/use-marketplace";
 import { useAuth } from "@/lib/auth";
 import { loadActiveWorkspace, roleHome } from "@/lib/active-workspace";
@@ -31,7 +31,7 @@ function Index() {
       <LiveFeedTeaser />
       <HowItWorks />
       <FeaturedFarmers />
-      <Testimonials />
+      <CorridorConstraints />
       <ClosingCTA />
     </SiteLayout>
   );
@@ -254,9 +254,9 @@ function Badge({ children, tone }: { children: React.ReactNode; tone: "amber" | 
 function HowItWorks() {
   const steps = [
     { icon: Tractor, title: "Farmer lists", body: "Snap a short video or photo of fresh harvest. Set quantity, price, pickup window." },
-    { icon: ShoppingBasket, title: "Buyer discovers", body: "Vertical swipe feed. AI matches your kitchen to nearby supply in real time." },
-    { icon: Truck, title: "We dispatch", body: "Verified drivers get auto-routed pickups. Live tracking, same-day delivery." },
-    { icon: Wallet, title: "Mobile money settles", body: "Paystack + MTN MoMo + Vodafone Cash. Farmers paid the same evening." },
+    { icon: ShoppingBasket, title: "Kitchen discovers", body: "Vertical feed of today’s tomato and leafy greens from the Dodowa corridor — discovery UX, not the innovation." },
+    { icon: Truck, title: "We dispatch", body: "Verified drivers get paid jobs only. Live tracking and POD on delivery." },
+    { icon: Wallet, title: "Mobile money settles", body: "Pay MoMo first, then match. Farmers paid after proof of delivery." },
   ];
   return (
     <section className="border-t border-border bg-card/30">
@@ -358,25 +358,25 @@ function FeaturedFarmers() {
   );
 }
 
-function Testimonials() {
+function CorridorConstraints() {
   return (
     <section className="border-y border-border bg-card/40">
       <div className="mx-auto max-w-7xl px-6 py-24 md:px-12 md:py-32">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground">(05) Voices</span>
+        <span className="text-xs uppercase tracking-widest text-muted-foreground">(05) Why not another marketplace</span>
         <h2 className="mt-3 max-w-3xl font-serif text-4xl md:text-6xl text-foreground">
-          Trusted by chefs, growers <span className="italic">and</span> drivers.
+          The hard problems we <span className="italic">actually</span> solve.
         </h2>
+        <p className="mt-5 max-w-2xl text-sm md:text-base font-light text-muted-foreground leading-relaxed">
+          Connecting farmers and buyers is table stakes. AgroLink targets same-day transport, MoMo settlement,
+          and delivery accountability on one Accra corridor — tomato and leafy greens to food-service kitchens.
+        </p>
         <div className="mt-14 grid gap-6 md:grid-cols-3">
-          {TESTIMONIALS.map((t, i) => (
-            <figure key={i} className="rounded-3xl border border-border bg-background p-8">
+          {CORRIDOR_CONSTRAINTS.map((c) => (
+            <figure key={c.title} className="rounded-3xl border border-border bg-background p-8">
               <Leaf className="h-5 w-5 text-primary" />
-              <blockquote className="mt-5 font-serif text-2xl text-foreground leading-snug">
-                "{t.quote}"
-              </blockquote>
-              <figcaption className="mt-6 text-sm">
-                <div className="text-foreground">{t.name}</div>
-                <div className="text-muted-foreground">{t.role}</div>
-              </figcaption>
+              <h3 className="mt-5 font-serif text-2xl text-foreground leading-snug">{c.title}</h3>
+              <p className="mt-4 text-sm font-light text-muted-foreground leading-relaxed">{c.body}</p>
+              <figcaption className="mt-6 text-xs uppercase tracking-widest text-muted-foreground">{c.who}</figcaption>
             </figure>
           ))}
         </div>

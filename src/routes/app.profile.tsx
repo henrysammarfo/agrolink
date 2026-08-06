@@ -102,6 +102,33 @@ function Profile() {
         <Stat n={String(stats?.completedTrades ?? 0)} label="Trades" />
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+        <Link
+          to="/app/buyer/orders"
+          className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          Orders
+        </Link>
+        <Link
+          to="/app/buyer/payments"
+          className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          Payments
+        </Link>
+        <Link
+          to="/app/profile/views"
+          className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          Profile views
+        </Link>
+        <Link
+          to="/app/settings"
+          className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          Settings
+        </Link>
+      </div>
+
       {profile?.bio && (
         <p className="mt-4 max-w-xl text-center text-sm text-foreground/80 sm:text-left">
           {profile.bio}

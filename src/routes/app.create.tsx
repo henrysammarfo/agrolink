@@ -212,7 +212,7 @@ function Create() {
         eyebrow="Studio"
         title="New"
         italic="post"
-        sub="Photo or video · price · quantity · location · WhatsApp when it sells."
+        sub="Photo or video · price · quantity · location · in-app alert when it sells."
       />
 
       <div className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs leading-relaxed text-foreground/80">

@@ -809,7 +809,7 @@ export async function confirmOrderPayment(reference: string): Promise<{ ok: bool
     link: "/app/buyer/orders",
   });
 
-  // Farmers: SMS/WhatsApp sale alert (judges — phone-first, not email)
+  // Farmers: in-app + push (+ email if on file) — WhatsApp/SMS off for launch
   const { data: soldItems } = await supabaseAdmin
     .from("order_items")
     .select("seller_id, listing:listings(title)")
@@ -825,7 +825,6 @@ export async function confirmOrderPayment(reference: string): Promise<{ ok: bool
       title: "New order for your produce",
       body: `A buyer ordered your ${listing?.title ?? "produce"}. Prepare for pickup.`,
       link: "/app/farmer/orders",
-      whatsappExtras: { crop: listing?.title ?? "produce" },
     });
   }
 

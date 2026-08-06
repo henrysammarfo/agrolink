@@ -87,6 +87,48 @@ export async function moderateListingContent(input: {
   }
 }
 
+export async function moderateCommentContent(content: string): Promise<{
+  passed: boolean;
+  reason?: string;
+}> {
+  const text = content.trim();
+  if (!text) return { passed: false, reason: "Comment is empty." };
+  if (text.length > 1000) return { passed: false, reason: "Comment is too long." };
+
+  const blocked = ["illegal", "weapon", "drug", "scam", "fuck you", "kill yourself"];
+  const lower = text.toLowerCase();
+  if (blocked.some((w) => lower.includes(w))) {
+    return { passed: false, reason: "Comment violates community guidelines." };
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { passed: true };
+
+  try {
+    const modRes = await fetch("https://api.openai.com/v1/moderations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ input: text }),
+    });
+    const modJson = (await modRes.json()) as {
+      results?: { flagged: boolean; categories: Record<string, boolean> }[];
+    };
+    const flagged = modJson.results?.[0]?.flagged;
+    if (flagged) {
+      const cats = modJson.results?.[0]?.categories ?? {};
+      const reason = Object.entries(cats)
+        .filter(([, v]) => v)
+        .map(([k]) => k)
+        .join(", ");
+      return { passed: false, reason: `Comment flagged: ${reason || "policy violation"}` };
+    }
+  } catch (e) {
+    console.warn("[moderateComment]", e);
+  }
+
+  return { passed: true };
+}
+
 export async function fetchPriceAdvice(
   cropType: string,
   region: string,

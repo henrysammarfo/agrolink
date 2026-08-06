@@ -19,6 +19,7 @@ const MARKET_NAV: { to: string; label: string; icon: typeof Wallet }[] = [
   { to: "/app/buyer/feed", label: "For You", icon: Sprout },
   { to: "/app/buyer/cart", label: "Cart", icon: ShoppingBasket },
   { to: "/app/buyer/orders", label: "Orders", icon: ClipboardList },
+  { to: "/app/buyer/payments", label: "Payments", icon: CreditCard },
   { to: "/app/inbox", label: "Inbox", icon: Inbox },
   { to: "/app/profile", label: "Profile", icon: User },
 ];
@@ -27,7 +28,6 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
   buyer: MARKET_NAV,
   farmer: MARKET_NAV,
   transport: [
-    { to: "/app/buyer/feed", label: "For You", icon: Sprout },
     { to: "/app/transport", label: "Map", icon: MapPin },
     { to: "/app/transport/jobs", label: "Jobs", icon: Truck },
     { to: "/app/inbox", label: "Inbox", icon: Inbox },
@@ -35,9 +35,9 @@ const NAV: Record<AppRole, { to: string; label: string; icon: typeof Wallet }[]>
   ],
   admin: [
     { to: "/app/admin", label: "Overview", icon: ShieldCheck },
-    { to: "/app/buyer/feed", label: "For You", icon: Sprout },
     { to: "/app/admin/orders", label: "Orders", icon: ClipboardList },
     { to: "/app/admin/payments", label: "Payments", icon: CreditCard },
+    { to: "/app/admin/pricing", label: "Surge", icon: Radio },
     { to: "/app/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { to: "/app/admin/listings", label: "Listings", icon: ListChecks },
     { to: "/app/admin/drivers", label: "Drivers", icon: Truck },
@@ -311,6 +311,18 @@ export function AppShell({
         </nav>
 
         <div className="space-y-1 border-t border-sidebar-border p-3">
+          {role === "transport" && (
+            <Link to="/app/buyer/feed" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground">
+              <Sprout className="h-4 w-4" />
+              {!collapsed && "Shop (Market)"}
+            </Link>
+          )}
+          {role === "admin" && (
+            <Link to="/app/buyer/feed" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground">
+              <Sprout className="h-4 w-4" />
+              {!collapsed && "Open Market"}
+            </Link>
+          )}
           {roles.includes("admin") && role !== "admin" && (
             <Link to="/app/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-amber-700 dark:text-amber-300 hover:bg-sidebar-accent">
               <ShieldCheck className="h-4 w-4" />

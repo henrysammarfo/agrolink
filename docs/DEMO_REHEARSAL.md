@@ -1,36 +1,37 @@
 # Finals demo rehearsal checklist
 
-Live pitch = 3–5 min walkthrough + Q&A. Demo video already submitted.
+Live pitch = 3–5 min walkthrough + Q&A.
 
 ## Before you leave
 
-- [ ] Paste Mapbox tokens into `.env.local` and Vercel (`MAPBOX_ACCESS_TOKEN`, `VITE_MAPBOX_ACCESS_TOKEN`)
+- [ ] Mapbox tokens on Vercel (`MAPBOX_ACCESS_TOKEN`, `VITE_MAPBOX_ACCESS_TOKEN`) + URL-restrict
 - [ ] `VITE_DEMO_MODE=false` on production
-- [ ] `npm run seed:demo` if feed/listings look empty
-- [ ] Approve at least one driver in `/app/admin/drivers`
-- [ ] Put real phones on buyer + driver profiles (for call demo)
-- [ ] Dual device / two browsers: buyer account + driver account logged in
-- [ ] Offline backup: screenshots of feed, checkout driver card, live track, admin GMV
+- [ ] Seed or real tomato/leafy listings visible
+- [ ] ≥1 approved driver online
+- [ ] Phones on buyer + driver profiles (call demo)
+- [ ] Two browsers: kitchen buyer + driver
+- [ ] Offline screenshots backup
 
-## Pitch lock (post-judge review 2026-07-27)
+## Pitch lock
 
-See **`docs/FINAL_FACTCHECK.md`** (Tavily + primary sources).
+See `docs/JUDGE_FEEDBACK.md` + `docs/FINAL_FACTCHECK.md`.
 
 - Corridor: Dodowa → Tema/Accra  
-- Buyers: restaurants + chop bars  
+- Buyers: restaurants + chop bars (B2B)  
 - Crops: tomato + leafy greens  
 - Innovation: same-day dispatch + MoMo + POD (feed = discovery only)  
-- Farmer channel: **WhatsApp** (never email-first; SMS later if budgeted)
+- Farmer channel: **in-app + push** (no SMS, no WhatsApp)  
 - Checkout: **Pay → match driver → track → POD**
 
+## Demo script (pay-then-match)
 
-1. Landing → sign in as farmer → post a listing (or use seeded produce)
-2. Switch / open buyer feed — swipe one item at a time (no skip)
-3. Add to cart → Delivery → Request driver → wait for accept → **DriverProfileCard** shows
-4. Pay with Paystack test MoMo
-5. Buyer track: phase copy “Heading to farm” then “Bringing your order” on Mapbox
-6. Driver app: go live → accept → slide pickup → POD
-7. Admin: orders + payments audit
+1. Landing — show corridor constraints (not fake testimonials)  
+2. Farmer Studio — post tomato / leafy listing (photo + qty + pickup window)  
+3. Kitchen buyer feed — swipe one item; add to cart  
+4. Cart → fulfillment → **Pay MoMo** → wait for match → DriverProfileCard  
+5. Buyer track: “Heading to farm” then “Bringing your order”  
+6. Driver: go live → accept → slide pickup → POD photo  
+7. Admin: KYC / payments / disputes — explain auto vs human  
 
 ## Accounts
 
@@ -41,4 +42,4 @@ See **`docs/FINAL_FACTCHECK.md`** (Tavily + primary sources).
 
 ## After finals
 
-Rotate Mapbox + other API keys.
+Rotate Mapbox + API keys.
